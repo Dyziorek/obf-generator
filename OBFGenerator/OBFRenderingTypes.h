@@ -1,0 +1,464 @@
+#pragma once
+#include "..\..\..\tinyxml2-master\tinyxml2.h"
+#include <boost\algorithm\string.hpp>
+
+// http://wiki.openstreetmap.org/wiki/Amenity
+// POI tags : amenity, leisure, shop, sport, tourism, historic; accessories (internet-access), natural ?
+class AmenityType {
+	// Some of those types are subtypes of Amenity tag 
+public:
+
+private:
+	static std::map<std::string, AmenityType> amenityTypes;
+public:
+	static AmenityType reg(std::string name, std::string defaultTag) {
+		boost::algorithm::to_lower(name);
+		if(amenityTypes.find(name) != amenityTypes.end()) {
+			return amenityTypes.find(name)->second;
+		}
+		AmenityType t(name, defaultTag, amenityTypes.size());
+		amenityTypes.insert(std::make_pair(t.name, t));
+		return t;
+	}
+	
+	
+	
+	 std::string defaultTag;
+	 std::string name;
+	 int ordinal;
+	 AmenityType(void){ ordinal = -1;}
+
+	 bool isEmpty()
+	 {
+		 return ordinal == -1;
+	 }
+	AmenityType(std::string name, std::string defaultTag, int ordinal) {
+		this->name = name;
+		this->defaultTag = defaultTag;
+		this->ordinal = ordinal;	
+	}
+	/*AmenityType(const AmenityType& other)
+	{
+		this->name = other.name;
+		this->defaultTag = other.defaultTag;
+		this->ordinal = other.ordinal;
+	}
+
+	AmenityType& operator=(const AmenityType &other)
+	{
+		this->name = other.name;
+		this->defaultTag = other.defaultTag;
+		this->ordinal = other.ordinal;
+
+		return *this;
+	}*/
+public:
+	static AmenityType findOrCreateTypeNoReg(std::string s) {
+		AmenityType type(s,s,-1);
+		for (auto t : amenityTypes) {
+			std::string lowName = t.second.name;
+			boost::algorithm::to_lower(lowName);
+			if (lowName == s) {
+				return t.second;
+			}
+		}
+		return type;
+	}
+	
+	static boolean isRegisteredType(AmenityType type) {
+		//return amenityTypes.containsKey(type.name);
+		return type.ordinal >= 0;
+	}
+	
+	static AmenityType getAndRegisterType(std::string name) {
+		return reg(name, name);
+	}
+	
+	std::string getDefaultTag() {
+		return defaultTag;
+	}
+	
+	std::string getCategoryName() {
+		return name;
+	}
+	
+	
+	static int getCategoriesSize() {
+		return amenityTypes.size();
+	}
+	static std::vector<AmenityType> getCategories(){
+		std::vector<AmenityType> categories(amenityTypes.size());
+		std::transform(amenityTypes.begin(), amenityTypes.end(), categories.begin(), [](std::pair<std::string, AmenityType> pairElem)
+		{
+			return pairElem.second;
+		});
+		return categories;
+	}
+
+
+	
+	
+	
+};
+
+	extern AmenityType EMERGENCY;
+	extern AmenityType HEALTHCARE;
+
+	extern AmenityType TRANSPORTATION;
+	extern AmenityType BARRIER;
+
+	extern AmenityType TOURISM;
+	extern AmenityType ENTERTAINMENT;
+	extern AmenityType HISTORIC;
+
+	extern AmenityType SPORT;
+	extern AmenityType LEISURE;
+	extern AmenityType GEOCACHE;
+
+	extern AmenityType OTHER;
+	extern AmenityType FINANCE;
+	extern AmenityType OFFICE;
+	extern AmenityType ADMINISTRATIVE;
+	extern AmenityType EDUCATION;
+	extern AmenityType MAN_MADE;
+	extern AmenityType SEAMARK;
+	extern AmenityType SUSTENANCE;
+
+	extern AmenityType SHOP;
+
+	extern AmenityType NATURAL;
+	extern AmenityType LANDUSE;
+	extern AmenityType MILITARY;
+
+	extern AmenityType OSMWIKI;
+	extern AmenityType USER_DEFINED;
+
+
+class TagValuePattern {
+public:
+	TagValuePattern()
+	{
+	}
+	std::string tag;
+	std::string value;
+		TagValuePattern(std::string t, std::string v) {
+			this->tag = t;
+			this->value = v;
+		}
+		
+public:
+	boolean isApplicable(std::map<std::string, std::string> e ){
+			if(value == "") {
+				return e.find(tag) != e.end();
+			}
+			return value  == e.find(tag)->second;
+		}
+		
+		boolean operator==(TagValuePattern obj) {
+			if (this == &obj)
+				return true;
+
+			TagValuePattern other = (TagValuePattern) obj;
+			if (tag == "") {
+				if (other.tag != "")
+					return false;
+			} else if (!(tag == other.tag))
+				return false;
+			if (value == "") {
+				if (other.value != "")
+					return false;
+			} else if (!(value == other.value))
+				return false;
+			return true;
+		}
+
+		bool operator<(const TagValuePattern& op2) const
+		{
+			return this->tag.compare(op2.tag) < 0;
+		}
+		
+	};
+
+class MapRulType {
+public:
+		std::vector<MapRulType> names;
+		TagValuePattern tagValuePattern;
+		boolean additional;
+		boolean additionalText;
+		std::set<TagValuePattern> applyToTagValue;
+		
+		std::string poiPrefix;
+		AmenityType poiCategory;
+		// poi_category was specially removed for one tag/value, to skip unnecessary objects
+		boolean poiSpecified;
+		
+		
+		MapRulType* targetTagValue;
+		
+		boolean relation;
+		// creation of only section
+		boolean onlyMap;
+		boolean onlyPoi;
+		
+		// Needed only for map rules
+		int minzoom;
+		int maxzoom;
+		boolean onlyPoint;
+		std::string namePrefix;
+		
+		
+		// inner id
+		int id;
+		int freq;
+		int targetId ;
+		int targetPoiId ;
+		
+		MapRulType()
+		{
+			id = -1; targetPoiId = -1;
+			poiSpecified = false;
+			onlyMap = false;
+			onlyPoi = false;
+			onlyPoint = false;
+			relation = false;
+			additional = false;
+			additionalText = false;
+			namePrefix = "";
+		}
+		bool operator<(const MapRulType& op2) const
+		{
+			return this->id < op2.id;
+		}
+		bool operator==(const MapRulType& op2) const
+		{
+			if (op2.isEmpty() && this->isEmpty())
+			{
+				return true;
+			}
+			return this->id == op2.id;
+		}
+public:
+		boolean isEmpty() const
+		{
+			return id == -1;
+		}
+		boolean isPOI(){
+			return !onlyMap;
+		}
+		
+		boolean isPOISpecified() {
+			return isPOI() && poiSpecified;
+
+		}
+		
+		boolean isMap(){
+			return !onlyPoi;
+		}
+		
+		static MapRulType createMainEntity(std::string tag, std::string value) {
+			MapRulType rt;
+			rt.tagValuePattern = TagValuePattern(tag, value);
+			return rt;
+		}
+		
+		static MapRulType createText(std::string tag) {
+			MapRulType rt;
+			rt.additionalText = true;
+			rt.minzoom = 5;
+			rt.maxzoom = 31;
+			rt.tagValuePattern = TagValuePattern(tag, ""); 
+			return rt;
+		}
+		
+		static MapRulType createAdditional(std::string tag, std::string value) {
+			MapRulType rt;
+			rt.additional = true;
+			rt.minzoom = 5;
+			rt.maxzoom = 31;
+			rt.tagValuePattern = TagValuePattern(tag, value);
+			return rt;
+		}
+
+
+		std::string getTag() {
+			return tagValuePattern.tag;
+		}
+		
+		int getTargetId() {
+			return targetId;
+		}
+		
+		int getTargetPoiId() {
+			return targetPoiId;
+		}
+		
+		void setTargetPoiId(int catId, int valueId) {
+			if(catId <= 31) {
+				this->targetPoiId  = (valueId << 6) | (catId << 1) ; 
+			} else {
+				if(catId > (1 << 15)) {
+					throw new std::exception("Refer source code");
+				}
+				this->targetPoiId  = (valueId << 16) | (catId << 1) | 1;
+			}
+		}
+		
+		int getInternalId() {
+			return id;
+		}
+		
+		void setTargetId(int targetId) {
+			this->targetId = targetId;
+		}
+		
+		MapRulType getTargetTagValue() {
+			return *targetTagValue;
+		}
+		
+		std::string getValue() {
+			return tagValuePattern.value;
+		}
+		
+		int getMinzoom() {
+			return minzoom;
+		}
+		
+		boolean isAdditional() {
+			return additional;
+		}
+		
+		boolean isAdditionalOrText() {
+			return additional || additionalText;
+		}
+		
+		boolean isText() {
+			return additionalText;
+		}
+		
+		boolean isOnlyPoint() {
+			return onlyPoint;
+		}
+		
+		boolean isRelation() {
+			return relation;
+		}
+		
+		int getFreq() {
+			return freq;
+		}
+		
+		int updateFreq(){
+			return ++freq;
+		}
+		
+		
+	};
+
+	static class MapRouteTag {
+	public:
+		boolean relation;
+		std::string tag;
+		std::string value;
+		std::string tag2;
+		std::string value2;
+		boolean _register;
+		boolean amend;
+		boolean base; 
+		boolean text;
+		boolean replace;
+		
+	};
+
+class OBFRenderingTypes
+{
+protected:
+	static std::string constructRuleKey(std::string tag, std::string val) {
+		if(val == "" || val.size() == 0){
+			return tag;
+		}
+		return tag + TAG_DELIMETER + val;
+	}
+
+	static char TAG_DELIMETER;
+public:
+	OBFRenderingTypes(void);
+	virtual ~OBFRenderingTypes(void);
+
+	void loadXmlData();
+
+	MapRulType nameRule;
+	MapRulType nameEnRule;
+	std::string read(const char* value)
+	{
+		if (value == NULL)
+			return std::string("");
+		return std::string(value);
+	}
+	
+	AmenityType getAmenityTypeForRelation(std::string tag, std::string val);
+	
+	AmenityType getAmenityType(std::string tag, std::string val, bool relation);
+
+	std::string getAmenitySubtype(std::string tag, std::string val);
+	
+	std::string getAmenitySubtypePrefix(std::string tag, std::string val);
+
+	std::map<std::string, std::string> getAmenityAdditionalInfo(std::map<std::string, std::string> tags, AmenityType type, std::string subtype);
+
+	static std::map<AmenityType, std::map<std::string, std::string>> amenityNameVal;
+	static std::map<std::string, AmenityType> namedAmenity;
+	static std::list<MapRouteTag> routeTags;
+	static std::map<std::string, MapRulType> namedRulType;
+	static std::vector<MapRulType> rules;
+
+	void parseCategoryElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
+	void parseBasicElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
+	void parseRouteElement(tinyxml2::XMLElement* elemData);
+	MapRulType registerRuleType(MapRulType& rt);
+
+	std::map<MapRulType, std::string> getRelationPropogatedTags(EntityRelation relation);
+	MapRulType getRelationalTagValue(std::string tag, std::string val);
+	MapRulType getMapRuleType(std::string tag, std::string val);
+	MapRulType getRuleType(std::string tag, std::string val, bool poi);
+	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
+	static std::list<std::map<std::string, std::string>> splitTagsIntoDifferentObjects(const std::map<std::string, std::string> tags);
+	std::map<std::string, MapRulType>& getRuleTypes()
+	{
+		if (namedRulType.size() == 0)
+		{
+			loadXmlData();
+		}
+		return namedRulType;
+	}
+
+	std::list<MapRouteTag>& getRouteTags() {
+		if (routeTags.size() == 0)
+		{
+			loadXmlData();
+		}
+		return routeTags;
+	}
+	
+	static byte RESTRICTION_NO_RIGHT_TURN;
+	static byte RESTRICTION_NO_LEFT_TURN;
+	static byte RESTRICTION_NO_U_TURN;
+	static byte RESTRICTION_NO_STRAIGHT_ON;
+	static byte RESTRICTION_ONLY_RIGHT_TURN;
+	static byte RESTRICTION_ONLY_LEFT_TURN;
+	static byte RESTRICTION_ONLY_STRAIGHT_ON;
+
+	static std::list<std::map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const std::map<std::string, std::string> tags);
+	static bool splitIsNeeded(const std::map<std::string, std::string> tags) {
+		boolean seamark = false;
+		for(auto s : tags) {
+			if(boost::algorithm::starts_with(s.first, "seamark:")) {
+				seamark = true;
+				break;
+			}
+		}
+		return seamark;
+	}
+	static std::string openSeaType(std::string value);
+	MapRulType coastlineRule;
+};
+
