@@ -1,9 +1,6 @@
 #pragma once
 
 #include "MapObject.h"
-#include <boost/foreach.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost\algorithm\string.hpp>
 #include <boost\lexical_cast.hpp>
 
 static char intToBase64[] = {
@@ -202,9 +199,11 @@ public:
 	 *            the list of EntityNodes
 	 * @return the area of it
 	 */
-	 static double getArea(std::vector<std::shared_ptr<EntityNode>> EntityNodes);
+	 static double getArea(std::vector<std::shared_ptr<EntityNode>> nodesVec);
 	 static std::vector<boolean> simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>> result, boolean avoidNooses);
 
+ 	static bool checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz);
+	static std::list<std::shared_ptr<EntityNode>> simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>>& ns, int zoom, int zoomWaySmothness);
 
 private:
 	
@@ -215,79 +214,54 @@ private:
 
 
 class MapZooms {
-	
+public:	
 	class MapZoomPair {
 	public:
 		static int MAX_ALLOWED_ZOOM;
-		MapZoomPair(int minZoom, int maxZoom) {
-			this->maxZoom = maxZoom;
-			this->minZoom = minZoom;
+		MapZoomPair(int pminZoom, int pmaxZoom) {
+			maxZoom = pmaxZoom;
+			minZoom = pminZoom;
 		}
-		
+
 		int getMinZoom() {
 			return minZoom;
 		}
 		
-		int getMaxZoom() {
+		 int getMaxZoom() {
 			return maxZoom;
 		}
-
-		std::string toString() {
-			return std::string("MapZoomPair : ") + minZoom + " - "+ maxZoom;
-		}
 		
+		std::string toString() {
+			return std::string("MapZoomPair : ") + boost::lexical_cast<std::string>(minZoom) + " - " + boost::lexical_cast<std::string>(maxZoom);
+		}
+
 		bool operator<(const MapZoomPair& op2) const
 		{
-			return (maxZoom < op2.maxZoom));
+			return maxZoom < op2.maxZoom;
 		}
 	private:
-
 		int minZoom;
 		int maxZoom;
 		
 	};
+	
 private:
 	std::list<MapZoomPair> levels;
-	static MapZooms* DEFAULT;
+	static MapZooms* DEFAULT;	
 public:
 	std::list<MapZoomPair> getLevels() {
 		return levels;
 	}
 	
-	void setLevels(std::list<MapZoomPair> levels) {
-		this->levels = levels;
-		this->levels.sort();
-		this->levels.reverse():
+	void setLevels(std::list<MapZoomPair> parlevels) {
+		levels = parlevels;
+		levels.sort();
+		levels.reverse();
 	}
 	/**
 	 * @param zooms - could be 5-8;7-10;11-14;15-
 	 */
-	static MapZooms parseZooms(std::string zooms)  {
-		boost::tokenizer< boost::char_separator<char> > tokens(zooms, boost::char_separator<char>(";"));
-		std::vector<std::string> split;
-		BOOST_FOREACH(const std::string token,tokens){split.push_back(token);}
-		
-		int zeroLevel = 15;
-		std::list<MapZoomPair> list;
-		for(std::string s : split){
-			boost::trim(s);
-			int i = s.find_first_of('-');
-			if (i == -1) {
-				zeroLevel = boost::lexical_cast<int>(s);
-				list.push_front(new MapZoomPair(zeroLevel, zeroLevel));
-			} else if( boost::ends_with(s,"-")){
-				list.push_front( new MapZoomPair(boost::lexical_cast<int>(s.substr(0, i)), MapZoomPair::MAX_ALLOWED_ZOOM));
-			} else {
-				list.push_front( new MapZoomPair(boost::lexical_cast<int>(s.substr(0, i)), boost::lexical_cast<int>(s.substr(i + 1))));
-			}
-		}
-		if(list.size() < 1 || list.size() > 8){
-			
-		}
-		MapZooms mapZooms;
-		mapZooms.setLevels(list);
-		return mapZooms;
-	}
+	static MapZooms* parseZooms(std::string zooms);
 	
 	int size(){
 		return levels.size();
@@ -295,18 +269,11 @@ public:
 	
 	MapZoomPair getLevel(int level){
 		std::list<MapZoomPair>::iterator itLevel = levels.begin();
-		std::advance(itLevel,level);
+		std::advance(itLevel, level);
 		return *itLevel;
 	}
 	
-	
-	static std::string MAP_ZOOMS_DEFAULT;
-	static MapZooms getDefault(){
-		if(DEFAULT == nullptr){
-			DEFAULT = new MapZooms(parseZooms(MAP_ZOOMS_DEFAULT));
-		}
-		return *DEFAULT;
-		
-	}
 
-}
+	static std::string MAP_ZOOMS_DEFAULT;
+	static MapZooms* getDefault();
+};

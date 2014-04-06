@@ -9,10 +9,12 @@ class EntityNode :
 {
 public:
 	EntityNode(void);
+	EntityNode(double olat, double olon, __int64 nid)
+	{
+		lat = olat; lon = olon; id = nid;
+	}
 	virtual ~EntityNode(void);
 
-
-	EntityNode(double olat, double olon, long long oid) {lat = olat; lon = olon; id = oid;}
 	double lat;
 	double lon;
 	
@@ -83,9 +85,9 @@ public:
 
 	bool operator<(const EntityWay& op1) const { return id < op1.id;}
 	std::pair<double, double> getLatLon();
-	std::vector<std::shared_ptr<EntityNode>> getArrayNodes()
+	std::list<std::shared_ptr<EntityNode>> getListNodes()
 	{
-		return std::vector<std::shared_ptr<EntityNode>>(nodes.begin(), nodes.end());
+		return std::list<std::shared_ptr<EntityNode>>(nodes.begin(), nodes.end());
 	}
 
 	__int64 getFirstNodeId() {if (nodeIDs.empty()) return -1; return *nodeIDs.begin(); }

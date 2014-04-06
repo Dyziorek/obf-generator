@@ -354,7 +354,7 @@ public:
 		
 	};
 
-	static class MapRouteTag {
+	class MapRouteTag {
 	public:
 		boolean relation;
 		std::string tag;
@@ -460,5 +460,13 @@ public:
 	}
 	static std::string openSeaType(std::string value);
 	MapRulType coastlineRule;
+
+
+	 bool encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
+	 bool encodeEntityWithType(bool isNode, std::map<std::string, std::string> tags, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
+
+
 };
 

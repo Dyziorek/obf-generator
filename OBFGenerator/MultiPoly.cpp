@@ -647,3 +647,34 @@ void MultiPoly::generateImage(std::shared_ptr<EntityWay> lines, SkCanvas* painte
 	
 
 }
+
+
+std::list<MultiPoly> MultiPoly::splitPerRing() {
+	std::list<std::shared_ptr<Ring>> listRings = combineRings(inWays);
+	std::set<std::shared_ptr<Ring>> inners = std::set<std::shared_ptr<Ring>>(listRings.begin(), listRings.end());
+		std::list<std::shared_ptr<Ring>> outers = combineRings(outWays);
+		std::list<MultiPoly> multipolygons;
+		// loop; start with the smallest outer ring
+		for (std::shared_ptr<Ring> outer : outers) {
+			std::list<std::shared_ptr<Ring>> innersInsideOuter;
+			auto innerIt = inners.begin();
+			while (innerIt != inners.end()) {
+				std::shared_ptr<Ring> inner = *innerIt;
+				if (inner->isIn(*outer)) {
+					innersInsideOuter.push_back(inner);
+					auto innerItRemove = innerIt;
+					innerIt++;
+					inners.erase(innerItRemove);
+				}
+			}
+			multipolygons.push_back(MultiPoly(outer, std::vector<std::shared_ptr<Ring>>(innersInsideOuter.begin(), innersInsideOuter.end()), id));
+		}
+
+		if (inners.size() != 0) {
+			std::wstring warn(L"Multipolygon ");
+			warn + boost::lexical_cast<std::wstring>(id) + L" has a mismatch in outer and inner rings";
+			OutputDebugString(warn.c_str());
+		}
+
+		return multipolygons;
+	}

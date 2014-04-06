@@ -609,3 +609,79 @@ MapRulType OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string
 		}
 		return map;
 	}
+
+
+
+ bool OBFRenderingTypes::encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed) {
+				if(splitIsNeeded(e->tags)) {
+			if(splitTagsIntoDifferentObjects(e->tags).size() > 1) {
+				throw new std::bad_exception();
+			}
+		}
+		auto inst = std::static_pointer_cast<EntityNode, EntityBase>(e);
+		bool isNode = inst;
+		return encodeEntityWithType(isNode, 
+				e->tags, zoom, outTypes, outAddTypes, namesToEncode, tempListNotUsed);
+	}
+	
+bool OBFRenderingTypes::encodeEntityWithType(bool isNode, std::map<std::string, std::string> tags, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed) {
+		outTypes.clear();
+		outAddTypes.clear();
+		namesToEncode.clear();
+		boolean area = false;
+		if (tags.find("area") != tags.end())
+		{
+			area = tags.at("area") == "yes" || tags.at("area") == "true";
+		}
+
+		for (auto tag : tags) {
+			std::string val = tag.second;
+			MapRulType rType = getMapRuleType(tag.first, val);
+			if (!rType.isEmpty()) {
+				if (rType.minzoom > zoom || rType.maxzoom < zoom) {
+					continue;
+				}
+				if (rType.onlyPoint && !isNode) {
+					continue;
+				}
+				std::string nameVal = "";
+				if (tags.find("name") != tags.end())
+				{
+					nameVal = tags.at("name");
+				}
+				if(rType == nameEnRule && nameVal == val) {
+					continue;
+				}
+				if(rType.targetTagValue != nullptr) {
+					rType = *rType.targetTagValue;
+				}
+				rType.updateFreq();
+				if (!rType.isAdditionalOrText()) {
+					outTypes.push_back(rType.id);
+				} else {
+					boolean applied = rType.applyToTagValue.empty();
+					if(!applied) {
+						auto it = rType.applyToTagValue.begin();
+						while(!applied && it != rType.applyToTagValue.end()) {
+							TagValuePattern nv = *it;
+							applied = nv.isApplicable(tags);
+							it++;
+						}
+					}
+					if (applied) {
+						if (rType.isAdditional()) {
+							outAddTypes.push_back(rType.id);
+						} else if (rType.isText()) {
+							namesToEncode.insert(std::make_pair(rType, val));
+						}
+					}
+				}
+			}
+		}
+        // sort to get most important features as first type (important for rendering)
+        outTypes.sort();
+        outAddTypes.sort();
+		return area;
+	}
