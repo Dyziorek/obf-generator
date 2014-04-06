@@ -229,7 +229,7 @@
     <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\tinyxml2-master\tinyxml2.cpp">
+    <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\core\protos\OBF.pb.cc">
