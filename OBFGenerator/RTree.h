@@ -25,7 +25,7 @@ public:
 	void insertBox(int a, int b, int c, int d)
 	{
 		box boxPoint(point(a, b), point(c,d));
-		//spaceTree.insert(boxPoint);
+		spaceTree.insert(std::make_pair(boxPoint, spaceTree.size()));
 	}
 };
 

@@ -87,7 +87,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
@@ -207,10 +207,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h" />
+    <ClInclude Include="Amenity.h" />
     <ClInclude Include="BlockReader.h" />
     <ClInclude Include="EntityBase.h" />
     <ClInclude Include="EntityNode.h" />
     <ClInclude Include="MapObject.h" />
+    <ClInclude Include="MapRoutingTypes.h" />
     <ClInclude Include="MapUtils.h" />
     <ClInclude Include="MultiPoly.h" />
     <ClInclude Include="OBFGenerator.h" />
@@ -222,6 +224,7 @@
     <ClInclude Include="proto\fileformat.pb.h" />
     <ClInclude Include="proto\osmformat.pb.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RTree.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="stdafx.h" />
