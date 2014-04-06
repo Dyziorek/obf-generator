@@ -238,7 +238,7 @@ class MapZooms {
 		
 		bool operator<(const MapZoomPair& op2) const
 		{
-			return (maxZoom < op2.maxZoom));
+			return (maxZoom < op2.maxZoom);
 		}
 	private:
 
