@@ -1,5 +1,5 @@
 #pragma once
-#include "..\..\..\tinyxml2-master\tinyxml2.h"
+#include "tinyxml2.h"
 #include <boost\algorithm\string.hpp>
 
 // http://wiki.openstreetmap.org/wiki/Amenity

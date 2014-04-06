@@ -140,12 +140,6 @@
     <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\core\protos\OBF.pb.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\tinyxml2-master\tinyxml2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TileManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -159,6 +153,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OBFElementDB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\VisualFiles\osmAnd\core\protos\OBF.pb.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Amenity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MapRoutingTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "OBFRenderingTypes.h"
-#include "..\..\..\tinyxml2-master\tinyxml2.h"
+#include "tinyxml2.h"
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost\algorithm\string.hpp>
