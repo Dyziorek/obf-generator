@@ -53,6 +53,7 @@
 #include <sstream>
 #include "BlockReader.h"
 #include "portable_binary_iarchive.hpp"
+#include "portable_binary_oarchive.hpp"
 #include "proto\fileformat.pb.h"
 #include "proto\osmformat.pb.h"
 #include <boost/iostreams/stream.hpp>

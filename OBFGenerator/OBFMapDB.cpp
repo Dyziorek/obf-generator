@@ -14,8 +14,13 @@
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#include <boost/archive/binary_oarchive.hpp>
+
+#include "ArchiveIO.h"
+
 
 namespace io = boost::iostreams;
+namespace ar = boost::archive;
 
 long long OBFMapDB::notUsedId = - 1 << 40; // million million
 int OBFMapDB::numberCalls = 0;
@@ -181,6 +186,10 @@ void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 					}
 				}
 		}
+		else
+		{
+			iterateMainEntityPost(baseItem);
+		}
 	}
 
 }
@@ -249,14 +258,20 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		long firstId = -1;
 		long lastId = -1;
 		
-		typedef io::basic_array<byte> arrData;
+		typedef io::basic_array<std::string> arrData;
 		typedef io::stream<arrData> arrStrm;
 
-		typedef io::array aa;
+		std::string bar;
 
-		byte bar[100] = {};
+		//arrStrm bNodes(bar);
 
-		arrStrm bNodes(bar);
+		std::stringstream bNodeData;
+		std::stringstream bTypesData;
+		std::stringstream bAddtTypesData;
+
+		portable_binary_oarchive bNodes(bNodeData);
+		portable_binary_oarchive bTypes(bTypesData);
+		portable_binary_oarchive bAddtTypes(bAddtTypesData);
 		//arrStrm bTypes(std::vector<byte>());
 		//arrStrm bAddtTypes(std::vector<byte>());
 
@@ -271,8 +286,10 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 						first = false;
 					}
 					lastId = n->id;
-					std::istream_iterator<byte, byte> in(bNodes);
-					//bNodes << (float)n->lat;
+					
+					writeInt(bNodes, n->lat);
+					writeInt(bNodes, n->lon);
+					
 
 					//Algorithms.writeInt(bNodes, Float.floatToRawIntBits((float) n.getLatitude()));
 					//Algorithms.writeInt(bNodes, Float.floatToRawIntBits((float) n.getLongitude()));
@@ -286,13 +303,17 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		}
 		for (int j = 0; j < types.size(); j++) {
 			try {
-				//Algorithms.writeSmallInt(bTypes, types.get(j));
+				std::list<long>::iterator typesIt = types.begin();
+				std::advance(typesIt, j);
+				writeSmallInt(bTypes, *typesIt);
 			} catch (std::exception e) {
 			}
 		}
 		for (int j = 0; j < addTypes.size(); j++) {
 			try {
-				//Algorithms.writeSmallInt(bAddtTypes, addTypes.get(j));
+				std::list<long>::iterator typesIt = types.begin();
+				std::advance(typesIt, j);
+				writeSmallInt(bAddtTypes, *typesIt);
 			} catch (std::exception e) {
 			}
 		}
@@ -307,6 +328,9 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 
 		addBatch(mapLowLevelBinaryStat);
 		*/
+		
+		addBatch(id, firstId, lastId, name, bNodeData, bTypesData, bAddtTypesData, level);
+
 	}
 
 void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
@@ -318,56 +342,72 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 		int minY = INT_MAX;
 		int maxY = 0;
 
+		std::stringstream bCoordData;
+		std::stringstream bInCoordData;
+		std::stringstream bTypesData;
+		std::stringstream bAddtTypesData;
+
+		portable_binary_oarchive bcoordinates(bCoordData);
+		portable_binary_oarchive binnercoord(bInCoordData);
+		portable_binary_oarchive btypes(bTypesData);
+		portable_binary_oarchive badditionalTypes(bAddtTypesData);
+
 		/*		 bcoordinates = new ByteArrayOutputStream();
 		ByteArrayOutputStream binnercoord = new ByteArrayOutputStream();
 		ByteArrayOutputStream btypes = new ByteArrayOutputStream();
 		ByteArrayOutputStream badditionalTypes = new ByteArrayOutputStream();
 
-		try {
+		*/
+
 			for (int j = 0; j < types.size(); j++) {
-				Algorithms.writeSmallInt(btypes, types.get(j));
+				std::list<long>::iterator typesIt = types.begin();
+				std::advance(typesIt, j);
+				writeSmallInt(btypes, *typesIt);
 			}
-			for (int j = 0; j < addTypes.size(); j++) {
-				Algorithms.writeSmallInt(badditionalTypes, addTypes.get(j));
+			for (int j = 0; j < addTypes.size(); j++) 
+			{
+				std::list<long>::iterator atypesIt = addTypes.begin();
+				std::advance(atypesIt, j);
+				writeSmallInt(badditionalTypes, *atypesIt);
 			}
 
-			for (Node n : nodes) {
-				if (n != null) {
-					int y = MapUtils.get31TileNumberY(n.getLatitude());
-					int x = MapUtils.get31TileNumberX(n.getLongitude());
-					minX = Math.min(minX, x);
-					maxX = Math.max(maxX, x);
-					minY = Math.min(minY, y);
-					maxY = Math.max(maxY, y);
+			for (std::shared_ptr<EntityNode> n : nodes) {
+				if (n) {
+					int y = MapUtils::get31TileNumberY(n->lat);
+					int x = MapUtils::get31TileNumberX(n->lon);
+					minX = min(minX, x);
+					maxX = max(maxX, x);
+					minY = min(minY, y);
+					maxY = max(maxY, y);
 					init = true;
-					Algorithms.writeInt(bcoordinates, x);
-					Algorithms.writeInt(bcoordinates, y);
+					writeInt(bcoordinates, x);
+					writeInt(bcoordinates, y);
 				}
 			}
 
-			if (innerWays != null) {
-				for (List<Node> ws : innerWays) {
+			if (innerWays.size()) {
+				for (std::list<std::shared_ptr<EntityNode>> ws : innerWays) {
 					boolean exist = false;
-					if (ws != null) {
-						for (Node n : ws) {
-							if (n != null) {
+					if (ws.size()) {
+						for (std::shared_ptr<EntityNode> n : ws) {
+							if (n) {
 								exist = true;
-								int y = MapUtils.get31TileNumberY(n.getLatitude());
-								int x = MapUtils.get31TileNumberX(n.getLongitude());
-								Algorithms.writeInt(binnercoord, x);
-								Algorithms.writeInt(binnercoord, y);
+								int y = MapUtils::get31TileNumberY(n->lat);
+								int x = MapUtils::get31TileNumberX(n->lon);
+								writeInt(binnercoord, x);
+								writeInt(binnercoord, y);
 							}
 						}
 					}
 					if (exist) {
-						Algorithms.writeInt(binnercoord, 0);
-						Algorithms.writeInt(binnercoord, 0);
+						writeInt(binnercoord, 0);
+						writeInt(binnercoord, 0);
 					}
 				}
 			}
-		} catch (IOException es) {
-			throw new IllegalStateException(es);
-		}
+		
+			addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
+		/*
 		if (init) {
 			// conn.prepareStatement("insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?, ?, ?, ?, ?, ?, ?)");
 			mapBinaryStat.setLong(1, id);
@@ -388,4 +428,17 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 			}
 		}
 		*/
+	}
+
+	std::string OBFMapDB::encodeNames(std::map<MapRulType, std::string> tempNames) {
+		std::string returnText;
+		std::stringstream strm(returnText);
+		for (std::pair<MapRulType, std::string> e : tempNames) {
+			if (e.second.size()) {
+				strm << "~";
+				strm << e.first.getInternalId();
+				strm << e.second;
+			}
+		}
+		return returnText;
 	}

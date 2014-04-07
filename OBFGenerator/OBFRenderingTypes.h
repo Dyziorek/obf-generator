@@ -216,6 +216,7 @@ public:
 		MapRulType()
 		{
 			id = -1; targetPoiId = -1;
+			freq = 0;
 			poiSpecified = false;
 			onlyMap = false;
 			onlyPoi = false;

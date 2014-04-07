@@ -44,6 +44,7 @@ public:
 	void insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit);
 	std::vector<RTree> mapTree;
+	std::string encodeNames(std::map<MapRulType, std::string> tempNames);
 	int zoomWaySmothness;
 };
 

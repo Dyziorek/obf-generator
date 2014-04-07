@@ -795,6 +795,16 @@ void OBFResultDB::addBatch(Amenity am)
 	storeData->addBatch(am);
 }
 
+void OBFResultDB::addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
+{
+	storeData->addBatch(id,firstId, lastId, name, bNodes, bTypes, bAddtTypes, level );
+}
+
+void OBFResultDB::addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
+{
+	storeData->addBatch(id,area, bCoord, bInCoord, bTypes, bAddtTypes, name );
+}
+
 
 void OBFResultDB::flush()
 {

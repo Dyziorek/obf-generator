@@ -79,6 +79,8 @@ public:
 	std::set<std::shared_ptr<EntityRelation>> relations;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
 	void addBatch(Amenity am);
+	void addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
+	void addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
 	void flush();
 	std::map<__int64, std::shared_ptr<EntityNode>> nodes;
 	std::map<__int64, std::shared_ptr<EntityWay>> ways;
