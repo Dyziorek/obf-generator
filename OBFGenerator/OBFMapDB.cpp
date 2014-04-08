@@ -91,6 +91,7 @@ void OBFMapDB::indexMapAndPolygonRelations(std::shared_ptr<EntityRelation>& relI
 			std::map<MapRulType, std::string>::iterator it = propogated.begin();
 			while(it != propogated.end()) {
 				std::pair<MapRulType, std::string> es = *it;
+				it++;
 				std::string key = es.first.getTag();
 				if(es.first.isText() && map.find(key) != map.end()) {
 					map.insert(std::make_pair(key, map.find(key)->second + ", " +  es.second));
