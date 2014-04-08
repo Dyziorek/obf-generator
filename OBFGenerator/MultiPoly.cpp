@@ -7,7 +7,7 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 
-SkAutoGraphics ag;
+//SkAutoGraphics ag;
 long MultiPoly::numberCalls = 0;
 
 void Ring::generateImage(SkCanvas* painter, SkColor color, double scale,  double offsetX, double offsetY)

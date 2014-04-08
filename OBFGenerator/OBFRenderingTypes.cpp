@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "OBFRenderingTypes.h"
-#include "..\..\..\tinyxml2-master\tinyxml2.h"
+#include "tinyxml2.h"
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost\algorithm\string.hpp>
@@ -23,7 +23,7 @@ byte OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
 std::map<AmenityType, std::map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
 std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
 std::list<MapRouteTag> OBFRenderingTypes::routeTags;
-std::map<std::string, MapRulType> OBFRenderingTypes::namedRulType;
+boost::ptr_map<std::string, MapRulType> OBFRenderingTypes::namedRulType;
 std::vector<MapRulType> OBFRenderingTypes::rules;
 
 AmenityType EMERGENCY = AmenityType::reg("emergency", "emergency"); // [TAG] emergency services //$NON-NLS-1$ //$NON-NLS-2$
@@ -60,7 +60,7 @@ AmenityType HEALTHCARE = AmenityType::reg("healthcare", "amenity"); // hospitals
 
 OBFRenderingTypes::OBFRenderingTypes(void)
 {
-
+	emptyRule = MapRulType();
 }
 
 
@@ -158,7 +158,11 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 		{
 			targetTagVal = value;
 		}
-		entity.targetTagValue = &namedRulType.find(constructRuleKey(targetTag, targetTagVal))->second;
+		if (namedRulType.find(constructRuleKey(targetTag, targetTagVal)) != namedRulType.end())
+		{
+			entity.targetTagValue = &namedRulType.at(constructRuleKey(targetTag, targetTagVal));
+		}
+
 	}
 	std::string applyTo = read(elemData->Attribute("apply_to"));
 	std::string applyValue = read(elemData->Attribute("apply_value"));
@@ -273,12 +277,12 @@ void OBFRenderingTypes::parseCategoryElement(tinyxml2::XMLElement* elemData, std
 }
 
 
-MapRulType OBFRenderingTypes::registerRuleType(MapRulType& rt) {
+MapRulType& OBFRenderingTypes::registerRuleType(MapRulType& rt) {
 		std::string tag = rt.tagValuePattern.tag;
 		std::string val = rt.tagValuePattern.value;
 		std::string keyVal = constructRuleKey(tag, val);
 		if(namedRulType.find(keyVal) != namedRulType.end()){
-			MapRulType mapRulType = namedRulType.find(keyVal)->second;
+			MapRulType mapRulType = namedRulType.at(keyVal);
 			if(mapRulType.isAdditional() || mapRulType.isText() ) {
 				rt.id = mapRulType.id;
 				if(rt.applyToTagValue.size() > 0 ){
@@ -300,7 +304,9 @@ MapRulType OBFRenderingTypes::registerRuleType(MapRulType& rt) {
 			}
 		} else {
 			rt.id = namedRulType.size();
-			namedRulType.insert(std::make_pair(keyVal, rt));
+			MapRulType* rtData = new MapRulType(rt);
+			namedRulType.insert(keyVal, rtData);
+			//namedRulType.insert(std::make_pair(keyVal, rt));
 			rules.push_back(rt);
 			if(tag == "natural" &&  val == "coastline") {
 					coastlineRule = rt;
@@ -341,36 +347,36 @@ std::map<MapRulType, std::string> OBFRenderingTypes::getRelationPropogatedTags(E
 		return propogated;
 	}
 
-MapRulType OBFRenderingTypes::getMapRuleType(std::string tag, std::string val) {
+MapRulType& OBFRenderingTypes::getMapRuleType(std::string tag, std::string val) {
 		return getRuleType(tag, val, false);
 	}
 
-MapRulType OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string val) {
-		MapRulType rType = getRuleType(tag, val, false);
+MapRulType& OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string val) {
+		MapRulType& rType = getRuleType(tag, val, false);
 		if(!rType.isEmpty() && rType.relation) {
 			return rType;
 		}
-		return MapRulType();
+		return emptyRule;
 	}
 
-	MapRulType OBFRenderingTypes::getRuleType(std::string tag, std::string val, bool poi) {
+MapRulType& OBFRenderingTypes::getRuleType(std::string tag, std::string val, bool poi) {
 		if (namedRulType.size() == 0)
 		{
 			loadXmlData();
 		}
-		std::map<std::string, MapRulType>& types = namedRulType;
-		MapRulType rType;
+		boost::ptr_map<std::string, MapRulType>& types = namedRulType;
+		MapRulType& rType = OBFRenderingTypes::emptyRule;
 		if (types.find(constructRuleKey(tag, val)) != types.end())
 		{
-			rType = types.find(constructRuleKey(tag, val))->second;
+			rType = types.at(constructRuleKey(tag, val));
 			if (rType.isEmpty() || (!rType.isPOI() && poi) || (!rType.isMap() && !poi)) {
 				if (types.find(constructRuleKey(tag, "")) != types.end())
 				{
-					rType = types.find(constructRuleKey(tag, ""))->second;
+					rType = types.at(constructRuleKey(tag, ""));
 				}
 			}
 		}
-			if(rType.isEmpty() || (!rType.isPOI() && poi) || (!rType.isMap() && !poi)) {
+		if(rType.isEmpty() || (!rType.isPOI() && poi) || (!rType.isMap() && !poi)) {
 			return rType;
 		} else if(rType.isAdditional() && rType.tagValuePattern.value == "") {
 			MapRulType parent = rType;
@@ -458,7 +464,7 @@ MapRulType OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string
 	
 	AmenityType OBFRenderingTypes::getAmenityType(std::string tag, std::string val, bool relation){
 		// register amenity types
-		std::map<std::string, MapRulType>& rules = getRuleTypes();
+		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
 		MapRulType rt;
 		if (rules.find(constructRuleKey(tag, val)) != rules.end())
 		{
@@ -557,8 +563,8 @@ MapRulType OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string
 	}
 	
 	std::string OBFRenderingTypes::getAmenitySubtypePrefix(std::string tag, std::string val){
-		std::map<std::string, MapRulType>& rules = getRuleTypes();
-		MapRulType rt;
+		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
+		MapRulType& rt = emptyRule;
 		if (rules.find(constructRuleKey(tag, val)) != rules.end())
 		{
 			rt = rules.at(constructRuleKey(tag, val));
@@ -568,7 +574,7 @@ MapRulType OBFRenderingTypes::getRelationalTagValue(std::string tag, std::string
 		}
 		if (rules.find(constructRuleKey(tag, "")) != rules.end())
 		{
-			rt = rules.find(constructRuleKey(tag, ""))->second;
+			rt = rules.at(constructRuleKey(tag, ""));
 		}
 		if(rt.isEmpty() && rt.poiPrefix != "" && rt.isPOI()) {
 			return rt.poiPrefix;
