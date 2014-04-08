@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "MapUtils.h"
-
+#include <boost/foreach.hpp>
+#include <boost/tokenizer.hpp>
+#include <boost\algorithm\string.hpp>
 
 #define LOCM_PI       3.14159265358979323846
 
@@ -852,6 +854,85 @@ MapUtils::~MapUtils(void)
 	}
 
 
-MapZooms* MapZooms::DEFAULT = nullptr;
-int MapZooms::MapZoomPair::MAX_ALLOWED_ZOOM = 22;
-std::string MapZooms::MAP_ZOOMS_DEFAULT = "11;12;13-14;15-";
+
+	MapZooms* MapZooms::DEFAULT = nullptr;	
+	int MapZooms::MapZoomPair::MAX_ALLOWED_ZOOM = 22;
+
+	std::string MapZooms::MAP_ZOOMS_DEFAULT = "11;12;13-14;15-";
+	MapZooms* MapZooms::getDefault(){
+		if(DEFAULT == nullptr){
+			DEFAULT = parseZooms(MAP_ZOOMS_DEFAULT);
+		}
+		return DEFAULT;
+		
+	}
+
+
+
+	MapZooms* MapZooms::parseZooms(std::string zooms){
+		boost::tokenizer< boost::char_separator<char> > tokens(zooms, boost::char_separator<char>(";"));
+		std::vector<std::string> split;
+		BOOST_FOREACH(const std::string token,tokens){split.push_back(token);}
+		
+		
+		int zeroLevel = 15;
+		std::list<MapZoomPair> list;
+		for(std::string s : split){
+			boost::trim(s);
+			int i = s.find('-');
+			if (i == -1) {
+				zeroLevel = boost::lexical_cast<int>(s);
+				list.push_front(MapZoomPair(zeroLevel, zeroLevel));
+			} else if(boost::ends_with(s,("-"))){
+				list.push_front(MapZoomPair(boost::lexical_cast<int>(s.substr(0, i)), MapZoomPair::MAX_ALLOWED_ZOOM));
+			} else {
+				list.push_front(MapZoomPair(boost::lexical_cast<int>(s.substr(0, i)), boost::lexical_cast<int>(s.substr(i + 1))));
+			}
+		}
+		if(list.size() < 1 || list.size() > 8){
+			throw new std::bad_exception();
+		}
+		MapZooms* mapZooms = new MapZooms();
+		mapZooms->setLevels(list);
+		return mapZooms;
+	}
+	
+bool OsmMapUtils::checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz) {
+		int minX = INT_MAX;
+		int maxX = INT_MIN;
+		int minY = INT_MAX;
+		int maxY = INT_MIN;
+		int c = 0;
+		int nsize = nodes.size();
+		for (int i = 0; i < nsize; i++) {
+			if (nodes[i]) {
+				c++;
+				int x = (int) (MapUtils::getTileNumberX(zoom, nodes[i]->lon) * 256.0);
+				int y = (int) (MapUtils::getTileNumberY(zoom, nodes[i]->lat) * 256.0);
+				minX = min(minX, x);
+				maxX = max(maxX, x);
+				minY = min(minY, y);
+				maxY = max(maxY, y);
+			}
+		}
+		if (c < 2) {
+			return true;
+		}
+		return ((maxX - minX) <= minz && (maxY - minY) <= maxz) || ((maxX - minX) <= maxz && (maxY - minY) <= minz);
+
+	}
+
+ std::list<std::shared_ptr<EntityNode>> OsmMapUtils::simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>>& ns, int zoom, int zoomWaySmothness) 
+ {
+		if (checkForSmallAreas(ns, zoom + min(zoomWaySmothness / 2, 3), 2, 4)) {
+			return std::list<std::shared_ptr<EntityNode>>();
+		}
+		std::vector<std::shared_ptr<EntityNode>> res;
+		// simplification
+		OsmMapUtils::simplifyDouglasPeucker(ns, zoom + 8 + zoomWaySmothness, 3, res, false);
+		if (res.size() < 2) {
+			return std::list<std::shared_ptr<EntityNode>>();
+		}
+
+		return std::list<std::shared_ptr<EntityNode>>(res.begin(), res.end());
+	}

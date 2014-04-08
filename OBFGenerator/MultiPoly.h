@@ -27,7 +27,7 @@ public:
 	{
 		int intersections = 0;
 		if (nodes.size() == 0) return false;
-		for(int idx = 0; idx < nodes.size(); idx++)
+		for(unsigned int idx = 0; idx < nodes.size(); idx++)
 		{
 			if (OsmMapUtils::ray_intersect_lon(*nodes[idx], *nodes[idx+1],lat, lon) != 360)
 				intersections++;
@@ -45,7 +45,13 @@ public:
 class MultiPoly
 {
 public:
-	MultiPoly(void) ;
+	MultiPoly(void);
+	MultiPoly(std::shared_ptr<Ring> outerRing, std::vector<std::shared_ptr<Ring>> innerRings, __int64 oid)
+	{
+		outRing.push_back(outerRing);
+		inRing = innerRings;
+		id = oid;
+	}
 	~MultiPoly(void);
 
 	std::vector<std::shared_ptr<Ring>> inRing;
@@ -60,6 +66,7 @@ public:
 	void paintList(std::vector<std::shared_ptr<EntityWay>> wayList, SkCanvas* painter);
 	void createData(std::shared_ptr<EntityRelation>& relItem, OBFResultDB& dbContext);
 	std::list<std::shared_ptr<Ring>> combineRings(std::vector<std::shared_ptr<EntityWay>> inList);
+	std::list<MultiPoly> splitPerRing();
 	std::shared_ptr<EntityWay> combineTwoWaysIfHasPoints(std::shared_ptr<EntityWay> w1, std::shared_ptr<EntityWay> w2);
 	void mergeWith(std::vector<std::shared_ptr<Ring>> inRing, std::vector<std::shared_ptr<Ring>> outRing);
 	void paintImage(SkCanvas* painter, double scale, double offsetX,double offsetY);

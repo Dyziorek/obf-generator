@@ -13,10 +13,50 @@ void BatchUpdater::addBatch(Amenity itemToAdd)
 		flush();
 	} 
 }
-void BatchUpdater::flush()
+
+void BatchUpdater::addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
+{
+	lowLevelMapData mapData;
+	mapData.id = id;
+	mapData.firstid = firstId;
+	mapData.lastid = lastId;
+	mapData.name = name;
+	mapData.nodes = bNodes.str();
+	mapData.types = bTypes.str();
+	mapData.addtypes = bAddtTypes.str();
+	mapData.level = level;
+
+	lowLevelMapList.push_back(mapData);
+
+	if (lowLevelMapList.size() > 10000)
+	{
+		flush();
+	}
+
+}
+
+void BatchUpdater::addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
+{
+	binMapData binMap;
+	binMap.area = area;
+	binMap.id = id;
+	binMap.coord = bCoord.str();
+	binMap.incoord = bInCoord.str();
+	binMap.types = bTypes.str();
+	binMap.addtypes = bAddtTypes.str();
+	binMap.name = name;
+
+	binaryMapList.push_back(binMap);
+	if (binaryMapList.size() > 10000)
+	{
+		flush();
+	}
+}
+
+void BatchUpdater::flush(bool bFlush)
 {
 	USES_CONVERSION;
-	if (amenities.size() > 0)
+	if (amenities.size() > 10000 || bFlush)
 	{
 		sqlite3_stmt* amenityStmt = workContext.poiNodeStmt;
 		sqlite3* dbCtx = workContext.dbPoiCtx;
@@ -49,8 +89,81 @@ void BatchUpdater::flush()
 			SqlCode = sqlite3_reset(amenityStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+		amenities.clear();
 	}
-	amenities.clear();
+	
+	if (lowLevelMapList.size() > 10000 || bFlush)
+	{
+		//insert into low_level_map_objects(id, start_node, end_node, name, nodes, type, addType, level)
+		sqlite3_stmt* lowMapStmt = workContext.lowStmt;
+		sqlite3* dbCtx = workContext.dbMapCtx;
+		char* errMsg;
+		int SqlCode;
+		sqlite3_exec(dbCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+		for (lowLevelMapData mapData : lowLevelMapList)
+		{
+			SqlCode = sqlite3_bind_int64(lowMapStmt, 1, mapData.id);
+			SqlCode = sqlite3_bind_int64(lowMapStmt, 2, mapData.firstid);
+			SqlCode = sqlite3_bind_int64(lowMapStmt, 3, mapData.lastid);
+			SqlCode = sqlite3_bind_text(lowMapStmt, 4, mapData.name.c_str(), mapData.name.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(lowMapStmt, 5, mapData.nodes.c_str(), mapData.nodes.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(lowMapStmt, 6, mapData.types.c_str(), mapData.types.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(lowMapStmt, 7, mapData.addtypes.c_str(), mapData.addtypes.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_int(lowMapStmt, 8, mapData.level);
+			SqlCode = sqlite3_step(lowMapStmt);
+			if (SqlCode != SQLITE_DONE)
+			{
+				if (SqlCode == SQLITE_CONSTRAINT)
+				{
+					if (errMsg != nullptr)
+					{
+						std::wstring errorCode = A2W(errMsg);
+						OutputDebugString(errorCode.c_str());
+					}
+				}
+			}
+			SqlCode = sqlite3_clear_bindings(lowMapStmt);
+			SqlCode = sqlite3_reset(lowMapStmt);
+		}
+		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+	}
+
+	if (binaryMapList.size() > 10000 || bFlush)
+	{
+		// "insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+		sqlite3_stmt* binMapStmt = workContext.mapStmt;
+		sqlite3* dbCtx = workContext.dbMapCtx;
+		char* errMsg;
+		int SqlCode;
+		sqlite3_exec(dbCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+		for (binMapData mapData : binaryMapList)
+		{
+			SqlCode = sqlite3_bind_int64(binMapStmt, 1, mapData.id);
+			SqlCode = sqlite3_bind_int(binMapStmt, 2, mapData.area);
+			SqlCode = sqlite3_bind_blob(binMapStmt, 3, mapData.coord.c_str(), mapData.coord.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(binMapStmt, 4, mapData.incoord.c_str(), mapData.incoord.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(binMapStmt, 5, mapData.types.c_str(), mapData.types.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(binMapStmt, 6, mapData.addtypes.c_str(), mapData.addtypes.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_text(binMapStmt, 3, mapData.name.c_str(), mapData.name.size(), SQLITE_TRANSIENT);
+			
+			SqlCode = sqlite3_step(binMapStmt);
+			if (SqlCode != SQLITE_DONE)
+			{
+				if (SqlCode == SQLITE_CONSTRAINT)
+				{
+					if (errMsg != nullptr)
+					{
+						std::wstring errorCode = A2W(errMsg);
+						OutputDebugString(errorCode.c_str());
+					}
+				}
+			}
+			SqlCode = sqlite3_clear_bindings(binMapStmt);
+			SqlCode = sqlite3_reset(binMapStmt);
+		}
+		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+	}
+
 }
 
 std::string BatchUpdater::encodeAdditionalInfo(std::map<std::string, std::string> tempNames, std::string name, std::string nameEn) {
@@ -83,6 +196,5 @@ std::string BatchUpdater::encodeAdditionalInfo(std::map<std::string, std::string
 
 void BatchUpdater::commit()
 {
-	flush();
-
+	flush(true);
 }

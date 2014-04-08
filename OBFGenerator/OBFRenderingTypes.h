@@ -1,7 +1,7 @@
 #pragma once
-#include "..\..\..\tinyxml2-master\tinyxml2.h"
+#include "tinyxml2.h"
 #include <boost\algorithm\string.hpp>
-
+#include <boost/ptr_container/ptr_map.hpp>
 // http://wiki.openstreetmap.org/wiki/Amenity
 // POI tags : amenity, leisure, shop, sport, tourism, historic; accessories (internet-access), natural ?
 class AmenityType {
@@ -215,7 +215,9 @@ public:
 		
 		MapRulType()
 		{
-			id = -1; targetPoiId = -1;
+			id = -1; 
+			targetPoiId = -1;
+			freq = 0;
 			poiSpecified = false;
 			onlyMap = false;
 			onlyPoi = false;
@@ -224,7 +226,37 @@ public:
 			additional = false;
 			additionalText = false;
 			namePrefix = "";
+			targetTagValue = nullptr;
 		}
+
+		MapRulType(MapRulType const& other)
+		{
+			id = other.id;
+			targetPoiId = other.targetPoiId;
+			freq = other.freq;
+			poiSpecified = other.poiSpecified;
+			onlyMap = other.onlyMap;
+			onlyPoi = other.onlyPoi;
+			onlyPoint = other.onlyPoint;
+			relation = other.relation;
+			additional = other.additional;
+			additionalText = other.additionalText;
+			namePrefix = other.namePrefix;
+			minzoom = other.minzoom;
+			maxzoom = other.maxzoom;
+			targetId = other.targetId;
+			if (other.targetTagValue != nullptr)
+			{
+				targetTagValue = new MapRulType(*other.targetTagValue);
+			}
+			else
+			{
+				targetTagValue = nullptr;
+			}
+			applyToTagValue = other.applyToTagValue;
+			tagValuePattern = other.tagValuePattern;
+		}
+
 		bool operator<(const MapRulType& op2) const
 		{
 			return this->id < op2.id;
@@ -354,7 +386,7 @@ public:
 		
 	};
 
-	static class MapRouteTag {
+	class MapRouteTag {
 	public:
 		boolean relation;
 		std::string tag;
@@ -387,6 +419,7 @@ public:
 	void loadXmlData();
 
 	MapRulType nameRule;
+	MapRulType emptyRule;
 	MapRulType nameEnRule;
 	std::string read(const char* value)
 	{
@@ -408,21 +441,21 @@ public:
 	static std::map<AmenityType, std::map<std::string, std::string>> amenityNameVal;
 	static std::map<std::string, AmenityType> namedAmenity;
 	static std::list<MapRouteTag> routeTags;
-	static std::map<std::string, MapRulType> namedRulType;
+	static boost::ptr_map<std::string, MapRulType> namedRulType;
 	static std::vector<MapRulType> rules;
 
 	void parseCategoryElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
 	void parseBasicElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
 	void parseRouteElement(tinyxml2::XMLElement* elemData);
-	MapRulType registerRuleType(MapRulType& rt);
+	MapRulType& registerRuleType(MapRulType& rt);
 
 	std::map<MapRulType, std::string> getRelationPropogatedTags(EntityRelation relation);
-	MapRulType getRelationalTagValue(std::string tag, std::string val);
-	MapRulType getMapRuleType(std::string tag, std::string val);
-	MapRulType getRuleType(std::string tag, std::string val, bool poi);
+	MapRulType& getRelationalTagValue(std::string tag, std::string val);
+	MapRulType& getMapRuleType(std::string tag, std::string val);
+	MapRulType& getRuleType(std::string tag, std::string val, bool poi);
 	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
 	static std::list<std::map<std::string, std::string>> splitTagsIntoDifferentObjects(const std::map<std::string, std::string> tags);
-	std::map<std::string, MapRulType>& getRuleTypes()
+	boost::ptr_map<std::string, MapRulType>& getRuleTypes()
 	{
 		if (namedRulType.size() == 0)
 		{
@@ -460,5 +493,13 @@ public:
 	}
 	static std::string openSeaType(std::string value);
 	MapRulType coastlineRule;
+
+
+	 bool encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
+	 bool encodeEntityWithType(bool isNode, std::map<std::string, std::string> tags, int zoom, std::list<long>& outTypes, 
+			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
+
+
 };
 
