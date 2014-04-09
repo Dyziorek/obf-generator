@@ -25,6 +25,9 @@ std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
 std::list<MapRouteTag> OBFRenderingTypes::routeTags;
 boost::ptr_map<std::string, MapRulType> OBFRenderingTypes::namedRulType;
 boost::ptr_vector<MapRulType> OBFRenderingTypes::rules;
+MapRulType* OBFRenderingTypes::nameRule = MapRulType::createText("name");
+MapRulType* OBFRenderingTypes::nameEnRule = MapRulType::createText("name:en");
+	
 
 AmenityType EMERGENCY = AmenityType::reg("emergency", "emergency"); // [TAG] emergency services //$NON-NLS-1$ //$NON-NLS-2$
 AmenityType HEALTHCARE = AmenityType::reg("healthcare", "amenity"); // hospitals, doctors, ... //$NON-NLS-1$ //$NON-NLS-2$
@@ -60,7 +63,6 @@ AmenityType HEALTHCARE = AmenityType::reg("healthcare", "amenity"); // hospitals
 
 OBFRenderingTypes::OBFRenderingTypes(void)
 {
-	emptyRule = new MapRulType();
 }
 
 
@@ -98,9 +100,8 @@ void OBFRenderingTypes::loadXmlData()
 	xDoc.Clear();
 
 
-	nameRule = MapRulType::createText("name");
+	
 	registerRuleType(nameRule);
-	nameEnRule = MapRulType::createText("name:en");
 	registerRuleType(nameEnRule);
 }
 
@@ -130,9 +131,9 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 {
 	std::string tag = read(elemData->Attribute("tag"));
 	std::string value = read(elemData->Attribute("value"));
-	if (tag == "highway")
+	if (value == "pharmacy")
 	{
-		tag = "highway";
+		value = "pharmacy";
 	}
 	std::string additional = read(elemData->Attribute("additional"));
 	MapRulType* entity = MapRulType::createMainEntity(tag, value);
@@ -570,7 +571,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 	
 	std::string OBFRenderingTypes::getAmenitySubtypePrefix(std::string tag, std::string val){
 		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
-		MapRulType* rt = emptyRule;
+		MapRulType* rt = nullptr;
 		if (rules.find(constructRuleKey(tag, val)) != rules.end())
 		{
 			rt = &rules.at(constructRuleKey(tag, val));
@@ -607,6 +608,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 						std::set<TagValuePattern>::iterator it = rType->applyToTagValue.begin();
 						while(!applied && it != rType->applyToTagValue.end()) {
 							TagValuePattern nv = *it;
+							it++;
 							applied = nv.isApplicable(tags);
 						}
 					}

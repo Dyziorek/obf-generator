@@ -430,9 +430,8 @@ public:
 
 	void loadXmlData();
 
-	MapRulType* nameRule;
-	MapRulType* nameEnRule;
-	MapRulType* emptyRule;
+	static MapRulType* nameRule;
+	static MapRulType* nameEnRule;
 	std::string read(const char* value)
 	{
 		if (value == NULL)

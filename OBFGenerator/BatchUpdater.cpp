@@ -176,7 +176,7 @@ std::string BatchUpdater::encodeAdditionalInfo(std::map<std::string, std::string
 		std::string b = "";
 		for (std::pair<std::string, std::string> e : tempNames) {
 			MapRulType* rulType = renderer.getRuleType(e.first, e.second, true);
-			if(rulType) {
+			if(rulType == nullptr) {
 				throw new std::bad_exception();
 			}
 			if(!rulType->isText() ||  !(e.second == "")) {
