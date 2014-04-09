@@ -32,7 +32,7 @@ public:
 
 	static long long notUsedId;
 	void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
-	void iterateMainEntityPost(std::shared_ptr<EntityBase>& e) ;
+	void iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB& dbContext) ;
 	void excludeFromMainIteration(std::vector<std::shared_ptr<EntityWay>> l);
 	long convertBaseIdToGeneratedId(long baseId, int level) {
 		if (level >= MAP_LEVELS_MAX) {
@@ -40,9 +40,9 @@ public:
 		}
 		return ((baseId << MAP_LEVELS_POWER) | level) << 1;
 	}
-	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name);
+	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
 	void insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
-			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit);
+			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext);
 	std::vector<RTree> mapTree;
 	std::string encodeNames(std::map<MapRulType, std::string> tempNames);
 	int zoomWaySmothness;

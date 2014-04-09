@@ -12,20 +12,18 @@ public:
 template<class T> portable_binary_oarchive& writeSmallInt(portable_binary_oarchive& oa, T data)
 {
 	char* shortData = (char*)&data;
-	for (int i = sizeof(data)-1; i > sizeof(data)-3; i--)
-	{
-		oa.save_binary((const void*)&shortData[i], 1);
-	}
+	oa.save_binary((const void*)&shortData[1], 1);
+	oa.save_binary((const void*)&shortData[0], 1);
 	return oa;
 }
 
 template<class T> portable_binary_oarchive& writeInt(portable_binary_oarchive& oa, T data)
 {
 	char* shortData = (char*)&data;
-	for (int i = sizeof(data)-1; i > sizeof(data)-5; i--)
-	{
-		oa.save_binary((const void*)&shortData[i], 1);
-	}
+	oa.save_binary((const void*)&shortData[3], 1);
+	oa.save_binary((const void*)&shortData[2], 1);
+	oa.save_binary((const void*)&shortData[1], 1);
+	oa.save_binary((const void*)&shortData[0], 1);
 	return oa;
 }
 

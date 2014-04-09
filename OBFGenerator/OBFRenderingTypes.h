@@ -152,7 +152,11 @@ public:
 			if(value == "") {
 				return e.find(tag) != e.end();
 			}
-			return value  == e.find(tag)->second;
+			if (e.find(tag) != e.end())
+			{
+				return value  == e.find(tag)->second;
+			}
+			return false;
 		}
 		
 		boolean operator==(TagValuePattern obj) {

@@ -33,6 +33,10 @@ OBFMapDB::OBFMapDB(void)
 	mapZooms = *MapZooms::getDefault();
 	zoomWaySmothness = 2;
 	mapTree.reserve(MAP_LEVELS_MAX);
+	for (int i =0; i < mapZooms.size(); i++)
+	{
+		mapTree.push_back(RTree());
+	}
 }
 
 
@@ -179,23 +183,23 @@ void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 					if(first) {
 						baseItem->tags = inst;
 						first = false;
-						iterateMainEntityPost(baseItem);
+						iterateMainEntityPost(baseItem, dbContext);
 					} else {
 						std::shared_ptr<EntityNode> ns(new EntityNode(latLon.first, latLon.second, notUsedId--));
 						ns->tags = inst;
-						iterateMainEntityPost(std::static_pointer_cast<EntityBase, EntityNode>(ns));
+						iterateMainEntityPost(std::static_pointer_cast<EntityBase, EntityNode>(ns), dbContext);
 					}
 				}
 		}
 		else
 		{
-			iterateMainEntityPost(baseItem);
+			iterateMainEntityPost(baseItem, dbContext);
 		}
 	}
 
 }
 
-void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e) 
+void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB& dbContext) 
 {
 	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(e);
 	std::shared_ptr<EntityNode> nodeItem = std::dynamic_pointer_cast<EntityNode, EntityBase>(e);
@@ -235,7 +239,7 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e)
 						if (namesUse.find(*renderEncoder.nameRule) != namesUse.end())
 						{
 							std::string ename = namesUse.at(*renderEncoder.nameRule);
-							insertLowLevelMapBinaryObject(level, zoomToSimplify, typeUse, addtypeUse, id, wayItem->nodes, ename);
+							insertLowLevelMapBinaryObject(level, zoomToSimplify, typeUse, addtypeUse, id, wayItem->nodes, ename, dbContext);
 						}
 					}
 				} else {
@@ -243,14 +247,14 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e)
 				}
 			}
 			if (!res.empty()) {
-				insertBinaryMapRenderObjectIndex(mapTree[level], res, std::list<std::list<std::shared_ptr<EntityNode>>>(), namesUse, id, area, typeUse, addtypeUse, true);
+				insertBinaryMapRenderObjectIndex(mapTree[level], res, std::list<std::list<std::shared_ptr<EntityNode>>>(), namesUse, id, area, typeUse, addtypeUse, true, dbContext);
 			}
 		}
 	}
 
 
 
-void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name)
+void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name,OBFResultDB& dbContext)
 {
 		
 		std::vector<std::shared_ptr<EntityNode>> nodes;
@@ -270,9 +274,9 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		std::stringstream bTypesData;
 		std::stringstream bAddtTypesData;
 
-		portable_binary_oarchive bNodes(bNodeData);
-		portable_binary_oarchive bTypes(bTypesData);
-		portable_binary_oarchive bAddtTypes(bAddtTypesData);
+		portable_binary_oarchive bNodes(bNodeData, boost::archive::no_header);
+		portable_binary_oarchive bTypes(bTypesData, boost::archive::no_header);
+		portable_binary_oarchive bAddtTypes(bAddtTypesData, boost::archive::no_header);
 		//arrStrm bTypes(std::vector<byte>());
 		//arrStrm bAddtTypes(std::vector<byte>());
 
@@ -330,12 +334,12 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		addBatch(mapLowLevelBinaryStat);
 		*/
 		
-		addBatch(id, firstId, lastId, name, bNodeData, bTypesData, bAddtTypesData, level);
+		dbContext.addBatch(id, firstId, lastId, name, bNodeData, bTypesData, bAddtTypesData, level);
 
 	}
 
 void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
-			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit)
+			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
 			{
 		boolean init = false;
 		int minX = INT_MAX;
@@ -348,10 +352,10 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 		std::stringstream bTypesData;
 		std::stringstream bAddtTypesData;
 
-		portable_binary_oarchive bcoordinates(bCoordData);
-		portable_binary_oarchive binnercoord(bInCoordData);
-		portable_binary_oarchive btypes(bTypesData);
-		portable_binary_oarchive badditionalTypes(bAddtTypesData);
+		portable_binary_oarchive bcoordinates(bCoordData, boost::archive::no_header);
+		portable_binary_oarchive binnercoord(bInCoordData, boost::archive::no_header);
+		portable_binary_oarchive btypes(bTypesData, boost::archive::no_header);
+		portable_binary_oarchive badditionalTypes(bAddtTypesData, boost::archive::no_header);
 
 		/*		 bcoordinates = new ByteArrayOutputStream();
 		ByteArrayOutputStream binnercoord = new ByteArrayOutputStream();
@@ -407,7 +411,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 				}
 			}
 		
-			addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
+			dbContext.addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
 		/*
 		if (init) {
 			// conn.prepareStatement("insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?, ?, ?, ?, ?, ?, ?)");

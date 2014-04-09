@@ -29,13 +29,13 @@ public:
 		if (nodes.size() == 0) return false;
 		for(unsigned int idx = 0; idx < nodes.size() - 1; idx++)
 		{
-			if (OsmMapUtils::ray_intersect_lon(*nodes[idx], *nodes[idx+1],lat, lon) != 360)
+			if (OsmMapUtils::ray_intersect_lon(nodes[idx], nodes[idx+1],lat, lon) != 360)
 				intersections++;
 		}
 
 		return intersections %2 == 1;
 	}
-	boolean isIn(Ring r);
+	boolean isIn(std::shared_ptr<Ring> r);
 
 	bool operator<(const Ring& op2) {return area < op2.area;}
 

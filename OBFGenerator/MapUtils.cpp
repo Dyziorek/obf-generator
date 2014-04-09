@@ -722,7 +722,7 @@ MapUtils::~MapUtils(void)
 			}
 			for (int i = startInd; i < nssize; i++) {
 				std::shared_ptr<EntityNode> next = ns[i];
-				double rlon = ray_intersect_lon(*prev, *next, lat, lon);
+				double rlon = ray_intersect_lon(prev, next, lat, lon);
 				if (rlon != -360) {
 					boolean skipSameSide = (prev->lat <= lat) == (next->lat <= lat);
 					if (skipSameSide) {
@@ -759,27 +759,27 @@ MapUtils::~MapUtils(void)
 	}
 
 	// try to intersect from left to right
-	 double OsmMapUtils::ray_intersect_lon(EntityNode EntityNode1, EntityNode EntityNode2, double latitude, double longitude) {
+	 double OsmMapUtils::ray_intersect_lon(std::shared_ptr<EntityNode> EntityNode1, std::shared_ptr<EntityNode> EntityNode2, double latitude, double longitude) {
 		// a EntityNode below
-		EntityNode a = EntityNode1.lat < EntityNode2.lat ? EntityNode1 : EntityNode2;
+		std::shared_ptr<EntityNode> a = EntityNode1->lat < EntityNode2->lat ? EntityNode1 : EntityNode2;
 		// b EntityNode above
-		EntityNode b = a == EntityNode2 ? EntityNode1 : EntityNode2;
-		if (latitude == a.lat || latitude == b.lat) {
+		std::shared_ptr<EntityNode> b = a == EntityNode2 ? EntityNode1 : EntityNode2;
+		if (latitude == a->lat || latitude == b->lat) {
 			latitude += 0.00000001;
 		}
-		if (latitude < a.lat || latitude > b.lat) {
+		if (latitude < a->lat || latitude > b->lat) {
 			return -360;
 		} else {
-			if (longitude < min(a.lon, b.lon)) {
+			if (longitude < min(a->lon, b->lon)) {
 				return -360;
 			} else {
-				if (a.lon == b.lon && longitude == a.lon) {
+				if (a->lon == b->lon && longitude == a->lon) {
 					// the EntityNode on the boundary !!!
 					return longitude;
 				}
 				// that tested on all cases (left/right)
-				double lon = b.lon - (b.lat - latitude) * (b.lon - a.lon)
-						/ (b.lat - a.lat);
+				double lon = b->lon - (b->lat - latitude) * (b->lon - a->lon)
+						/ (b->lat - a->lat);
 				if (lon <= longitude) {
 					return lon;
 				} else {
