@@ -32,6 +32,7 @@ std::list<Amenity> Amenity::parseAmenities (OBFRenderingTypes renderer, EntityBa
 			}
 			bool purerelation = isRelation &&  mpoly != "multipolygon";
 				for (auto e : tags) {
+					long long idNode = baseItem->id;
 					AmenityType type = purerelation ? renderer.getAmenityTypeForRelation(e.first, e.second)
 							: renderer.getAmenityType(e.first, e.second, false);
 					if (!type.isEmpty()) {
@@ -72,8 +73,34 @@ Amenity Amenity::parseAmenity (EntityBase& entity,
 	am.setType(type.getDefaultTag());
 	am.subType = subtype;
 	am.setAdditionalInfo(renderer.getAmenityAdditionalInfo(tagValues, type, subtype));
-	am.setAdditionalInfo("website", "http://en/wikipedia.org");
+	am.setAdditionalInfo("website", getUrl(entity));
 	return am;
 }
 
+
+std::string Amenity::getUrl(EntityBase& entity)
+{
+	std::string url = entity.getTag("wikipedia");
+
+	if (url == "")
+	{
+		url = entity.getTag("website");
+		if (url == "")
+		{
+			url = entity.getTag("url");
+			if (url == "")
+			{
+				url = entity.getTag("contact:website");
+			}
+		}
+	}
+	if (url != "")
+	{
+		if (!boost::starts_with(url, "http"))
+		{
+			url = "http://" + url;
+		}
+	}
+	return url;
+}
 

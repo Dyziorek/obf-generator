@@ -11,6 +11,7 @@ public:
 
 	std::string subType;
 	std::map<std::string, std::string> additionalInfo;
+	static std::string getUrl(EntityBase& entity);
 	static std::list<Amenity> parseAmenities(OBFRenderingTypes renderer, EntityBase*,  std::list<Amenity> amenitiesList);
 
 	static Amenity parseAmenity(EntityBase& entity, AmenityType type, std::string subtype, std::map<std::string, std::string> tagValues,	OBFRenderingTypes renderer);

@@ -72,7 +72,7 @@ void BatchUpdater::flush(bool bFlush)
 			SqlCode = sqlite3_bind_text(amenityStmt, 4, am.getType().c_str(), am.getType().size(), SQLITE_TRANSIENT);
 			SqlCode = sqlite3_bind_text(amenityStmt, 5, am.subType.c_str(), am.subType.size(), SQLITE_TRANSIENT);
 			std::string additional = encodeAdditionalInfo(am.additionalInfo, am.getName(), am.getEnName());
-			SqlCode = sqlite3_bind_text(amenityStmt, 5, additional.c_str(), additional.size() , SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_text(amenityStmt, 6, additional.c_str(), additional.size() , SQLITE_TRANSIENT);
 			SqlCode = sqlite3_step(amenityStmt);
 			if (SqlCode != SQLITE_DONE)
 			{
@@ -175,18 +175,18 @@ std::string BatchUpdater::encodeAdditionalInfo(std::map<std::string, std::string
 		}
 		std::string b = "";
 		for (std::pair<std::string, std::string> e : tempNames) {
-			MapRulType rulType = renderer.getRuleType(e.first, e.second, true);
-			if(rulType.isEmpty()) {
-				
+			MapRulType* rulType = renderer.getRuleType(e.first, e.second, true);
+			if(rulType) {
+				throw new std::bad_exception();
 			}
-			if(!rulType.isText() ||  !(e.second == "")) {
+			if(!rulType->isText() ||  !(e.second == "")) {
 				if(b.length() > 0){
 					b.push_back(-1);
 				}
-				if(rulType.isAdditional() && rulType.getValue() == "") {
+				if(rulType->isAdditional() && rulType->getValue() == "") {
 					
 				}
-				b.push_back((char)(rulType.getInternalId()) );
+				b.push_back((char)(rulType->getInternalId()) );
 				b.append(e.second);
 			}
 		}

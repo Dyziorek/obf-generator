@@ -27,7 +27,7 @@ public:
 	{
 		int intersections = 0;
 		if (nodes.size() == 0) return false;
-		for(unsigned int idx = 0; idx < nodes.size(); idx++)
+		for(unsigned int idx = 0; idx < nodes.size() - 1; idx++)
 		{
 			if (OsmMapUtils::ray_intersect_lon(*nodes[idx], *nodes[idx+1],lat, lon) != 360)
 				intersections++;
