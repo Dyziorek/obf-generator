@@ -594,7 +594,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 		for (std::pair<std::string,std::string> tag : tags) {
 			std::string val = tag.second;
 			MapRulType* rType = getRuleType(tag.first, val, true);
-			if (!rType && val.size()  > 0) {
+			if (rType != nullptr && val.size()  > 0) {
 				if(rType == nameEnRule &&  val == tags.at("name")) {
 					continue;
 				}

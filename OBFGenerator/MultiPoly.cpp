@@ -84,7 +84,7 @@ std::list<std::shared_ptr<Ring>> MultiPoly::combineRings(std::vector<std::shared
 		return result;
 }
 
-boolean Ring::isIn(Ring r) {
+boolean Ring::isIn(std::shared_ptr<Ring> r) {
 		/*
 		 * bi-directional check is needed because some concave rings can intersect
 		 * and would only fail on one of the checks
@@ -93,12 +93,12 @@ boolean Ring::isIn(Ring r) {
 		
 		// r should contain all nodes of this
 		for(std::shared_ptr<EntityNode> n : points) {
-			if (!r.containsPoint(n->lat, n->lon)) {
+			if (!r->containsPoint(n->lat, n->lon)) {
 				return false;
 			}
 		}
 		
-		points = r.nodes;
+		points = r->nodes;
 		
 		// this should not contain a node from r
 		for(std::shared_ptr<EntityNode> n : points) {
@@ -327,7 +327,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		for (std::shared_ptr<Ring> inner : inRing) {
 			std::set<std::shared_ptr<Ring>> outContainingRings;
 			for (std::shared_ptr<Ring> out : outRing) {
-				if (inner->isIn(*out)) {
+				if (inner->isIn(out)) {
 					outContainingRings.insert(out);
 				}
 			}
@@ -660,11 +660,15 @@ std::list<MultiPoly> MultiPoly::splitPerRing() {
 			auto innerIt = inners.begin();
 			while (innerIt != inners.end()) {
 				std::shared_ptr<Ring> inner = *innerIt;
-				if (inner->isIn(*outer)) {
+				if (inner->isIn(outer)) {
 					innersInsideOuter.push_back(inner);
 					auto innerItRemove = innerIt;
 					innerIt++;
 					inners.erase(innerItRemove);
+				}
+				else
+				{
+					innerIt++;
 				}
 			}
 			multipolygons.push_back(MultiPoly(outer, std::vector<std::shared_ptr<Ring>>(innersInsideOuter.begin(), innersInsideOuter.end()), id));

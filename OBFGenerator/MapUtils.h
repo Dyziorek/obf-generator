@@ -184,7 +184,7 @@ public:
 	 static BOOL isClockwiseWay(std::vector<std::shared_ptr<EntityWay>> ways);
 
 	// try to intersect from left to right
-	 static double ray_intersect_lon(EntityNode EntityNode1, EntityNode EntityNode2, double latitude, double longitude);
+	 static double ray_intersect_lon(std::shared_ptr<EntityNode> EntityNode1, std::shared_ptr<EntityNode> EntityNode2, double latitude, double longitude);
 
     /**
      * Get the area in pixels
