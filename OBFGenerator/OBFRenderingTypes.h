@@ -2,6 +2,7 @@
 #include "tinyxml2.h"
 #include <boost\algorithm\string.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 // http://wiki.openstreetmap.org/wiki/Amenity
 // POI tags : amenity, leisure, shop, sport, tourism, historic; accessories (internet-access), natural ?
 class AmenityType {
@@ -37,7 +38,7 @@ public:
 		this->defaultTag = defaultTag;
 		this->ordinal = ordinal;	
 	}
-	/*AmenityType(const AmenityType& other)
+	AmenityType(AmenityType const& other)
 	{
 		this->name = other.name;
 		this->defaultTag = other.defaultTag;
@@ -51,7 +52,7 @@ public:
 		this->ordinal = other.ordinal;
 
 		return *this;
-	}*/
+	}
 public:
 	static AmenityType findOrCreateTypeNoReg(std::string s) {
 		AmenityType type(s,s,-1);
@@ -228,6 +229,9 @@ public:
 			namePrefix = "";
 			targetTagValue = nullptr;
 		}
+		~MapRulType()
+		{
+		}
 
 		MapRulType(MapRulType const& other)
 		{
@@ -235,6 +239,10 @@ public:
 			targetPoiId = other.targetPoiId;
 			freq = other.freq;
 			poiSpecified = other.poiSpecified;
+			if (poiSpecified && other.poiCategory.ordinal != -1)
+			{
+				poiCategory = other.poiCategory;
+			}
 			onlyMap = other.onlyMap;
 			onlyPoi = other.onlyPoi;
 			onlyPoint = other.onlyPoint;
@@ -247,7 +255,7 @@ public:
 			targetId = other.targetId;
 			if (other.targetTagValue != nullptr)
 			{
-				targetTagValue = new MapRulType(*other.targetTagValue);
+				targetTagValue = other.targetTagValue;
 			}
 			else
 			{
@@ -287,27 +295,27 @@ public:
 			return !onlyPoi;
 		}
 		
-		static MapRulType createMainEntity(std::string tag, std::string value) {
-			MapRulType rt;
-			rt.tagValuePattern = TagValuePattern(tag, value);
+		static MapRulType* createMainEntity(std::string tag, std::string value) {
+			MapRulType* rt = new MapRulType();
+			rt->tagValuePattern = TagValuePattern(tag, value);
 			return rt;
 		}
 		
-		static MapRulType createText(std::string tag) {
-			MapRulType rt;
-			rt.additionalText = true;
-			rt.minzoom = 5;
-			rt.maxzoom = 31;
-			rt.tagValuePattern = TagValuePattern(tag, ""); 
+		static MapRulType* createText(std::string tag) {
+			MapRulType* rt = new MapRulType();
+			rt->additionalText = true;
+			rt->minzoom = 5;
+			rt->maxzoom = 31;
+			rt->tagValuePattern = TagValuePattern(tag, ""); 
 			return rt;
 		}
 		
-		static MapRulType createAdditional(std::string tag, std::string value) {
-			MapRulType rt;
-			rt.additional = true;
-			rt.minzoom = 5;
-			rt.maxzoom = 31;
-			rt.tagValuePattern = TagValuePattern(tag, value);
+		static MapRulType* createAdditional(std::string tag, std::string value) {
+			MapRulType* rt = new MapRulType();
+			rt->additional = true;
+			rt->minzoom = 5;
+			rt->maxzoom = 31;
+			rt->tagValuePattern = TagValuePattern(tag, value);
 			return rt;
 		}
 
@@ -418,9 +426,9 @@ public:
 
 	void loadXmlData();
 
-	MapRulType nameRule;
-	MapRulType emptyRule;
-	MapRulType nameEnRule;
+	MapRulType* nameRule;
+	MapRulType* nameEnRule;
+	MapRulType* emptyRule;
 	std::string read(const char* value)
 	{
 		if (value == NULL)
@@ -442,17 +450,17 @@ public:
 	static std::map<std::string, AmenityType> namedAmenity;
 	static std::list<MapRouteTag> routeTags;
 	static boost::ptr_map<std::string, MapRulType> namedRulType;
-	static std::vector<MapRulType> rules;
+	static boost::ptr_vector<MapRulType> rules;
 
 	void parseCategoryElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
 	void parseBasicElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
 	void parseRouteElement(tinyxml2::XMLElement* elemData);
-	MapRulType& registerRuleType(MapRulType& rt);
+	MapRulType* registerRuleType(MapRulType* rt);
 
 	std::map<MapRulType, std::string> getRelationPropogatedTags(EntityRelation relation);
-	MapRulType& getRelationalTagValue(std::string tag, std::string val);
-	MapRulType& getMapRuleType(std::string tag, std::string val);
-	MapRulType& getRuleType(std::string tag, std::string val, bool poi);
+	MapRulType* getRelationalTagValue(std::string tag, std::string val);
+	MapRulType* getMapRuleType(std::string tag, std::string val);
+	MapRulType* getRuleType(std::string tag, std::string val, bool poi);
 	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
 	static std::list<std::map<std::string, std::string>> splitTagsIntoDifferentObjects(const std::map<std::string, std::string> tags);
 	boost::ptr_map<std::string, MapRulType>& getRuleTypes()
@@ -492,7 +500,7 @@ public:
 		return seamark;
 	}
 	static std::string openSeaType(std::string value);
-	MapRulType coastlineRule;
+	MapRulType* coastlineRule;
 
 
 	 bool encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 

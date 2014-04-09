@@ -42,7 +42,7 @@ OBFMapDB::~OBFMapDB(void)
 
 void OBFMapDB::excludeFromMainIteration(std::vector<std::shared_ptr<EntityWay>> l) {
 		for(std::shared_ptr<EntityWay> w : l) {
-			if(multiPolygonsWays.find(w->id) != multiPolygonsWays.end()) {
+			if(multiPolygonsWays.find(w->id) == multiPolygonsWays.end()) {
 				multiPolygonsWays.insert(std::make_pair(w->id, std::vector<long>()));
 			}
 			multiPolygonsWays.at(w->id).insert(multiPolygonsWays.at(w->id).end(), typeUse.begin(), typeUse.end());
@@ -232,9 +232,9 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e)
 					if (cycle) {
 						res = OsmMapUtils::simplifyCycleWay(wayItem->nodes, zoomToSimplify, zoomWaySmothness);
 					} else {
-						if (namesUse.find(renderEncoder.nameRule) != namesUse.end())
+						if (namesUse.find(*renderEncoder.nameRule) != namesUse.end())
 						{
-							std::string ename = namesUse.at(renderEncoder.nameRule);
+							std::string ename = namesUse.at(*renderEncoder.nameRule);
 							insertLowLevelMapBinaryObject(level, zoomToSimplify, typeUse, addtypeUse, id, wayItem->nodes, ename);
 						}
 					}
