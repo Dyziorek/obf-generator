@@ -72,6 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\boost_1_55_0;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -89,17 +90,17 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm140 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>C:\boost_1_55_0;D:\SourceFiles\osmand\core\externals\protobuf\upstream.original\src;D:\SourceFiles\osmand\core\externals\zlib\upstream.patched\zlib-1.2.8;D:\SourceFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\SourceFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\SourceFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\SourceFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\SourceFiles\osmand\tools\tinyxml2-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Debug\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\SourceFiles\osmand\core\externals\protobuf\upstream.original\vsprojects\Debug\libprotobuf.lib;D:\SourceFiles\osmAnd\core\externals\zlib\upstream.patched\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <LinkStatus>true</LinkStatus>
-      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\boost_1_55_0\stage\lib;D:\SourceFiles\osmand\core\externals\skia\upstream.original\out\gyp\Debug\lib;D:\SourceFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -229,39 +230,40 @@
     <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\tinyxml2-master\tinyxml2.cpp">
+    <ClCompile Include="..\..\..\SourceFiles\osmand\tools\tinyxml2-master\tinyxml2.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\core\protos\OBF.pb.cc">
+    <ClCompile Include="..\..\..\SourceFiles\osmand\core\protos\OBF.pb.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Amenity.cpp" />
     <ClCompile Include="BatchUpdater.cpp" />
     <ClCompile Include="BlockReader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp">
+    <ClCompile Include="C:\boost_1_55_0\libs\iostreams\src\file_descriptor.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp">
+    <ClCompile Include="C:\boost_1_55_0\libs\iostreams\src\gzip.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp">
+    <ClCompile Include="C:\boost_1_55_0\libs\iostreams\src\mapped_file.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
+    <ClCompile Include="C:\boost_1_55_0\libs\iostreams\src\zlib.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
@@ -278,6 +280,7 @@
     <ClCompile Include="EntityBase.cpp" />
     <ClCompile Include="EntityNode.cpp" />
     <ClCompile Include="MapObject.cpp" />
+    <ClCompile Include="MapRoutingTypes.cpp" />
     <ClCompile Include="MapUtils.cpp" />
     <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFElementDB.cpp" />
@@ -315,6 +318,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="RTree.cpp" />
     <ClCompile Include="sqlite3.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
