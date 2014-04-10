@@ -58,6 +58,12 @@ void OBFpoiDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 		if(relItem) {
 			dbContext.loadNodesOnRelation(relItem.get());
 		}
+
+		if (tempAmenityList.size() > 3)
+		{
+			privateReg = true;
+		}
+
 		for (Amenity a : tempAmenityList) {
 			if(a.getType() == LEISURE.name && privateReg) {
 				// don't index private swimming pools 

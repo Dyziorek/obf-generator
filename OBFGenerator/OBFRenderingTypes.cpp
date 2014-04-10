@@ -472,6 +472,10 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 		// register amenity types
 		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
 		MapRulType* rt = nullptr;
+		if (tag == "amenity" && val == "pharmacy")
+		{
+			val = "pharmacy";
+		}
 		if (rules.find(constructRuleKey(tag, val)) != rules.end())
 		{
 			rt = &rules.at(constructRuleKey(tag, val));

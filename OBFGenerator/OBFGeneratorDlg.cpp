@@ -447,7 +447,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 					{
 						Way wayData = group.ways().Get(wayId);
 						__int64 idWay = wayData.id();
-						
+						assocMap.clear();
 						__int64 refID = 0;
 						std::vector<__int64> intRefs;
 						for (int refid = 0; refid < wayData.refs().size(); refid++)
@@ -624,20 +624,25 @@ int COBFGeneratorDlg::PrepareTempDB()
 
 	results.PrepareDB(dbCtx);
 
+	std::wstring buff = L"Phase index cities\r\n";
+	OutputDebugString(buff.c_str());
 	results.iterateOverElements(PHASEINDEXCITY);
 
-	
 	strMessage.Format(L"Iterating over address relations");
 	delete[] msgTxt;
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
+	buff = L"Phase index addres relations\r\n";
+	OutputDebugString(buff.c_str());
 	results.iterateOverElements(PHASEINDEXADDRREL);
 	strMessage.Format(L"Iterating over all of rest");
 	delete[] msgTxt;
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
+	buff = L"Phase index main iteration\r\n";
+	OutputDebugString(buff.c_str());
 	results.iterateOverElements(PHASEMAINITERATE);
 
 	results.flush();

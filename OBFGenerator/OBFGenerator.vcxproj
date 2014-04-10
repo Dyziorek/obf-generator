@@ -72,6 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\boost_1_55;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -90,7 +91,7 @@
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm140 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -229,10 +230,11 @@
     <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Amenity.cpp" />
     <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\core\protos\OBF.pb.cc">
+    <ClCompile Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -278,6 +280,7 @@
     <ClCompile Include="EntityBase.cpp" />
     <ClCompile Include="EntityNode.cpp" />
     <ClCompile Include="MapObject.cpp" />
+    <ClCompile Include="MapRoutingTypes.cpp" />
     <ClCompile Include="MapUtils.cpp" />
     <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFElementDB.cpp" />
@@ -315,6 +318,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="RTree.cpp" />
     <ClCompile Include="sqlite3.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

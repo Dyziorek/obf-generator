@@ -199,6 +199,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASEINDEXADDRREL)
 	{
+		int numbers = 0;
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) {  
 				
@@ -215,10 +216,18 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				((OBFpoiDB*)poiIndexer)->indexRelations(relItem, *this);
 
 				relations.insert(relItem);
+				numbers++;
 				
 		});
 
-		int numbers = 0;
+		std::wstringstream strbuf;
+		strbuf << L"Counter relations: ";
+		strbuf << numbers;
+		strbuf << std::endl;
+		std::wstring buffText = strbuf.str();
+		OutputDebugString(buffText.c_str());
+
+		numbers = 0;
 		iterateOverElements(NODEWAYBOUNDARY,
 			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
 				std::shared_ptr<EntityWay> relItem = std::static_pointer_cast<EntityWay, EntityBase>(itm);
@@ -226,9 +235,13 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				numbers++;
 		});
 
-		wchar_t dstBuf[100];
-		_itow_s(numbers, dstBuf, 10);
-		OutputDebugString(dstBuf);
+		strbuf.str(L"");
+		strbuf.clear();
+		strbuf << L"Counter boundaries: ";
+		strbuf << numbers;
+		strbuf << std::endl;
+		buffText = strbuf.str();
+		OutputDebugString(buffText.c_str());
 		/*
 		iterateOverElements(NODEREL,
 			[&](EntityBase* itm) { 
@@ -239,20 +252,46 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASEMAINITERATE)
 	{
+		int numbers = 0;
 		iterateOverElements(NODEELEM, 
-			[=](std::shared_ptr<EntityBase> itm) {  
+			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
 				mainIteration(itm);
+				numbers++;
 		});
 
+		std::wstringstream strbuf;
+		strbuf << L"Counter node elements: ";
+		strbuf << numbers;
+		strbuf << std::endl;
+		std::wstring buffText = strbuf.str();
+		OutputDebugString(buffText.c_str());
+		numbers = 0;
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) { 
 				mainIteration(itm);
+				numbers++;
 		});
-		
+		strbuf.str(L"");
+		strbuf.clear();
+		strbuf << L"Counter node relations: ";
+		strbuf << numbers;
+		strbuf << std::endl;
+		buffText = strbuf.str();
+		OutputDebugString(buffText.c_str());
+		numbers = 0;
 		iterateOverElements(NODEWAY,
-			[=](std::shared_ptr<EntityBase> itm) {  
+			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
 			mainIteration(itm);
+			numbers++;
 		});
+		strbuf.str(L"");
+		strbuf.clear();
+		strbuf << L"Counter node ways: ";
+		strbuf << numbers;
+		strbuf << std::endl;
+		buffText = strbuf.str();
+		OutputDebugString(buffText.c_str());
+		numbers = 0;
 	}
 	if (iterationPhase == NODEWAY)
 	{

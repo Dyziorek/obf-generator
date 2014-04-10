@@ -70,7 +70,14 @@ Amenity Amenity::parseAmenity (EntityBase& entity,
 	if(tagValues.empty()) {
 		tagValues = entity.tags;
 	}
-	am.setType(type.getDefaultTag());
+	if (type.name == "")
+	{
+		am.setType(type.getDefaultTag());
+	}
+	else
+	{
+		am.setType(type.getCategoryName());
+	}
 	am.subType = subtype;
 	am.setAdditionalInfo(renderer.getAmenityAdditionalInfo(tagValues, type, subtype));
 	am.setAdditionalInfo("website", getUrl(entity));
