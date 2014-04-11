@@ -23,8 +23,8 @@ byte OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
 std::map<AmenityType, std::map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
 std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
 std::list<MapRouteTag> OBFRenderingTypes::routeTags;
-boost::ptr_map<std::string, MapRulType> OBFRenderingTypes::namedRulType;
-boost::ptr_vector<MapRulType> OBFRenderingTypes::rules;
+NamedRuleContainer OBFRenderingTypes::namedRulType;
+boost::ptr_vector<MapRulType, boost::view_clone_allocator> OBFRenderingTypes::rules;
 MapRulType* OBFRenderingTypes::nameRule = MapRulType::createText("name");
 MapRulType* OBFRenderingTypes::nameEnRule = MapRulType::createText("name:en");
 	
@@ -68,6 +68,7 @@ OBFRenderingTypes::OBFRenderingTypes(void)
 
 OBFRenderingTypes::~OBFRenderingTypes(void)
 {
+
 }
 
 

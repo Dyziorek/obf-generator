@@ -413,6 +413,13 @@ public:
 		
 	};
 
+class NamedRuleContainer : public boost::ptr_map<std::string, MapRulType>
+{
+public:
+	NamedRuleContainer() {};
+	virtual ~NamedRuleContainer() {};
+};
+
 class OBFRenderingTypes
 {
 protected:
@@ -452,8 +459,8 @@ public:
 	static std::map<AmenityType, std::map<std::string, std::string>> amenityNameVal;
 	static std::map<std::string, AmenityType> namedAmenity;
 	static std::list<MapRouteTag> routeTags;
-	static boost::ptr_map<std::string, MapRulType> namedRulType;
-	static boost::ptr_vector<MapRulType> rules;
+	static NamedRuleContainer namedRulType;
+	static boost::ptr_vector<MapRulType, boost::view_clone_allocator> rules;
 
 	void parseCategoryElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
 	void parseBasicElement(tinyxml2::XMLElement* elemData,std::string poiParentCategory,std::string poiParentPrefix);
