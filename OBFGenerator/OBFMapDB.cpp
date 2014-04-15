@@ -22,7 +22,7 @@
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
-long long OBFMapDB::notUsedId = - 1 << 40; // million million
+long long OBFMapDB::notUsedId = - 1LL << 40; // million million
 int OBFMapDB::numberCalls = 0;
 
 int OBFMapDB::MAP_LEVELS_POWER = 3;
@@ -254,14 +254,14 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB
 
 
 
-void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name,OBFResultDB& dbContext)
+void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, __int64 id, std::vector<std::shared_ptr<EntityNode>> in, std::string name,OBFResultDB& dbContext)
 {
 		
 		std::vector<std::shared_ptr<EntityNode>> nodes;
 		OsmMapUtils::simplifyDouglasPeucker(in, zoom + 8 + zoomWaySmothness, 3, nodes, false);
 		boolean first = true;
-		long firstId = -1;
-		long lastId = -1;
+		__int64 firstId = -1;
+		__int64 lastId = -1;
 		
 		typedef io::basic_array<std::string> arrData;
 		typedef io::stream<arrData> arrStrm;
@@ -274,9 +274,9 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		std::stringstream bTypesData;
 		std::stringstream bAddtTypesData;
 
-		portable_binary_oarchive bNodes(bNodeData, boost::archive::no_header);
-		portable_binary_oarchive bTypes(bTypesData, boost::archive::no_header);
-		portable_binary_oarchive bAddtTypes(bAddtTypesData, boost::archive::no_header);
+		//portable_binary_oarchive bNodes(bNodeData, boost::archive::no_header);
+		//portable_binary_oarchive bTypes(bTypesData, boost::archive::no_header);
+		//portable_binary_oarchive bAddtTypes(bAddtTypesData, boost::archive::no_header);
 		//arrStrm bTypes(std::vector<byte>());
 		//arrStrm bAddtTypes(std::vector<byte>());
 
@@ -292,8 +292,8 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 					}
 					lastId = n->id;
 					
-					writeInt(bNodes, n->lat);
-					writeInt(bNodes, n->lon);
+					writeInt(bNodeData, (float)n->lat);
+					writeInt(bNodeData, (float)n->lon);
 					
 
 					//Algorithms.writeInt(bNodes, Float.floatToRawIntBits((float) n.getLatitude()));
@@ -310,7 +310,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 			try {
 				std::list<long>::iterator typesIt = types.begin();
 				std::advance(typesIt, j);
-				writeSmallInt(bTypes, *typesIt);
+				writeSmallInt(bTypesData, *typesIt);
 			} catch (std::exception e) {
 			}
 		}
@@ -318,7 +318,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 			try {
 				std::list<long>::iterator typesIt = types.begin();
 				std::advance(typesIt, j);
-				writeSmallInt(bAddtTypes, *typesIt);
+				writeSmallInt(bAddtTypesData, *typesIt);
 			} catch (std::exception e) {
 			}
 		}
@@ -338,8 +338,8 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 
 	}
 
-void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
-			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
+void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
+			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
 			{
 		boolean init = false;
 		int minX = INT_MAX;
@@ -352,10 +352,10 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 		std::stringstream bTypesData;
 		std::stringstream bAddtTypesData;
 
-		portable_binary_oarchive bcoordinates(bCoordData, boost::archive::no_header);
-		portable_binary_oarchive binnercoord(bInCoordData, boost::archive::no_header);
-		portable_binary_oarchive btypes(bTypesData, boost::archive::no_header);
-		portable_binary_oarchive badditionalTypes(bAddtTypesData, boost::archive::no_header);
+		//portable_binary_oarchive bcoordinates(bCoordData, boost::archive::no_header);
+		//portable_binary_oarchive binnercoord(bInCoordData, boost::archive::no_header);
+		//portable_binary_oarchive btypes(bTypesData, boost::archive::no_header);
+		//portable_binary_oarchive badditionalTypes(bAddtTypesData, boost::archive::no_header);
 
 		/*		 bcoordinates = new ByteArrayOutputStream();
 		ByteArrayOutputStream binnercoord = new ByteArrayOutputStream();
@@ -367,13 +367,13 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 			for (int j = 0; j < types.size(); j++) {
 				std::list<long>::iterator typesIt = types.begin();
 				std::advance(typesIt, j);
-				writeSmallInt(btypes, *typesIt);
+				writeSmallInt(bTypesData, *typesIt);
 			}
 			for (int j = 0; j < addTypes.size(); j++) 
 			{
 				std::list<long>::iterator atypesIt = addTypes.begin();
 				std::advance(atypesIt, j);
-				writeSmallInt(badditionalTypes, *atypesIt);
+				writeSmallInt(bAddtTypesData, *atypesIt);
 			}
 
 			for (std::shared_ptr<EntityNode> n : nodes) {
@@ -385,8 +385,8 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 					minY = min(minY, y);
 					maxY = max(maxY, y);
 					init = true;
-					writeInt(bcoordinates, x);
-					writeInt(bcoordinates, y);
+					writeInt(bCoordData, x);
+					writeInt(bCoordData, y);
 				}
 			}
 
@@ -399,19 +399,20 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 								exist = true;
 								int y = MapUtils::get31TileNumberY(n->lat);
 								int x = MapUtils::get31TileNumberX(n->lon);
-								writeInt(binnercoord, x);
-								writeInt(binnercoord, y);
+								writeInt(bInCoordData, x);
+								writeInt(bInCoordData, y);
 							}
 						}
 					}
 					if (exist) {
-						writeInt(binnercoord, 0);
-						writeInt(binnercoord, 0);
+						writeInt(bInCoordData, 0);
+						writeInt(bInCoordData, 0);
 					}
 				}
 			}
 		
 			dbContext.addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
+			mapTree.insertBox(minX, minY, maxX, maxY, id);
 		/*
 		if (init) {
 			// conn.prepareStatement("insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?, ?, ?, ?, ?, ?, ?)");
@@ -446,4 +447,224 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::s
 			}
 		}
 		return returnText;
+	}
+
+
+
+	void OBFMapDB::processLowLevelWays(OBFResultDB& dbContext)
+	{
+		sqlite3* dbCtx = dbContext.dbMapCtx;
+		sqlite3_stmt* lowLevelWayItStart;
+		int dbCode = SQLITE_OK;
+		dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, start_node, end_node, nodes, name, type, addType FROM low_level_map_objects WHERE start_node = 1? AND level = 2?" , sizeof("SELECT id, start_node, end_node, nodes, name, type, addType FROM low_level_map_objects WHERE start_node = 1? AND level = 2?"), &lowLevelWayItStart, NULL);
+		sqlite3_stmt* lowLevelWayItEnd;
+		dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, start_node, end_node, nodes, name, type, addType FROM low_level_map_objects WHERE end_node = 1? AND level = 2?", sizeof("SELECT id, start_node, end_node, nodes, name, type, addType FROM low_level_map_objects WHERE end_node = 1? AND level = 2?"), &lowLevelWayItEnd, NULL);
+		char* errMsg;
+		sqlite3_stmt* lowLevelWayIt;
+		dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, start_node, end_node, nodes, name, type, addType, level FROM low_level_map_objects", sizeof("SELECT id, start_node, end_node, nodes, name, type, addType, level FROM low_level_map_objects"), &lowLevelWayIt, NULL);
+
+
+		dbCode = sqlite3_step(lowLevelWayIt);
+
+		std::set<__int64> visited;
+
+
+		if (dbCode != SQLITE_ROW)
+		{
+			sqlite3_reset(lowLevelWayIt);
+		}
+
+		do 
+		{
+			__int64 id = sqlite3_column_int64(lowLevelWayIt, 0);
+			if (visited.find(id) != visited.end())
+				continue;
+			visited.insert(id);
+
+			__int64 nodeStart = sqlite3_column_int64(lowLevelWayIt, 1);
+			__int64 nodeEnd = sqlite3_column_int64(lowLevelWayIt, 2);
+			const void* pData = sqlite3_column_blob(lowLevelWayIt, 3);
+			int blobSize = sqlite3_column_bytes(lowLevelWayIt, 3);
+			
+			std::string name(reinterpret_cast<const char*>(sqlite3_column_text(lowLevelWayIt, 4)));
+			int level = sqlite3_column_int(lowLevelWayIt, 7);
+			
+			int maxZoom = mapZooms.getLevel(level).getMaxZoom();
+
+			parseAndSort(sqlite3_column_blob(lowLevelWayIt, 5), sqlite3_column_bytes(lowLevelWayIt, 5), typeUse);
+			parseAndSort(sqlite3_column_blob(lowLevelWayIt, 6), sqlite3_column_bytes(lowLevelWayIt, 6), addtypeUse);
+
+			std::stringstream nodeStream;
+			nodeStream.rdbuf()->sputn((const char*)pData, blobSize);
+			std::vector<float> nodeData;
+			readInts(nodeStream, nodeData);
+
+			std::list<long> temp;
+			std::list<long> tempAdd;
+
+			bool combineWay = true;
+			while (combineWay)
+			{
+				combineWay = false;
+				dbCode = sqlite3_bind_int64(lowLevelWayItEnd, 1, nodeStart);
+				dbCode = sqlite3_bind_int(lowLevelWayItEnd, 2, level);
+				dbCode = sqlite3_step(lowLevelWayItEnd);
+				if (dbCode != SQLITE_ROW)
+				{
+					sqlite3_reset(lowLevelWayItEnd);
+				}
+				do 
+				{
+					if (visited.find(sqlite3_column_int64(lowLevelWayItEnd, 0)) == visited.end())
+					{
+						parseAndSort(sqlite3_column_blob(lowLevelWayItEnd, 5), sqlite3_column_bytes(lowLevelWayItEnd, 5), temp);
+						parseAndSort(sqlite3_column_blob(lowLevelWayItEnd, 6), sqlite3_column_bytes(lowLevelWayItEnd, 6), tempAdd);
+						if ((temp.size() == typeUse.size() && std::equal(temp.begin(), temp.end(), typeUse.begin())) &&
+							(tempAdd.size() == addtypeUse.size() && std::equal(tempAdd.begin(), tempAdd.end(), addtypeUse.begin())))
+						{
+							combineWay = true;
+							__int64 lid = sqlite3_column_int64(lowLevelWayItEnd, 0);
+							nodeStart = sqlite3_column_int64(lowLevelWayItEnd, 1);
+							visited.insert(lid);
+							const void* plData = sqlite3_column_blob(lowLevelWayItEnd, 3);
+							int bloblSize = sqlite3_column_bytes(lowLevelWayItEnd, 3);
+							std::stringstream nodelStream;
+							nodelStream.rdbuf()->sputn((const char*)plData, bloblSize);
+							std::vector<float> linodeData;
+							readInts(nodelStream, linodeData);
+							std::string iname(reinterpret_cast<const char*>(sqlite3_column_text(lowLevelWayItEnd, 4)));
+							if(name != iname){
+								name = "";
+							}
+							
+							// remove first lat/lon point
+							nodeData.erase(nodeData.begin());
+							nodeData.erase(nodeData.begin());
+							linodeData.insert(linodeData.end(), nodeData.begin(), nodeData.end());
+							nodeData = linodeData;
+						}
+					}
+					dbCode = sqlite3_step(lowLevelWayItEnd);
+				}
+				while(dbCode == SQLITE_ROW && !combineWay);
+				sqlite3_reset(lowLevelWayItEnd);
+			}
+
+			combineWay = true;
+
+			while (combineWay)
+			{
+				combineWay = false;
+				dbCode = sqlite3_bind_int64(lowLevelWayItStart, 1, nodeEnd);
+				dbCode = sqlite3_bind_int(lowLevelWayItStart, 2, level);
+				dbCode = sqlite3_step(lowLevelWayItStart);
+				if (dbCode != SQLITE_ROW)
+				{
+					sqlite3_reset(lowLevelWayItStart);
+				}
+				do 
+				{
+					if (visited.find(sqlite3_column_int64(lowLevelWayItStart, 0)) == visited.end())
+					{
+						parseAndSort(sqlite3_column_blob(lowLevelWayItStart, 5), sqlite3_column_bytes(lowLevelWayItStart, 5), temp);
+						parseAndSort(sqlite3_column_blob(lowLevelWayItStart, 6), sqlite3_column_bytes(lowLevelWayItStart, 6), tempAdd);
+						if ((temp.size() == typeUse.size() && std::equal(temp.begin(), temp.end(), typeUse.begin())) &&
+							(tempAdd.size() == addtypeUse.size() && std::equal(tempAdd.begin(), tempAdd.end(), addtypeUse.begin())))
+						{
+							combineWay = true;
+							__int64 lid = sqlite3_column_int64(lowLevelWayItStart, 0);
+							nodeEnd = sqlite3_column_int64(lowLevelWayItStart, 2);
+							visited.insert(lid);
+							const void* plData = sqlite3_column_blob(lowLevelWayItStart, 3);
+							int bloblSize = sqlite3_column_bytes(lowLevelWayItStart, 3);
+							std::stringstream nodelStream;
+							nodelStream.rdbuf()->sputn((const char*)plData, bloblSize);
+							std::vector<float> linodeData;
+							readInts(nodelStream, linodeData);
+							std::string iname(reinterpret_cast<const char*>(sqlite3_column_text(lowLevelWayItStart, 4)));
+							if(name != iname){
+								name = "";
+							}
+							auto itBegin = linodeData.begin();
+							itBegin++;
+							itBegin++;
+							nodeData.insert(nodeData.end(), itBegin, linodeData.end());
+						}
+					}
+					dbCode = sqlite3_step(lowLevelWayItStart);
+				}
+				while(dbCode == SQLITE_ROW && !combineWay);
+				sqlite3_reset(lowLevelWayItStart);
+			}
+			
+			std::vector<std::shared_ptr<EntityNode>> wnodeList;
+
+			for (int i=0; i < wnodeList.size(); i+=2)
+			{
+				wnodeList.push_back(std::unique_ptr<EntityNode>(new EntityNode(nodeData[i], nodeData[i+1], i==0?nodeStart:nodeEnd)));
+			}
+			bool skip = false;
+			bool cycle = nodeStart == nodeEnd;
+			if (cycle) {
+				skip = checkForSmallAreas(wnodeList, maxZoom  + min(zoomWaySmothness / 2, 3), 3, 4);
+			} else {
+				// coastline
+				if(std::find(typeUse.begin(),typeUse.end(),(renderEncoder.coastlineRule->getInternalId())) == typeUse.end()) {
+					skip = checkForSmallAreas(wnodeList, maxZoom  + min(zoomWaySmothness / 2, 3), 2, 8);
+				}
+			}
+			if (!skip) {
+				std::vector<std::shared_ptr<EntityNode>> res;
+				OsmMapUtils::simplifyDouglasPeucker(wnodeList, maxZoom - 1 + 8 + zoomWaySmothness, 3, res, false);
+				if (res.size() > 0) {
+					namesUse.clear();
+					if (name != "") {
+						namesUse.insert(std::make_pair(*renderEncoder.nameRule, name));
+					}
+					std::list<std::shared_ptr<EntityNode>> resList(res.begin(), res.end());
+					insertBinaryMapRenderObjectIndex(mapTree[level], resList, std::list<std::list<std::shared_ptr<EntityNode>>>(), namesUse, id, false, typeUse, addtypeUse, false, dbContext);
+				}
+			}
+			dbCode = sqlite3_step(lowLevelWayIt);
+		}
+		while (dbCode == SQLITE_ROW);
+	}
+
+
+	void OBFMapDB::parseAndSort(const void* blobData, int blobSize, std::list<long>& toData)
+	{
+		std::stringstream dataStream;
+		dataStream.rdbuf()->sputn((const char*)blobData, blobSize);
+		std::vector<long> localLoad;
+		readSmallInts(dataStream, localLoad);
+		if(localLoad.size() > 0)
+		{
+			std::copy(localLoad.begin(), localLoad.end(), toData.end());
+			toData.sort();
+		}
+	}
+
+	bool OBFMapDB::checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz) {
+		int minX = INT_MAX;
+		int maxX = INT_MIN;
+		int minY = INT_MAX;
+		int maxY = INT_MIN;
+		int c = 0;
+		int nsize = nodes.size();
+		for (auto i = nodes.begin(); i != nodes.end(); i++) {
+			if (*i) {
+				c++;
+				int x = (int) (MapUtils::getTileNumberX(zoom, (*i)->lon) * 256.0);
+				int y = (int) (MapUtils::getTileNumberY(zoom, (*i)->lat) * 256.0);
+				minX = min(minX, x);
+				maxX = max(maxX, x);
+				minY = min(minY, y);
+				maxY = max(maxY, y);
+			}
+		}
+		if (c < 2) {
+			return true;
+		}
+		return ((maxX - minX) <= minz && (maxY - minY) <= maxz) || ((maxX - minX) <= maxz && (maxY - minY) <= minz);
+
 	}

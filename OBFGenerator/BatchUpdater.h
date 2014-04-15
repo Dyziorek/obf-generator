@@ -6,9 +6,9 @@
 
 struct lowLevelMapData
 {
-	long id;
-	long firstid;
-	long lastid;
+	__int64 id;
+	__int64 firstid;
+	__int64 lastid;
 	std::string name;
 	std::string nodes;
 	std::string types;
@@ -18,7 +18,7 @@ struct lowLevelMapData
 
 struct binMapData
 {
-	long id;
+	__int64 id;
 	bool area;
 	std::string coord;
 	std::string incoord;
@@ -38,8 +38,8 @@ public:
 	std::list<lowLevelMapData> lowLevelMapList;
 	std::list<binMapData> binaryMapList;
 	void addBatch(Amenity itemToAdd);
-	void addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
-	void addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
+	void addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
+	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
 	OBFResultDB& workContext;
 	std::string encodeAdditionalInfo(std::map<std::string, std::string> tempNames, std::string name, std::string nameEn);
 	void commit();

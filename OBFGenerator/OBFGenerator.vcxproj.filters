@@ -81,6 +81,9 @@
     <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BinaryMapDataWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OBFGenerator.cpp">
@@ -168,6 +171,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryMapDataWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

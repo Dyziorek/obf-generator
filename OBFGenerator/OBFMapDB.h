@@ -11,6 +11,9 @@ protected:
 	std::map<MapRulType, std::string> namesUse;
 	std::list<MapRulType> tempNameUse;
 	MapZooms mapZooms;
+	sqlite3_stmt* lowLevelWayItStart;
+	sqlite3_stmt* lowLevelWayItEnd;
+
 private:
 	static int MAP_LEVELS_POWER;
 	static int MAP_LEVELS_MAX;
@@ -33,6 +36,9 @@ public:
 	static long long notUsedId;
 	void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
 	void iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB& dbContext) ;
+	void processLowLevelWays(OBFResultDB& dbContext);
+	void parseAndSort(const void* blobData, int blobSize, std::list<long>& toData);
+	bool checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz);
 	void excludeFromMainIteration(std::vector<std::shared_ptr<EntityWay>> l);
 	long convertBaseIdToGeneratedId(long baseId, int level) {
 		if (level >= MAP_LEVELS_MAX) {
@@ -40,11 +46,15 @@ public:
 		}
 		return ((baseId << MAP_LEVELS_POWER) | level) << 1;
 	}
-	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, long id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
-	void insertBinaryMapRenderObjectIndex(RTree mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
-			std::map<MapRulType, std::string>& names, long id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext);
+	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, __int64 id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
+	void insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
+			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext);
 	std::vector<RTree> mapTree;
 	std::string encodeNames(std::map<MapRulType, std::string> tempNames);
 	int zoomWaySmothness;
+
+
+
+
 };
 

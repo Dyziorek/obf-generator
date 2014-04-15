@@ -14,7 +14,7 @@ class RTree
 private:
 	typedef bg::model::point<int, 2, bg::cs::cartesian> point;
     typedef bg::model::box<point> box;
-    typedef std::pair<box, unsigned> value;
+    typedef std::pair<box, __int64> value;
 
 	bgi::rtree<value, bgi::rstar<16>> spaceTree;
 
@@ -22,10 +22,10 @@ public:
 	RTree(void);
 	~RTree(void);
 
-	void insertBox(int a, int b, int c, int d)
+	void insertBox(int a, int b, int c, int d, __int64 id)
 	{
 		box boxPoint(point(a, b), point(c,d));
-		//spaceTree.insert(boxPoint);
+		spaceTree.insert(std::make_pair(boxPoint, id));
 	}
 };
 

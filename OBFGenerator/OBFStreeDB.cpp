@@ -293,11 +293,9 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		OutputDebugString(buffText.c_str());
 		numbers = 0;
 	}
-	if (iterationPhase == NODEWAY)
+	if (iterationPhase == PHASECOMBINE)
 	{
-		return iterateOverElements(NODEWAY,
-			[=](std::shared_ptr<EntityBase> itm) {  
-		});
+		((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
 	}
 	return 0;
 }
@@ -834,12 +832,12 @@ void OBFResultDB::addBatch(Amenity am)
 	storeData->addBatch(am);
 }
 
-void OBFResultDB::addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
+void OBFResultDB::addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
 {
 	storeData->addBatch(id,firstId, lastId, name, bNodes, bTypes, bAddtTypes, level );
 }
 
-void OBFResultDB::addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
+void OBFResultDB::addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
 {
 	storeData->addBatch(id,area, bCoord, bInCoord, bTypes, bAddtTypes, name );
 }

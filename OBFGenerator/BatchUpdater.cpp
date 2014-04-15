@@ -14,7 +14,7 @@ void BatchUpdater::addBatch(Amenity itemToAdd)
 	} 
 }
 
-void BatchUpdater::addBatch(long id, long firstId, long lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
+void BatchUpdater::addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level)
 {
 	lowLevelMapData mapData;
 	mapData.id = id;
@@ -35,7 +35,7 @@ void BatchUpdater::addBatch(long id, long firstId, long lastId, std::string& nam
 
 }
 
-void BatchUpdater::addBatch(long id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
+void BatchUpdater::addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name)
 {
 	binMapData binMap;
 	binMap.area = area;
@@ -144,7 +144,7 @@ void BatchUpdater::flush(bool bFlush)
 			SqlCode = sqlite3_bind_blob(binMapStmt, 4, mapData.incoord.c_str(), mapData.incoord.size(), SQLITE_TRANSIENT);
 			SqlCode = sqlite3_bind_blob(binMapStmt, 5, mapData.types.c_str(), mapData.types.size(), SQLITE_TRANSIENT);
 			SqlCode = sqlite3_bind_blob(binMapStmt, 6, mapData.addtypes.c_str(), mapData.addtypes.size(), SQLITE_TRANSIENT);
-			SqlCode = sqlite3_bind_text(binMapStmt, 3, mapData.name.c_str(), mapData.name.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_text(binMapStmt, 7, mapData.name.c_str(), mapData.name.size(), SQLITE_TRANSIENT);
 			
 			SqlCode = sqlite3_step(binMapStmt);
 			if (SqlCode != SQLITE_DONE)
