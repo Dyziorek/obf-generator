@@ -47,5 +47,8 @@ public:
 		std::for_each(retVec.begin(), retVec.end(),[&vecIds](value result) { vecIds.push_back(result.second);});
 		return vecIds;
 	}
+
+	void paintTreeData(OBFResultDB& dbContext);
+	
 };
 
