@@ -208,6 +208,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h" />
+    <ClInclude Include="ArchiveIO.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BlockReader.h" />
     <ClInclude Include="EntityBase.h" />

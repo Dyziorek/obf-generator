@@ -163,6 +163,7 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 void OBFResultDB::imageResult()
 {
 	((OBFMapDB*)mapIndexer)->paintPolys();
+	((OBFMapDB*)mapIndexer)->paintTreeData(*this);
 }
 
 int OBFResultDB::iterateOverElements(int iterationPhase)

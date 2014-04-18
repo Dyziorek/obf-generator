@@ -125,7 +125,7 @@ MapUtils::~MapUtils(void)
 		unsigned __int64 l = 1ll << 31;
 		return (int)((longitude + 180)/360 * l);
 	}
-	  int MapUtils::get31TileNumberY( double latitude){
+	 int MapUtils::get31TileNumberY( double latitude){
 		latitude = checkLatitude(latitude);
 		double eval = log( tan(toRadians(latitude)) + 1/cos(toRadians(latitude)) );
 		unsigned __int64 l = 1ll << 31;

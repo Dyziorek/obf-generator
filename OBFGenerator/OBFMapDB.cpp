@@ -15,8 +15,16 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 #include <boost/archive/binary_oarchive.hpp>
-
+#include <boost/unordered_map.hpp>
 #include "ArchiveIO.h"
+
+
+#include "SkCanvas.h"
+#include "SkSurface.h"
+#include "SkImage.h"
+#include "SkData.h"
+#include "SkStream.h"
+#include "SkGraphics.h"
 
 
 namespace io = boost::iostreams;
@@ -154,6 +162,9 @@ void OBFMapDB::paintPolys()
 		SkFILEWStream stream(pathImage.c_str());
 
 		stream.write(data->data(), data->size());
+
+
+
 }
 
 void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)
@@ -668,3 +679,202 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 		return ((maxX - minX) <= minz && (maxY - minY) <= maxz) || ((maxX - minX) <= maxz && (maxY - minY) <= minz);
 
 	}
+
+
+void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
+{
+
+	std::vector<__int64> treeIds;
+	 std::tuple<double, double, double, double> bounds;
+
+	mapTree[0].getTreeData(treeIds, bounds);
+
+	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> lines;
+	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> inlines;
+
+	int dbCode;
+	sqlite3* dbCtx = dbContext.dbMapCtx;
+	sqlite3_stmt* mapSelStmt;
+	dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1" , sizeof("SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1"), &mapSelStmt, NULL);
+
+
+	for (__int64 iid : treeIds) 
+	{
+		dbCode = sqlite3_reset(mapSelStmt);
+		dbCode = sqlite3_bind_int64(mapSelStmt, 1, iid);
+		
+
+		dbCode = sqlite3_step(mapSelStmt);
+
+
+		if (dbCode != SQLITE_ROW)
+		{
+			sqlite3_reset(mapSelStmt);
+			continue;
+		}
+
+
+		int closed = sqlite3_column_int(mapSelStmt, 1);
+		const void* plData = sqlite3_column_blob(mapSelStmt, 2);
+		int blobSize = sqlite3_column_bytes(mapSelStmt, 2);
+		std::stringstream buffer;
+		std::shared_ptr<std::vector<std::pair<float, float>>> coords(new std::vector<std::pair<float, float>>());
+		std::shared_ptr<std::vector<std::pair<float, float>>> Incoords(new std::vector<std::pair<float, float>>());
+		if (blobSize>0)
+		{
+			buffer.rdbuf()->sputn((const char*)plData, blobSize);
+			std::vector<int> linodeData;
+			readInts(buffer, linodeData);
+			for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
+			{
+				float lon = MapUtils::get31LongitudeX(*floatIt);
+				float lat = MapUtils::get31LatitudeY(*(floatIt+1));
+				coords->push_back(std::make_pair(lon, lat));
+			}
+			buffer.str(std::string());
+			if (closed)
+			{
+				lines.emplace(iid<<2, std::move(coords));
+			}
+			else
+			{
+				lines.emplace(iid<<2+1, std::move(coords));
+			}
+		}
+		plData = sqlite3_column_blob(mapSelStmt, 3);
+		blobSize = sqlite3_column_bytes(mapSelStmt, 3);
+		if (blobSize>0)
+		{
+			buffer.rdbuf()->sputn((const char*)plData, blobSize);
+			std::vector<int> linodeData;
+			readInts(buffer, linodeData);
+			for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
+			{
+				float lon = MapUtils::get31LongitudeX(*floatIt);
+				float lat = MapUtils::get31LatitudeY(*(floatIt+1));
+				Incoords->push_back(std::make_pair(lon, lat));
+			}
+			buffer.str(std::string());
+			if (closed)
+			{
+				inlines.emplace(iid<<2, std::move(Incoords));
+			}
+			else
+			{
+				inlines.emplace(iid<<2+1, std::move(Incoords));
+			}
+		}
+	}
+	
+
+
+	SkImage::Info info = {
+        800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+    };
+	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
+	SkCanvas* painter = imageRender->getCanvas();
+	painter->drawColor(SK_ColorWHITE);
+	SkRect limits;
+	painter->getClipBounds(&limits);
+	SkScalar w = limits.width();
+	SkScalar h = limits.height();
+	
+	
+
+	double offsetX = std::get<0>(bounds), offsetY = std::get<1>(bounds);
+	double maxY = std::get<3>(bounds), maxX = std::get<2>(bounds);
+
+
+	double scale = 1.0;
+	if (maxX - offsetX > w || maxY - offsetY > h)
+	{
+		if ((maxX - offsetX - w) > (maxY - offsetY - h))
+		{
+			scale = w / (maxX - offsetX);
+		}
+		else
+		{
+			scale = w / (maxY - offsetY);
+		}
+	}
+	else if (maxX - offsetX < w && maxY - offsetY < h)
+	{
+		scale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
+	}
+
+
+	SkPaint paint;
+	paint.setColor(SK_ColorBLACK);
+	paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
+	scale = scale * 5;
+
+	bool closed = true;
+	for (auto nData : lines)
+	{
+		if ((*nData.second).size() > 1)
+		{
+			if (nData.first % 2 == 1)
+			{
+				closed = false;
+			}
+			else
+			{
+				closed = true;
+			}
+			SkPath pathData;
+
+
+			std::pair<float, float> prevNode(0,0);
+			for (auto coordData : *nData.second)
+			{
+				if (prevNode.first == 0)
+				{
+					SkScalar pointX1 = (coordData.first - offsetX) * scale;
+					SkScalar pointY1 = (coordData.second - offsetY) * scale;
+					prevNode = coordData;
+									pointX1 = abs(pointX1);
+					pointY1 = abs(pointY1);
+
+					pathData.moveTo(pointX1, pointY1);
+				}
+				else
+				{
+					SkScalar pointX1 = (coordData.first - offsetX) * scale;
+					SkScalar pointY1 = (coordData.second - offsetY) * scale;
+									pointX1 = abs(pointX1);
+				pointY1 = abs(pointY1);
+
+					pathData.lineTo(pointX1, pointY1);
+					prevNode = coordData;
+				}
+			}
+			//if (closed)
+			//{
+			//	pathData.close();
+			//}
+
+			painter->drawPath(pathData, paint);
+		}
+	/*		else
+		{
+			std::pair<float, float> Node = (*(nData.second))[0];
+			SkScalar pointX1 = (Node.first - offsetX) * scale;
+			SkScalar pointY1 = (Node.second - offsetY) * scale;
+				pointX1 = abs(pointX1);
+				pointY1 = abs(pointY1);
+			painter->drawCircle(pointX1, pointY1, 2, paint);
+		}
+	*/
+	}
+	
+	SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
+    SkAutoDataUnref data(image->encode());
+    if (NULL == data.get()) {
+        return ;
+    }
+	char buff[10];
+	_ultoa_s(numberCalls++, buff,10);
+	std::string pathImage = "D:\\osmData\\resultPolyImage" + std::string(buff) + std::string(".png");
+    SkFILEWStream stream(pathImage.c_str());
+    stream.write(data->data(), data->size());
+}

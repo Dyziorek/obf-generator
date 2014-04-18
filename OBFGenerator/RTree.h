@@ -48,7 +48,7 @@ public:
 		return vecIds;
 	}
 
-	void paintTreeData(OBFResultDB& dbContext);
+	void getTreeData(std::vector<__int64>& vecResults, std::tuple<double, double, double, double>& bounds);
 	
 };
 
