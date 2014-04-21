@@ -578,7 +578,7 @@ MapUtils::~MapUtils(void)
         return ccw(A, C, D) != ccw(B, C, D) && ccw(A, B, C) != ccw(A, B, D);
     }
 
-	 std::vector<boolean> OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>> result, boolean avoidNooses) {
+	 std::vector<boolean> OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>>& result, boolean avoidNooses) {
 		if (zoom > 31) {
 			zoom = 31;
 		}
@@ -635,7 +635,7 @@ MapUtils::~MapUtils(void)
 		return kept;
 	}
 
-	 void OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<boolean> kept,
+	 void OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<boolean>& kept,
                                                int start, int end, boolean avoidNooses) {
 		double dmax = -1;
 		int index = -1;

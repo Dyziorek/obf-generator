@@ -173,10 +173,10 @@
     <ClCompile Include="RTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.cc">
+    <ClCompile Include="BinaryMapDataWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BinaryMapDataWriter.cpp">
+    <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

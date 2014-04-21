@@ -205,8 +205,6 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 			[&](std::shared_ptr<EntityBase> itm) {  
 				
 				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
-				relItem->id = itm->id;
-				relItem->tags = itm->tags;
 
 				indexBoundary(std::static_pointer_cast<EntityBase,EntityRelation>(relItem));
 
@@ -216,7 +214,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 				((OBFpoiDB*)poiIndexer)->indexRelations(relItem, *this);
 
-				relations.insert(relItem);
+				//relations.insert(relItem);
 				numbers++;
 				
 		});
@@ -450,11 +448,10 @@ void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
 		}
 		if (relIDMember.second.first == 1)
 		{
-
-			std::shared_ptr<EntityWay> way(new EntityWay);
-			way->id = relIDMember.first;
-			loadWays(way.get());
-			relItem->relations.insert(std::make_pair(std::make_pair(1,way), relIDMember.second.second));
+				std::shared_ptr<EntityWay> way(new EntityWay);
+				way->id = relIDMember.first;
+				loadWays(way.get());
+				relItem->relations.insert(std::make_pair(std::make_pair(1,way), relIDMember.second.second));
 		}
 
 		if (relIDMember.second.first == 2)
@@ -500,15 +497,24 @@ void OBFResultDB::loadWays(EntityWay* wayItem)
 		}
 		if (sqlite3_column_type(selWayStmt, 4) != SQLITE_NULL)
 		{
-			std::shared_ptr<EntityNode> node(new EntityNode);
-			node->lat = sqlite3_column_double(selWayStmt, 3);
-			node->lon = sqlite3_column_double(selWayStmt, 4);
-			if (sqlite3_column_type(selWayStmt, 5) != SQLITE_NULL)
+			if (nodes.find(nodeId) == nodes.end())
 			{
-				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 5)));
-				node->parseTags(tags);
+				std::shared_ptr<EntityNode> node(new EntityNode);
+				node->id = nodeId;
+				node->lat = sqlite3_column_double(selWayStmt, 3);
+				node->lon = sqlite3_column_double(selWayStmt, 4);
+				if (sqlite3_column_type(selWayStmt, 5) != SQLITE_NULL)
+				{
+					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 5)));
+					node->parseTags(tags);
+				}
+				nodeList.push_back(node);
 			}
-			nodeList.push_back(node);
+			else
+			{
+				std::shared_ptr<EntityNode> node = nodes.at(nodeId);
+				nodeList.push_back(node);
+			}
 		}
 		wayItem->nodeIDs.push_back(nodeId);
 		dbRet = sqlite3_step(selWayStmt);
@@ -631,7 +637,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itNodeStmt, 3)));
 				nodeData->parseTags(tags);
 				saver(nodeData);
-				nodes.insert(std::make_pair(nodeId, nodeData));
+				//nodes.insert(std::make_pair(nodeId, nodeData));
 			}
 			else
 			{
@@ -667,7 +673,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itRelStmt, 2)));
 				nodeData->parseTags(tags);
 				saver(nodeData);
-				relNodes.insert(std::make_pair(nodeId, nodeData));
+				//relNodes.insert(std::make_pair(nodeId, nodeData));
 			}
 			else
 			{
@@ -719,14 +725,24 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				}
 				if (sqlite3_column_type(itWayStmt, 4) != SQLITE_NULL)
 				{
-					std::shared_ptr<EntityNode> entNode(new EntityNode);
-					entNode->id = sqlite3_column_int64(itWayStmt, 1);
-					entNode->lat = sqlite3_column_double(itWayStmt, 4);
-					entNode->lon = sqlite3_column_double(itWayStmt, 5);
-					std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 6)));
-					entNode->parseTags(ntags);
-					wayData->nodes.push_back(entNode);
-					wayData->nodeIDs.push_back(entNode->id);
+					__int64 nodeId = sqlite3_column_int64(itWayStmt, 1);
+					if (nodes.find(nodeId) == nodes.end())
+					{
+						std::shared_ptr<EntityNode> entNode(new EntityNode);
+						entNode->id = nodeId;
+						entNode->lat = sqlite3_column_double(itWayStmt, 4);
+						entNode->lon = sqlite3_column_double(itWayStmt, 5);
+						std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 6)));
+						entNode->parseTags(ntags);
+						wayData->nodes.push_back(entNode);
+						wayData->nodeIDs.push_back(entNode->id);
+					}
+					else
+					{
+						std::shared_ptr<EntityNode> entNode = nodes.at(nodeId);
+						wayData->nodes.push_back(entNode);
+						wayData->nodeIDs.push_back(entNode->id);
+					}
 				}
 				else
 				{
@@ -735,7 +751,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				if (prevEntity && newId)
 				{
 					saver(prevEntity);
-					ways.insert(std::make_pair(prevEntity->id, prevEntity));
+					//ways.insert(std::make_pair(prevEntity->id, prevEntity));
 				}
 				prevEntity = wayData;
 				prevId = wayData->id;
@@ -790,14 +806,24 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				}
 				if (sqlite3_column_type(itWayBoundStmt, 4) != SQLITE_NULL)
 				{
-					std::shared_ptr<EntityNode> entNode(new EntityNode);
-					entNode->id = sqlite3_column_int64(itWayBoundStmt, 1);
-					entNode->lat = sqlite3_column_double(itWayBoundStmt, 4);
-					entNode->lon = sqlite3_column_double(itWayBoundStmt, 5);
-					std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 6)));
-					entNode->parseTags(ntags);
-					wayData->nodes.push_back(entNode);
-					wayData->nodeIDs.push_back(entNode->id);
+					__int64 nodeId = sqlite3_column_int64(itWayBoundStmt, 1);
+					if (nodes.find(nodeId) == nodes.end())
+					{
+						std::shared_ptr<EntityNode> entNode(new EntityNode);
+						entNode->id = nodeId;
+						entNode->lat = sqlite3_column_double(itWayBoundStmt, 4);
+						entNode->lon = sqlite3_column_double(itWayBoundStmt, 5);
+						std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 6)));
+						entNode->parseTags(ntags);
+						wayData->nodes.push_back(entNode);
+						wayData->nodeIDs.push_back(entNode->id);
+					}
+					else
+					{
+						std::shared_ptr<EntityNode> entNode = nodes.at(nodeId);
+						wayData->nodes.push_back(entNode);
+						wayData->nodeIDs.push_back(entNode->id);
+					}
 				}
 				else
 				{
@@ -807,7 +833,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				if (prevEntity && newId)
 				{
 					saver(prevEntity);
-					waybounds.insert(std::make_pair(prevEntity->id, prevEntity));
+					//waybounds.insert(std::make_pair(prevEntity->id, prevEntity));
 				}
 				prevEntity = wayData;
 				prevId = wayData->id;

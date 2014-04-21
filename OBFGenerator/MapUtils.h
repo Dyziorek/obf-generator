@@ -200,14 +200,14 @@ public:
 	 * @return the area of it
 	 */
 	 static double getArea(std::vector<std::shared_ptr<EntityNode>> nodesVec);
-	 static std::vector<boolean> simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>> result, boolean avoidNooses);
+	 static std::vector<boolean> simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>>& result, boolean avoidNooses);
 
  	static bool checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz);
 	static std::list<std::shared_ptr<EntityNode>> simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>>& ns, int zoom, int zoomWaySmothness);
 
 private:
 	
-	static void simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<boolean> kept,
+	static void simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>> n, int zoom, int epsilon, std::vector<boolean>& kept,
                                                int start, int end, boolean avoidNooses);
 	static double orthogonalDistance(int zoom,  std::shared_ptr<EntityNode> EntityNodeLineStart,  std::shared_ptr<EntityNode> EntityNodeLineEnd,  std::shared_ptr<EntityNode> RelEntityNode);
 };

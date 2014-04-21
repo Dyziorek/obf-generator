@@ -108,7 +108,14 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	m_Browse.EnableFileBrowseButton(L"pbf", L"PBF Files|*.pbf|All Files|*.*||");
 	
 	int dbRes = SQLITE_OK;
+	FILE* fp = NULL;
+	errno_t err;
 
+	if ((err = fopen_s(&fp, "D:\\osmData\\tempLocalIN.db", "r")) == 0)
+	{
+		fclose(fp);
+		remove("D:\\osmData\\tempLocalIN.db");
+	}
 
 	dbRes = sqlite3_open("D:\\osmData\\tempLocalIN.db", &dbCtx);
 	//dbRes = sqlite3_open("D:\\osmData\\tempLocalWay.db", &dbWayCtx);
@@ -119,9 +126,11 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists ways" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table ways (id bigint primary key, wayid bigint, node bigint, ord smallint, tags blob, boundary smallint)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdWSearchIndex ON ways (wayid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists relations" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table relations (id bigint primary key, relid bigint,  member bigint, type smallint, role varchar(1024), ord smallint, tags blob)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create index IdRIndex ON relations (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdRelIndex ON relations (relid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 
 	dbRes = sqlite3_prepare_v2(dbCtx, "insert into node values (?1, ?2, ?3, ?4)", strlen("insert into node values (?1, ?2, ?3, ?4)"), &nodeStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbCtx, "insert into ways values (?1, ?2, ?3, ?4, ?5, ?6)", strlen("insert into ways values (?1, ?2, ?3, ?4, ?5, ?6)"), &wayStmt, NULL);
@@ -644,8 +653,14 @@ int COBFGeneratorDlg::PrepareTempDB()
 	buff = L"Phase index main iteration\r\n";
 	OutputDebugString(buff.c_str());
 	results.iterateOverElements(PHASEMAINITERATE);
-
 	results.flush();
+	strMessage.Format(L"Combining result");
+	delete[] msgTxt;
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
+	results.iterateOverElements(PHASECOMBINE);
+	
 	strMessage.Format(L"Imaging result");
 	delete[] msgTxt;
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];

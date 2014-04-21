@@ -40,6 +40,7 @@ public:
 	void paintTreeData(OBFResultDB& dbContext);
 	void parseAndSort(const void* blobData, int blobSize, std::list<long>& toData);
 	bool checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz);
+	std::vector<std::shared_ptr<EntityNode>> simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>> ns, int zoom, int zoomWaySmothness);
 	void excludeFromMainIteration(std::vector<std::shared_ptr<EntityWay>> l);
 	long convertBaseIdToGeneratedId(long baseId, int level) {
 		if (level >= MAP_LEVELS_MAX) {
@@ -48,7 +49,7 @@ public:
 		return ((baseId << MAP_LEVELS_POWER) | level) << 1;
 	}
 	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, __int64 id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
-	void insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
+	void insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext);
 	std::vector<RTree> mapTree;
 	std::string encodeNames(std::map<MapRulType, std::string> tempNames);

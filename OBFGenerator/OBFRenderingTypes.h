@@ -510,7 +510,7 @@ public:
 		return seamark;
 	}
 	static std::string openSeaType(std::string value);
-	MapRulType* coastlineRule;
+	static MapRulType* coastlineRule;
 
 
 	 bool encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 

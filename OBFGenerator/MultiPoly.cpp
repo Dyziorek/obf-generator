@@ -140,6 +140,8 @@ void MultiPoly::build()
 		outRing.insert(outRing.begin(), outRings.begin(), outRings.end());
 	}
 
+	return;
+
 	SkImage::Info info = {
         800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
     };

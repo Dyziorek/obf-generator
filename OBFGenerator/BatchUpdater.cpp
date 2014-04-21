@@ -126,6 +126,7 @@ void BatchUpdater::flush(bool bFlush)
 			SqlCode = sqlite3_reset(lowMapStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+		lowLevelMapList.clear();
 	}
 
 	if (binaryMapList.size() > 10000 || bFlush)
@@ -162,6 +163,7 @@ void BatchUpdater::flush(bool bFlush)
 			SqlCode = sqlite3_reset(binMapStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+		binaryMapList.clear();
 	}
 
 }

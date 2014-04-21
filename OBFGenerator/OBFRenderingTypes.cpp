@@ -27,7 +27,7 @@ NamedRuleContainer OBFRenderingTypes::namedRulType;
 boost::ptr_vector<MapRulType, boost::view_clone_allocator> OBFRenderingTypes::rules;
 MapRulType* OBFRenderingTypes::nameRule = MapRulType::createText("name");
 MapRulType* OBFRenderingTypes::nameEnRule = MapRulType::createText("name:en");
-	
+MapRulType* OBFRenderingTypes::coastlineRule = nullptr;
 
 AmenityType EMERGENCY = AmenityType::reg("emergency", "emergency"); // [TAG] emergency services //$NON-NLS-1$ //$NON-NLS-2$
 AmenityType HEALTHCARE = AmenityType::reg("healthcare", "amenity"); // hospitals, doctors, ... //$NON-NLS-1$ //$NON-NLS-2$
@@ -74,8 +74,9 @@ OBFRenderingTypes::~OBFRenderingTypes(void)
 
 void OBFRenderingTypes::loadXmlData()
 {
+	registerRuleType(nameRule);
+	registerRuleType(nameEnRule);
 	tinyxml2::XMLDocument xDoc;
-	
 	xDoc.LoadFile("D:\\osmdata\\rendering_types.xml");
 	std::string poiParentCategory, poiParentPrefix;
 	for ( const tinyxml2::XMLNode* node=xDoc.FirstChildElement(); node; node=node->NextSibling() )
@@ -99,11 +100,7 @@ void OBFRenderingTypes::loadXmlData()
 	}
 
 	xDoc.Clear();
-
-
 	
-	registerRuleType(nameRule);
-	registerRuleType(nameEnRule);
 }
 
 void OBFRenderingTypes::parseRouteElement(tinyxml2::XMLElement* elemData)
@@ -132,9 +129,9 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 {
 	std::string tag = read(elemData->Attribute("tag"));
 	std::string value = read(elemData->Attribute("value"));
-	if (value == "pharmacy")
+	if (value == "tree")
 	{
-		value = "pharmacy";
+		value = "tree";
 	}
 	std::string additional = read(elemData->Attribute("additional"));
 	MapRulType* entity = MapRulType::createMainEntity(tag, value);
@@ -183,13 +180,14 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 			entity->poiPrefix = poiParentPrefix;
 		}
 
-		std::string poiCategory = read(elemData->Attribute("poi_category"));
-		if (poiCategory != "") {
+		const char* poiCategory = elemData->Attribute("poi_category");
+		if (poiCategory != nullptr) {
 			entity->poiSpecified = true;
-			if (poiCategory.length() == 0) {
+			std::string poiCategoryText(poiCategory);
+			if (poiCategoryText.length() == 0) {
 				entity->poiCategory = AmenityType();
 			} else {
-				entity->poiCategory = AmenityType::getAndRegisterType(poiCategory);
+				entity->poiCategory = AmenityType::getAndRegisterType(poiCategoryText);
 			}
 		}
 		std::string poiPrefix = read(elemData->Attribute("poi_prefix"));
@@ -428,10 +426,13 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 					if (tokens.size() > 2 && rt->names.size() != 0) {
 						std::string symbol = "osmc_symbol_" + tokens[1] + "_" + tokens[2] + "_name";
 						std::string name = "\u00A0";
-						std::string token3 = tokens[3];
-						boost::algorithm::trim(token3);
-						if (tokens.size() > 3 && token3.length() > 0) {
-							name = tokens[3];
+						if (tokens.size() > 3 ) {
+							std::string token3 = tokens[3];
+							boost::algorithm::trim(token3);
+							if (token3.size() > 0)
+							{
+								name = tokens[3];
+							}
 						}
 						for(int k = 0; k < rt->names.size(); k++) {
 							if(rt->names[k].tagValuePattern.tag== symbol) {
@@ -471,15 +472,15 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 	
 	AmenityType OBFRenderingTypes::getAmenityType(std::string tag, std::string val, bool relation){
 		// register amenity types
-		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
+		boost::ptr_map<std::string, MapRulType>& rulesMap = getRuleTypes();
 		MapRulType* rt = nullptr;
 		if (tag == "amenity" && val == "pharmacy")
 		{
 			val = "pharmacy";
 		}
-		if (rules.find(constructRuleKey(tag, val)) != rules.end())
+		if (rulesMap.find(constructRuleKey(tag, val)) != rulesMap.end())
 		{
-			rt = &rules.at(constructRuleKey(tag, val));
+			rt = &rulesMap.at(constructRuleKey(tag, val));
 		}
 		if(rt != nullptr && rt->isPOISpecified()) {
 			if((relation && !rt->relation) || rt->isAdditionalOrText()) {
@@ -488,9 +489,9 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 			return rt->poiCategory;
 		}
 
-		if (rules.find(constructRuleKey(tag, "")) != rules.end())
+		if (rulesMap.find(constructRuleKey(tag, "")) != rulesMap.end())
 		{
-			rt = &rules.at(constructRuleKey(tag, ""));
+			rt = &rulesMap.at(constructRuleKey(tag, ""));
 		}
 
 		if(rt != nullptr && rt->isPOISpecified()) {
@@ -575,18 +576,18 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 	}
 	
 	std::string OBFRenderingTypes::getAmenitySubtypePrefix(std::string tag, std::string val){
-		boost::ptr_map<std::string, MapRulType>& rules = getRuleTypes();
+		boost::ptr_map<std::string, MapRulType>& rulesMap = getRuleTypes();
 		MapRulType* rt = nullptr;
-		if (rules.find(constructRuleKey(tag, val)) != rules.end())
+		if (rulesMap.find(constructRuleKey(tag, val)) != rulesMap.end())
 		{
-			rt = &rules.at(constructRuleKey(tag, val));
+			rt = &rulesMap.at(constructRuleKey(tag, val));
 		}
 		if(rt != nullptr && rt->poiPrefix != "" && rt->isPOI()) {
 			return rt->poiPrefix;
 		}
-		if (rules.find(constructRuleKey(tag, "")) != rules.end())
+		if (rulesMap.find(constructRuleKey(tag, "")) != rulesMap.end())
 		{
-			rt = &rules.at(constructRuleKey(tag, ""));
+			rt = &rulesMap.at(constructRuleKey(tag, ""));
 		}
 		if(rt == nullptr && rt->poiPrefix != "" && rt->isPOI()) {
 			return rt->poiPrefix;
@@ -601,7 +602,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 			std::string val = tag.second;
 			MapRulType* rType = getRuleType(tag.first, val, true);
 			if (rType != nullptr && val.size()  > 0) {
-				if(rType == nameEnRule &&  val == tags.at("name")) {
+				if(rType == nameEnRule && (tags.find("name") != tags.end() && val == tags.at("name"))) {
 					continue;
 				}
 				if(rType->targetTagValue != nullptr) {

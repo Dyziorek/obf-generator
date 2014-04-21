@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <boost\geometry.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
 #include "RTree.h"
 //#include "ArchiveIO.h"
 
@@ -16,7 +17,7 @@ RTree::~RTree(void)
 
 
 
-void RTree::getTreeData(std::vector<__int64>& vecResults, std::tuple<double, double, double, double>& bounds)
+void RTree::getTreeData(std::vector<std::pair<__int64, std::vector<short>>>& vecResults, std::tuple<double, double, double, double>& bounds)
 {
 	box boundaries = calculateBounds();
 
@@ -34,7 +35,7 @@ void RTree::getTreeData(std::vector<__int64>& vecResults, std::tuple<double, dou
 	std::vector<value> retVec;
 	//std::vector<__int64> Results;
 	spaceTree.query(bgi::intersects(boundaries), std::back_inserter(retVec));
-	std::for_each(retVec.begin(), retVec.end(),[&vecResults](value result) { vecResults.push_back(result.second);});
+	std::for_each(retVec.begin(), retVec.end(),[&vecResults](value result) { vecResults.push_back(std::make_pair(result.get<1>(), result.get<2>()));});
 
 }
 

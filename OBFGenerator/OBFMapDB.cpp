@@ -61,6 +61,21 @@ void OBFMapDB::excludeFromMainIteration(std::vector<std::shared_ptr<EntityWay>> 
 		}
 	}
 
+ 
+std::vector<std::shared_ptr<EntityNode>> OBFMapDB::simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>> ns, int zoom, int zoomWaySmothness) 
+{
+		if (OsmMapUtils::checkForSmallAreas(ns, zoom + min(zoomWaySmothness / 2, 3), 2, 4)) {
+			return std::vector<std::shared_ptr<EntityNode>>();
+		}
+		std::vector<std::shared_ptr<EntityNode>>  res;
+		// simplification
+		OsmMapUtils::simplifyDouglasPeucker(ns, zoom + 8 + zoomWaySmothness, 3, res, false);
+		if (res.size() < 2) {
+			return std::vector<std::shared_ptr<EntityNode>>();
+		}
+		return res;
+	}
+
 void OBFMapDB::indexMultiPolygon(std::shared_ptr<EntityRelation>& relItem, OBFResultDB& dbContext)
 {
 	if (!relItem)
@@ -82,8 +97,53 @@ void OBFMapDB::indexMultiPolygon(std::shared_ptr<EntityRelation>& relItem, OBFRe
 	excludeFromMainIteration(polyline->inWays);
 	excludeFromMainIteration(polyline->outWays);
 
-	polyline->splitPerRing();
+	std::list<MultiPoly> polys = polyline->splitPerRing();
+	for (MultiPoly m : polys) {
 	
+		auto out = m.outRing[0];
+		if(out->nodes.size() == 0) {
+				// don't index this
+				continue;
+			}
+
+			// innerWays are new closed ways 
+			std::vector<std::vector<std::shared_ptr<EntityNode>>> innerWays;
+
+			for (std::shared_ptr<Ring> r : m.inRing) {
+				innerWays.push_back(r->nodes);
+			}
+
+			// don't use the relation ids. Create new onesgetInnerRings
+			long baseId = notUsedId --;
+			for (int level = 0; level < mapZooms.size(); level++) {
+				renderEncoder.encodeEntityWithType(relItem, mapZooms.getLevel(level).getMaxZoom(), typeUse, addtypeUse, namesUse,
+						tempNameUse);
+				if (typeUse.size() == 0) {
+					continue;
+				}
+				long id = convertBaseIdToGeneratedId(baseId, level);
+				// simplify route
+				std::vector<std::shared_ptr<EntityNode>> outerWay = out->nodes;
+				int zoomToSimplify = mapZooms.getLevel(level).getMaxZoom() - 1;
+				if (zoomToSimplify < 15) {
+					outerWay = simplifyCycleWay(outerWay, zoomToSimplify, zoomWaySmothness);
+					if (outerWay.size() == 0) {
+						continue;
+					}
+					std::vector<std::vector<std::shared_ptr<EntityNode>>> newinnerWays;
+					for (std::vector<std::shared_ptr<EntityNode>> ls : innerWays) {
+						ls = simplifyCycleWay(ls, zoomToSimplify, zoomWaySmothness);
+						if (ls.size() != 0) {
+							newinnerWays.push_back(ls);
+						}
+					}
+					innerWays = newinnerWays;
+				}
+				std::list<std::shared_ptr<EntityNode>> outerWayList(outerWay.begin(), outerWay.end());
+				insertBinaryMapRenderObjectIndex(mapTree[level], outerWayList, innerWays, namesUse, id, true, typeUse, addtypeUse, true, dbContext);
+
+			}
+		}
 	
 	polyLines.push_back(polyline);
 }
@@ -258,7 +318,7 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB
 				}
 			}
 			if (!res.empty()) {
-				insertBinaryMapRenderObjectIndex(mapTree[level], res, std::list<std::list<std::shared_ptr<EntityNode>>>(), namesUse, id, area, typeUse, addtypeUse, true, dbContext);
+				insertBinaryMapRenderObjectIndex(mapTree[level], res, std::vector<std::vector<std::shared_ptr<EntityNode>>>(), namesUse, id, area, typeUse, addtypeUse, true, dbContext);
 			}
 		}
 	}
@@ -327,7 +387,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		}
 		for (int j = 0; j < addTypes.size(); j++) {
 			try {
-				std::list<long>::iterator typesIt = types.begin();
+				std::list<long>::iterator typesIt = addTypes.begin();
 				std::advance(typesIt, j);
 				writeSmallInt(bAddtTypesData, *typesIt);
 			} catch (std::exception e) {
@@ -349,7 +409,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 
 	}
 
-void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::list<std::list<std::shared_ptr<EntityNode>>>& innerWays,
+void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
 			{
 		boolean init = false;
@@ -402,7 +462,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			}
 
 			if (innerWays.size()) {
-				for (std::list<std::shared_ptr<EntityNode>> ws : innerWays) {
+				for (std::vector<std::shared_ptr<EntityNode>> ws : innerWays) {
 					boolean exist = false;
 					if (ws.size()) {
 						for (std::shared_ptr<EntityNode> n : ws) {
@@ -423,7 +483,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			}
 		
 			dbContext.addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
-			mapTree.insertBox(minX, minY, maxX, maxY, id);
+			mapTree.insertBox(minX, minY, maxX, maxY, id, types);
 		/*
 		if (init) {
 			// conn.prepareStatement("insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?, ?, ?, ?, ?, ?, ?)");
@@ -448,8 +508,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 	}
 
 	std::string OBFMapDB::encodeNames(std::map<MapRulType, std::string> tempNames) {
-		std::string returnText;
-		std::stringstream strm(returnText);
+		std::stringstream strm;
 		for (std::pair<MapRulType, std::string> e : tempNames) {
 			if (e.second.size()) {
 				strm << "~";
@@ -457,7 +516,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 				strm << e.second;
 			}
 		}
-		return returnText;
+		return  strm.str();
 	}
 
 
@@ -633,7 +692,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 						namesUse.insert(std::make_pair(*renderEncoder.nameRule, name));
 					}
 					std::list<std::shared_ptr<EntityNode>> resList(res.begin(), res.end());
-					insertBinaryMapRenderObjectIndex(mapTree[level], resList, std::list<std::list<std::shared_ptr<EntityNode>>>(), namesUse, id, false, typeUse, addtypeUse, false, dbContext);
+					insertBinaryMapRenderObjectIndex(mapTree[level], resList, std::vector<std::vector<std::shared_ptr<EntityNode>>>(), namesUse, id, false, typeUse, addtypeUse, false, dbContext);
 				}
 			}
 			dbCode = sqlite3_step(lowLevelWayIt);
@@ -650,7 +709,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 		readSmallInts(dataStream, localLoad);
 		if(localLoad.size() > 0)
 		{
-			std::copy(localLoad.begin(), localLoad.end(), toData.end());
+			std::for_each(localLoad.begin(), localLoad.end(), [&toData](long value) {toData.push_back(value);});
 			toData.sort();
 		}
 	}
@@ -684,11 +743,14 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 {
 
-	std::vector<__int64> treeIds;
+	std::vector<std::pair<__int64, std::vector<short>>> treeIds;
 	 std::tuple<double, double, double, double> bounds;
 
-	mapTree[0].getTreeData(treeIds, bounds);
+	
 
+	for (int indexMapTree = mapTree.size()-1; indexMapTree >= 0; indexMapTree--)
+	{
+		mapTree[indexMapTree].getTreeData(treeIds, bounds);
 	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> lines;
 	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> inlines;
 
@@ -698,8 +760,31 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1" , sizeof("SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1"), &mapSelStmt, NULL);
 
 
-	for (__int64 iid : treeIds) 
+	for (std::pair<__int64, std::vector<short>> iidPair : treeIds) 
 	{
+		__int64 iid = iidPair.first;
+
+		std::vector<short> typesUse = iidPair.second;
+
+		bool useData = false;
+		if (typesUse.size() > 0)
+		{
+			short mainType = typesUse[0];
+			if (renderEncoder.rules.size() > mainType)
+			{
+				MapRulType ruleData = renderEncoder.rules[mainType];
+				if (ruleData.tagValuePattern.tag == "highway" || ruleData.tagValuePattern.tag == "natural" || ruleData.tagValuePattern.tag == "place")
+					useData = true;
+			}
+		}
+		else
+		{
+			useData = true;
+		}
+
+		if (!useData)
+			continue;
+
 		dbCode = sqlite3_reset(mapSelStmt);
 		dbCode = sqlite3_bind_int64(mapSelStmt, 1, iid);
 		
@@ -769,7 +854,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 
 
 	SkImage::Info info = {
-        800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+        1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
     };
 	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 	SkCanvas* painter = imageRender->getCanvas();
@@ -806,7 +891,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	SkPaint paint;
 	paint.setColor(SK_ColorBLACK);
 	paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
-	scale = scale * 5;
+	//scale = scale * 5;
 
 	bool closed = true;
 	for (auto nData : lines)
@@ -821,7 +906,6 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 			{
 				closed = true;
 			}
-			SkPath pathData;
 
 
 			std::pair<float, float> prevNode(0,0);
@@ -829,23 +913,20 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 			{
 				if (prevNode.first == 0)
 				{
-					SkScalar pointX1 = (coordData.first - offsetX) * scale;
-					SkScalar pointY1 = (coordData.second - offsetY) * scale;
 					prevNode = coordData;
-									pointX1 = abs(pointX1);
-					pointY1 = abs(pointY1);
-
-					pathData.moveTo(pointX1, pointY1);
 				}
 				else
 				{
-					SkScalar pointX1 = (coordData.first - offsetX) * scale;
-					SkScalar pointY1 = (coordData.second - offsetY) * scale;
-									pointX1 = abs(pointX1);
-				pointY1 = abs(pointY1);
-
-					pathData.lineTo(pointX1, pointY1);
+					SkScalar pointX1 = (prevNode.first - offsetX) * scale;
+					SkScalar pointY1 = (prevNode.second - offsetY) * scale;
+					pointX1 = abs(pointX1);
+					pointY1 = abs(pointY1);
+					SkScalar pointX2 = (coordData.first - offsetX) * scale;
+					SkScalar pointY2 = (coordData.second - offsetY) * scale;
+					pointX2 = abs(pointX2);
+					pointY2 = abs(pointY2);
 					prevNode = coordData;
+					painter->drawLine(pointX1,pointY1, pointX2, pointY2, paint);
 				}
 			}
 			//if (closed)
@@ -853,7 +934,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 			//	pathData.close();
 			//}
 
-			painter->drawPath(pathData, paint);
+			
 		}
 	/*		else
 		{
@@ -873,8 +954,9 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
         return ;
     }
 	char buff[10];
-	_ultoa_s(numberCalls++, buff,10);
+	_ultoa_s(indexMapTree, buff,10);
 	std::string pathImage = "D:\\osmData\\resultPolyImage" + std::string(buff) + std::string(".png");
     SkFILEWStream stream(pathImage.c_str());
     stream.write(data->data(), data->size());
+	}
 }

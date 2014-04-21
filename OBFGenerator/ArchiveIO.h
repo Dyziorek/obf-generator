@@ -27,23 +27,18 @@ template<class T> std::stringstream& writeInt(std::stringstream& oa, T data)
 	return oa;
 }
 
-template<> std::stringstream& writeInt<float>(std::stringstream& oa, float data)
-{
-	float shortData = (float)data;
-	oa << shortData;
-	return oa;
-}
 
 
 
 template<class T> std::stringstream& readSmallInts(std::stringstream& oa, std::vector<T>& data)
 {
 	size_t dataSize = sizeof(T);
-	T dataElem;
-	char* shortData = (char*)&dataElem;
 	oa.rdbuf()->pubseekpos(0);
 	while(oa.rdbuf()->in_avail() > 0)
 	{
+		T dataElem;
+		ZeroMemory(&dataElem, dataSize);
+		char* shortData = (char*)&dataElem;
 		oa.rdbuf()->sgetn(&shortData[0], 1);
 		oa.rdbuf()->sgetn(&shortData[1], 1);
 		data.push_back(dataElem);
@@ -54,11 +49,12 @@ template<class T> std::stringstream& readSmallInts(std::stringstream& oa, std::v
 template<class T> std::stringstream& readInts(std::stringstream& oa, std::vector<T>& data)
 {
 	size_t dataSize = sizeof(T);
-	T dataElem;
-	char* shortData = (char*)&dataElem;
 	oa.rdbuf()->pubseekpos(0);
 	while(oa.rdbuf()->in_avail() > 0)
 	{
+		T dataElem;
+		ZeroMemory(&dataElem, dataSize);
+		char* shortData = (char*)&dataElem;
 		oa.rdbuf()->sgetn(&shortData[0], 1);
 		oa.rdbuf()->sgetn(&shortData[1], 1);
 		oa.rdbuf()->sgetn(&shortData[2], 1);
@@ -68,14 +64,3 @@ template<class T> std::stringstream& readInts(std::stringstream& oa, std::vector
 	return oa;
 }
 
-template<> std::stringstream& readInts<double>(std::stringstream& oa, std::vector<double>& data)
-{
-	float shortData;
-	oa.rdbuf()->pubseekpos(0);
-	while(oa.rdbuf()->in_avail() > 0)
-	{
-		oa >> shortData;
-		data.push_back(shortData);
-	}
-	return oa;
-}
