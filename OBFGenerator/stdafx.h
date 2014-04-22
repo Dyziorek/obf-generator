@@ -80,5 +80,5 @@
 #include "EntityNode.h"
 #include "MapObject.h"
 #include "MapUtils.h"
-#include "OBFStreeDB.h"
+#include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"

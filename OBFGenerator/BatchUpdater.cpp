@@ -68,7 +68,7 @@ void BatchUpdater::flush(bool bFlush)
 			// INSERT INTO poi (id, x, y, type, subtype, additionalTags) VALUES (1?, 2?, 3?, 4?, 5?, 6?)"
 			SqlCode = sqlite3_bind_int64(amenityStmt, 1, am.getID());
 			SqlCode = sqlite3_bind_int(amenityStmt, 2,  MapUtils::get31TileNumberX(am.getLatLon().second) );
-			SqlCode = sqlite3_bind_int(amenityStmt, 3, MapUtils::get31TileNumberX(am.getLatLon().first) );
+			SqlCode = sqlite3_bind_int(amenityStmt, 3, MapUtils::get31TileNumberY(am.getLatLon().first) );
 			SqlCode = sqlite3_bind_text(amenityStmt, 4, am.getType().c_str(), am.getType().size(), SQLITE_TRANSIENT);
 			SqlCode = sqlite3_bind_text(amenityStmt, 5, am.subType.c_str(), am.subType.size(), SQLITE_TRANSIENT);
 			std::string additional = encodeAdditionalInfo(am.additionalInfo, am.getName(), am.getEnName());

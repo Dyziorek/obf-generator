@@ -67,9 +67,7 @@ public:
 	void loadRelationMembers(EntityRelation* relItem);
 	void loadWays(EntityWay* wayItem);
 	void loadNodesOnRelation(EntityRelation* relItem);
-	std::set<__int64> visitedBoundaryWays;
-	void indexBoundary(std::shared_ptr<EntityBase>& relItem);
-
+	
 
 	void mainIteration(std::shared_ptr<EntityBase>& relItem);
 	virtual void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
@@ -77,7 +75,6 @@ public:
 	TileManager<MapObject> townManager;
 	std::map<std::shared_ptr<EntityNode>, MapObject> cities;
 	std::set<std::shared_ptr<EntityRelation>> relations;
-	std::set<std::shared_ptr<MultiPoly>> boundaries;
 	void addBatch(Amenity am);
 	void addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
 	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
@@ -92,6 +89,7 @@ public:
 	OBFResultDB* poiIndexer;
 	OBFResultDB* transIndexer;
 	OBFResultDB* routeIndexer;
+	OBFResultDB* addresIndexer;
 	BatchUpdater* storeData;
 };
 

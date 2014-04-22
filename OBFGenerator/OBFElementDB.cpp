@@ -56,6 +56,7 @@ void OBFpoiDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 	tempAmenityList = Amenity::parseAmenities(renderer, baseItem.get(), tempAmenityList);
 	if (!tempAmenityList.empty() ) {
 		if(relItem) {
+			dbContext.loadRelationMembers(relItem.get());	
 			dbContext.loadNodesOnRelation(relItem.get());
 		}
 
@@ -180,3 +181,107 @@ void OBFrouteDB::indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry,
 }
 
 
+
+
+OBFAddresStreetDB::OBFAddresStreetDB(void)
+{
+}
+
+
+OBFAddresStreetDB::~OBFAddresStreetDB(void)
+{
+}
+
+void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)
+{
+	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
+	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(baseItem);
+	
+	if (wayItem.get() == nullptr && relItem.get() == nullptr)
+		return;
+
+	
+
+	BOOL administrative = (baseItem->getTag("boundary") == "administrative");
+	if (administrative  && baseItem->getTag("place") != "")
+	{
+		if (wayItem.get() != nullptr)
+		{
+			if (visitedBoundaryWays.find(wayItem->id) != visitedBoundaryWays.end())
+				return;
+		}
+		std::string boundName = baseItem->getTag("name");
+		if (relItem != nullptr)
+		{
+			dbContext.loadRelationMembers(relItem.get());
+			if (relItem->entityIDs.size() > 0)
+			{
+				dbContext.loadNodesOnRelation(relItem.get());
+			}
+		}
+		__int64 centrID = 0;
+		std::shared_ptr<MultiPoly> polyline(new MultiPoly);
+		if (relItem != nullptr)
+		{
+			for(auto entityItem : relItem->relations)
+			{
+				if (entityItem.first.first == 2)
+				{
+					std::shared_ptr<EntityRelation> relSubItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(entityItem.first.second);
+					if (relSubItem->entityIDs.size() > 0)
+					{
+						dbContext.loadNodesOnRelation(relSubItem.get());
+						for(auto innerEntityItem : relSubItem->relations)
+						{
+							if (innerEntityItem.first.first == 1)
+							{
+								boolean inner = (innerEntityItem.second == "inner");
+								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(innerEntityItem.first.second);
+								if (inner)
+								{
+									polyline->inWays.push_back(wayPtr);
+								}
+								else
+								{
+									polyline->outWays.push_back(wayPtr);
+									if (wayPtr->getTag("name") == boundName)
+									{
+										visitedBoundaryWays.insert(wayPtr->id);
+									}
+								}
+							}
+							else if (innerEntityItem.first.first == 0)
+							{
+								if (innerEntityItem.second == "admin_centre" || innerEntityItem.second == "admin_center")
+								{
+									centrID = innerEntityItem.first.second->id;
+								}
+								else if (innerEntityItem.second == "label")
+								{
+									centrID = innerEntityItem.first.second->id;
+								}
+							}
+						}
+					}
+				}
+				else if (entityItem.first.first == 1)
+				{
+					polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(entityItem.first.second));
+				}
+			}
+		}
+		else if (wayItem != nullptr)
+		{
+			polyline->outWays.push_back(wayItem);
+		}
+		polyline->build();
+		polyline->centerID = centrID;
+		polyline->id = baseItem->id;
+		if (baseItem->getTag("admin_level") != "")
+		{
+			std::string text = baseItem->getTag("admin_level");
+			polyline->level = std::stoi(text);
+		}
+		boundaries.insert(polyline);
+	}
+}

@@ -57,9 +57,6 @@
     <ClInclude Include="portable_binary_oarchive.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OBFStreeDB.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EntityNode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -85,6 +82,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ArchiveIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OBFResultDB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -114,9 +114,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="portable_binary_oarchive.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="OBFStreeDB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EntityNode.cpp">
@@ -177,6 +174,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OBFResultDB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

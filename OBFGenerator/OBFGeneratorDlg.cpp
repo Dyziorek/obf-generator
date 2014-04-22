@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "EntityBase.h"
 #include "EntityNode.h"
-#include "OBFStreeDB.h"
+#include "OBFResultDB.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

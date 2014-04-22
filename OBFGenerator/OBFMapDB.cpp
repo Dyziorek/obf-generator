@@ -4,7 +4,7 @@
 #include "EntityNode.h"
 #include "MapObject.h"
 #include "OBFRenderingTypes.h"
-#include "OBFStreeDB.h"
+#include "OBFResultDB.h"
 #include "MapUtils.h"
 #include "MultiPoly.h"
 #include "OBFMapDB.h"
@@ -16,6 +16,7 @@
 #include "SkGraphics.h"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/container/list.hpp>
 #include "ArchiveIO.h"
 
 
@@ -195,7 +196,7 @@ void OBFMapDB::paintPolys()
 	}
 
 	SkImage::Info info = {
-			800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+			1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
 		};
 		SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 		SkCanvas* painter = imageRender->getCanvas();
@@ -703,12 +704,16 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 
 	void OBFMapDB::parseAndSort(const void* blobData, int blobSize, std::list<long>& toData)
 	{
+		toData.clear();
 		std::stringstream dataStream;
 		dataStream.rdbuf()->sputn((const char*)blobData, blobSize);
 		std::vector<long> localLoad;
 		readSmallInts(dataStream, localLoad);
 		if(localLoad.size() > 0)
 		{
+			//boost::container::list<long> arrData;
+			//std::for_each(localLoad.begin(), localLoad.end(), [&arrData](long value) {arrData.push_back(value);});
+			//arrData.sort();
 			std::for_each(localLoad.begin(), localLoad.end(), [&toData](long value) {toData.push_back(value);});
 			toData.sort();
 		}
@@ -891,7 +896,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	SkPaint paint;
 	paint.setColor(SK_ColorBLACK);
 	paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
-	//scale = scale * 5;
+	scale = scale * 6;
 
 	bool closed = true;
 	for (auto nData : lines)

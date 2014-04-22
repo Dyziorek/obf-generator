@@ -219,7 +219,7 @@
     <ClInclude Include="MultiPoly.h" />
     <ClInclude Include="OBFGenerator.h" />
     <ClInclude Include="OBFGeneratorDlg.h" />
-    <ClInclude Include="OBFStreeDB.h" />
+    <ClInclude Include="OBFResultDB.h" />
     <ClInclude Include="portable_binary_archive.hpp" />
     <ClInclude Include="portable_binary_iarchive.hpp" />
     <ClInclude Include="portable_binary_oarchive.hpp" />
@@ -298,7 +298,7 @@
     </ClCompile>
     <ClCompile Include="OBFMapDB.cpp" />
     <ClCompile Include="OBFRenderingTypes.cpp" />
-    <ClCompile Include="OBFStreeDB.cpp" />
+    <ClCompile Include="OBFResultDB.cpp" />
     <ClCompile Include="portable_binary_iarchive.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

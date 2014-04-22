@@ -1,5 +1,5 @@
 #pragma once
-#include "obfstreedb.h"
+#include "OBFResultDB.h"
 #include "MapRoutingTypes.h"
 
 class OBFpoiDB :
@@ -40,3 +40,13 @@ public:
 	MapRoutingTypes routingTypes;
 };
 
+class OBFAddresStreetDB :
+	public OBFResultDB
+{
+public:
+	std::set<__int64> visitedBoundaryWays;
+	std::set<std::shared_ptr<MultiPoly>> boundaries;
+	OBFAddresStreetDB(void);
+	virtual ~OBFAddresStreetDB(void);
+	void indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
+};

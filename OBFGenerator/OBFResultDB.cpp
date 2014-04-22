@@ -3,7 +3,7 @@
 #include "EntityBase.h"
 #include "EntityNode.h"
 #include "MapObject.h"
-#include "OBFStreeDB.h"
+#include "OBFResultDB.h"
 #include "MapUtils.h"
 #include "MultiPoly.h"
 #include "OBFMapDB.h"
@@ -44,6 +44,11 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	if (poiIndexer == nullptr)
 	{
 		poiIndexer = new OBFpoiDB();
+	}
+
+	if (addresIndexer == nullptr)
+	{
+		addresIndexer = new OBFAddresStreetDB();
 	}
 
 	if (routeIndexer == nullptr)
@@ -206,7 +211,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				
 				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
 
-				indexBoundary(std::static_pointer_cast<EntityBase,EntityRelation>(relItem));
+				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(std::static_pointer_cast<EntityBase,EntityRelation>(relItem), *this);
+				
 
 				((OBFMapDB*)mapIndexer)->indexMapAndPolygonRelations(relItem, *this);
 
@@ -229,8 +235,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		numbers = 0;
 		iterateOverElements(NODEWAYBOUNDARY,
 			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
-				std::shared_ptr<EntityWay> relItem = std::static_pointer_cast<EntityWay, EntityBase>(itm);
-				indexBoundary(std::static_pointer_cast<EntityBase,EntityWay>(relItem));
+				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(itm, *this);
 				numbers++;
 		});
 
@@ -312,99 +317,6 @@ void OBFResultDB::mainIteration(std::shared_ptr<EntityBase>& relItem)
 	routeIndexer->iterateMainEntity(relItem, *this);
 }
 
-void OBFResultDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem)
-{
-	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
-	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(baseItem);
-	
-	if (wayItem.get() == nullptr && relItem.get() == nullptr)
-		return;
-
-	
-
-	BOOL administrative = (baseItem->getTag("boundary") == "administrative");
-	if (administrative  && baseItem->getTag("place") != "")
-	{
-		if (wayItem.get() != nullptr)
-		{
-			if (visitedBoundaryWays.find(wayItem->id) != visitedBoundaryWays.end())
-				return;
-		}
-		std::string boundName = baseItem->getTag("name");
-		if (relItem != nullptr)
-		{
-			loadRelationMembers(relItem.get());
-			if (relItem->entityIDs.size() > 0)
-			{
-				loadNodesOnRelation(relItem.get());
-			}
-		}
-		__int64 centrID = 0;
-		std::shared_ptr<MultiPoly> polyline(new MultiPoly);
-		if (relItem != nullptr)
-		{
-			for(auto entityItem : relItem->relations)
-			{
-				if (entityItem.first.first == 2)
-				{
-					std::shared_ptr<EntityRelation> relSubItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(entityItem.first.second);
-					if (relSubItem->entityIDs.size() > 0)
-					{
-						loadNodesOnRelation(relSubItem.get());
-						for(auto innerEntityItem : relSubItem->relations)
-						{
-							if (innerEntityItem.first.first == 1)
-							{
-								boolean inner = (innerEntityItem.second == "inner");
-								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(innerEntityItem.first.second);
-								if (inner)
-								{
-									polyline->inWays.push_back(wayPtr);
-								}
-								else
-								{
-									polyline->outWays.push_back(wayPtr);
-									if (wayPtr->getTag("name") == boundName)
-									{
-										visitedBoundaryWays.insert(wayPtr->id);
-									}
-								}
-							}
-							else if (innerEntityItem.first.first == 0)
-							{
-								if (innerEntityItem.second == "admin_centre" || innerEntityItem.second == "admin_center")
-								{
-									centrID = innerEntityItem.first.second->id;
-								}
-								else if (innerEntityItem.second == "label")
-								{
-									centrID = innerEntityItem.first.second->id;
-								}
-							}
-						}
-					}
-				}
-				else if (entityItem.first.first == 1)
-				{
-					polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(entityItem.first.second));
-				}
-			}
-		}
-		else if (wayItem != nullptr)
-		{
-			polyline->outWays.push_back(wayItem);
-		}
-		polyline->build();
-		polyline->centerID = centrID;
-		polyline->id = baseItem->id;
-		if (baseItem->getTag("admin_level") != "")
-		{
-			std::string text = baseItem->getTag("admin_level");
-			polyline->level = std::stoi(text);
-		}
-		boundaries.insert(polyline);
-	}
-}
 
 
 void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
