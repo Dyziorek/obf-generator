@@ -11,7 +11,7 @@ namespace bgi = boost::geometry::index;
 
 class RTree
 {
-private:
+public:
 
 	
 
@@ -54,6 +54,7 @@ public:
 	}
 
 	void getTreeData(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, std::tuple<double, double, double, double>& bounds);
+	void getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, box& bounds, std::tuple<double, double, double, double>& newbounds);
 	
 };
 

@@ -17,6 +17,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/container/list.hpp>
+#include "boost/multi_array.hpp"
 #include "ArchiveIO.h"
 
 
@@ -749,13 +750,43 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 {
 
 	std::vector<std::pair<__int64, std::vector<short>>> treeIds;
+	std::vector<std::pair<__int64, std::vector<short>>> treeSearchIds;
 	 std::tuple<double, double, double, double> bounds;
+	 
 
-	
-
+	 
 	for (int indexMapTree = mapTree.size()-1; indexMapTree >= 0; indexMapTree--)
 	{
 		mapTree[indexMapTree].getTreeData(treeIds, bounds);
+		double stepx = (std::get<2>(bounds) - std::get<0>(bounds)) / 2;
+		double stepy = (std::get<3>(bounds) - std::get<1>(bounds)) / 2;
+		double basex = std::get<0>(bounds);
+		double basey = std::get<1>(bounds);
+		int maxCount = 0;
+		std::pair<int, int> tile;
+		 std::tuple<double, double, double, double> newbounds;
+		for (int iarrx = 0; iarrx < 2; iarrx++)
+		{
+			for (int iarry = 0; iarry < 2; iarry++)
+			{
+				RTree::box newPart;
+						
+				newPart.min_corner().set<0>(MapUtils::get31TileNumberX(basex + (stepx * iarrx)));
+				newPart.min_corner().set<1>(MapUtils::get31TileNumberY(basey + (stepy * iarry)));
+
+				newPart.max_corner().set<0>(MapUtils::get31TileNumberX(basex + (stepx * (iarrx+1))));
+				newPart.max_corner().set<1>(MapUtils::get31TileNumberY(basey + (stepy * (iarry+1))));
+
+				mapTree[indexMapTree].getTreeDataBox(treeSearchIds, newPart, newbounds);
+
+				if (maxCount < treeSearchIds.size())
+				{
+					maxCount = treeSearchIds.size();
+					treeIds = treeSearchIds;
+					bounds = newbounds;
+				}
+			}
+		}
 	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> lines;
 	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> inlines;
 
@@ -771,7 +802,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 
 		std::vector<short> typesUse = iidPair.second;
 
-		bool useData = false;
+		bool useData = true;
 		if (typesUse.size() > 0)
 		{
 			short mainType = typesUse[0];
@@ -896,7 +927,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	SkPaint paint;
 	paint.setColor(SK_ColorBLACK);
 	paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
-	scale = scale * 6;
+	
 
 	bool closed = true;
 	for (auto nData : lines)
