@@ -8,7 +8,7 @@
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
 
-SkAutoGraphics ag;
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -28,8 +28,14 @@ COBFGeneratorApp::COBFGeneratorApp()
 {
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
+	SkGraphics::Init();
 }
 
+COBFGeneratorApp::~COBFGeneratorApp()
+{
+	// TODO: add construction code here,
+	// Place all significant initialization in InitInstance
+}
 
 // The one and only COBFGeneratorApp object
 

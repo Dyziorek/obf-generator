@@ -141,7 +141,7 @@ void MultiPoly::build()
 	}
 
 	SkImage::Info info = {
-        800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+        1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
     };
 	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 	SkCanvas* painter = imageRender->getCanvas();

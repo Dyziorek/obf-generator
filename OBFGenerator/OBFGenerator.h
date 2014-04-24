@@ -19,7 +19,7 @@ class COBFGeneratorApp : public CWinApp
 {
 public:
 	COBFGeneratorApp();
-
+	~COBFGeneratorApp();
 // Overrides
 public:
 	virtual BOOL InitInstance();

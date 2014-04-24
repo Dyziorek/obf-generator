@@ -753,21 +753,28 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	std::vector<std::pair<__int64, std::vector<short>>> treeSearchIds;
 	 std::tuple<double, double, double, double> bounds;
 	 
+	 int dbCode;
+	sqlite3* dbCtx = dbContext.dbMapCtx;
+	sqlite3_stmt* mapSelStmt;
+	dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1" , sizeof("SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1"), &mapSelStmt, NULL);
 
+
+	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> lines;
+	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> inlines;
 	 
 	for (int indexMapTree = mapTree.size()-1; indexMapTree >= 0; indexMapTree--)
 	{
 		mapTree[indexMapTree].getTreeData(treeIds, bounds);
-		double stepx = (std::get<2>(bounds) - std::get<0>(bounds)) / 2;
-		double stepy = (std::get<3>(bounds) - std::get<1>(bounds)) / 2;
+		double stepx = (std::get<2>(bounds) - std::get<0>(bounds)) / 5;
+		double stepy = (std::get<3>(bounds) - std::get<1>(bounds)) / 4;
 		double basex = std::get<0>(bounds);
 		double basey = std::get<1>(bounds);
 		int maxCount = 0;
 		std::pair<int, int> tile;
 		 std::tuple<double, double, double, double> newbounds;
-		for (int iarrx = 0; iarrx < 2; iarrx++)
+		for (int iarrx = 0; iarrx < 5; iarrx++)
 		{
-			for (int iarry = 0; iarry < 2; iarry++)
+			for (int iarry = 0; iarry < 4; iarry++)
 			{
 				RTree::box newPart;
 						
@@ -777,222 +784,218 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 				newPart.max_corner().set<0>(MapUtils::get31TileNumberX(basex + (stepx * (iarrx+1))));
 				newPart.max_corner().set<1>(MapUtils::get31TileNumberY(basey + (stepy * (iarry+1))));
 
-				mapTree[indexMapTree].getTreeDataBox(treeSearchIds, newPart, newbounds);
-
-				if (maxCount < treeSearchIds.size())
+				mapTree[indexMapTree].getTreeDataBox(treeIds, newPart, newbounds);
+				lines.clear();
+				inlines.clear();
+				if (treeIds.size() == 0)
 				{
-					maxCount = treeSearchIds.size();
-					treeIds = treeSearchIds;
-					bounds = newbounds;
+					continue;
 				}
-			}
-		}
-	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> lines;
-	boost::unordered_map<__int64, std::shared_ptr<std::vector<std::pair<float, float>>>> inlines;
+				for (std::pair<__int64, std::vector<short>> iidPair : treeIds) 
+				{
+					__int64 iid = iidPair.first;
 
-	int dbCode;
-	sqlite3* dbCtx = dbContext.dbMapCtx;
-	sqlite3_stmt* mapSelStmt;
-	dbCode = sqlite3_prepare_v2(dbCtx, "SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1" , sizeof("SELECT id, area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?1"), &mapSelStmt, NULL);
+					std::vector<short> typesUse = iidPair.second;
 
+					bool useData = true;
+					if (typesUse.size() > 0)
+					{
+						short mainType = typesUse[0];
+						if (renderEncoder.rules.size() > mainType)
+						{
+							MapRulType ruleData = renderEncoder.rules[mainType];
+							if (ruleData.tagValuePattern.tag == "highway" || ruleData.tagValuePattern.tag == "natural" || ruleData.tagValuePattern.tag == "place")
+								useData = true;
+						}
+					}
+					else
+					{
+						useData = true;
+					}
 
-	for (std::pair<__int64, std::vector<short>> iidPair : treeIds) 
-	{
-		__int64 iid = iidPair.first;
+					if (!useData)
+						continue;
 
-		std::vector<short> typesUse = iidPair.second;
-
-		bool useData = true;
-		if (typesUse.size() > 0)
-		{
-			short mainType = typesUse[0];
-			if (renderEncoder.rules.size() > mainType)
-			{
-				MapRulType ruleData = renderEncoder.rules[mainType];
-				if (ruleData.tagValuePattern.tag == "highway" || ruleData.tagValuePattern.tag == "natural" || ruleData.tagValuePattern.tag == "place")
-					useData = true;
-			}
-		}
-		else
-		{
-			useData = true;
-		}
-
-		if (!useData)
-			continue;
-
-		dbCode = sqlite3_reset(mapSelStmt);
-		dbCode = sqlite3_bind_int64(mapSelStmt, 1, iid);
+					dbCode = sqlite3_reset(mapSelStmt);
+					dbCode = sqlite3_bind_int64(mapSelStmt, 1, iid);
 		
 
-		dbCode = sqlite3_step(mapSelStmt);
+					dbCode = sqlite3_step(mapSelStmt);
 
 
-		if (dbCode != SQLITE_ROW)
-		{
-			sqlite3_reset(mapSelStmt);
-			continue;
-		}
+					if (dbCode != SQLITE_ROW)
+					{
+						sqlite3_reset(mapSelStmt);
+						continue;
+					}
 
 
-		int closed = sqlite3_column_int(mapSelStmt, 1);
-		const void* plData = sqlite3_column_blob(mapSelStmt, 2);
-		int blobSize = sqlite3_column_bytes(mapSelStmt, 2);
-		std::stringstream buffer;
-		std::shared_ptr<std::vector<std::pair<float, float>>> coords(new std::vector<std::pair<float, float>>());
-		std::shared_ptr<std::vector<std::pair<float, float>>> Incoords(new std::vector<std::pair<float, float>>());
-		if (blobSize>0)
-		{
-			buffer.rdbuf()->sputn((const char*)plData, blobSize);
-			std::vector<int> linodeData;
-			readInts(buffer, linodeData);
-			for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
-			{
-				float lon = MapUtils::get31LongitudeX(*floatIt);
-				float lat = MapUtils::get31LatitudeY(*(floatIt+1));
-				coords->push_back(std::make_pair(lon, lat));
-			}
-			buffer.str(std::string());
-			if (closed)
-			{
-				lines.emplace(iid<<2, std::move(coords));
-			}
-			else
-			{
-				lines.emplace(iid<<2+1, std::move(coords));
-			}
-		}
-		plData = sqlite3_column_blob(mapSelStmt, 3);
-		blobSize = sqlite3_column_bytes(mapSelStmt, 3);
-		if (blobSize>0)
-		{
-			buffer.rdbuf()->sputn((const char*)plData, blobSize);
-			std::vector<int> linodeData;
-			readInts(buffer, linodeData);
-			for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
-			{
-				float lon = MapUtils::get31LongitudeX(*floatIt);
-				float lat = MapUtils::get31LatitudeY(*(floatIt+1));
-				Incoords->push_back(std::make_pair(lon, lat));
-			}
-			buffer.str(std::string());
-			if (closed)
-			{
-				inlines.emplace(iid<<2, std::move(Incoords));
-			}
-			else
-			{
-				inlines.emplace(iid<<2+1, std::move(Incoords));
-			}
-		}
-	}
-	
-
-
-	SkImage::Info info = {
-        1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
-    };
-	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
-	SkCanvas* painter = imageRender->getCanvas();
-	painter->drawColor(SK_ColorWHITE);
-	SkRect limits;
-	painter->getClipBounds(&limits);
-	SkScalar w = limits.width();
-	SkScalar h = limits.height();
-	
-	
-
-	double offsetX = std::get<0>(bounds), offsetY = std::get<1>(bounds);
-	double maxY = std::get<3>(bounds), maxX = std::get<2>(bounds);
-
-
-	double scale = 1.0;
-	if (maxX - offsetX > w || maxY - offsetY > h)
-	{
-		if ((maxX - offsetX - w) > (maxY - offsetY - h))
-		{
-			scale = w / (maxX - offsetX);
-		}
-		else
-		{
-			scale = w / (maxY - offsetY);
-		}
-	}
-	else if (maxX - offsetX < w && maxY - offsetY < h)
-	{
-		scale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
-	}
-
-
-	SkPaint paint;
-	paint.setColor(SK_ColorBLACK);
-	paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
-	
-
-	bool closed = true;
-	for (auto nData : lines)
-	{
-		if ((*nData.second).size() > 1)
-		{
-			if (nData.first % 2 == 1)
-			{
-				closed = false;
-			}
-			else
-			{
-				closed = true;
-			}
-
-
-			std::pair<float, float> prevNode(0,0);
-			for (auto coordData : *nData.second)
-			{
-				if (prevNode.first == 0)
-				{
-					prevNode = coordData;
+					int closed = sqlite3_column_int(mapSelStmt, 1);
+					const void* plData = sqlite3_column_blob(mapSelStmt, 2);
+					int blobSize = sqlite3_column_bytes(mapSelStmt, 2);
+					std::stringstream buffer;
+					std::shared_ptr<std::vector<std::pair<float, float>>> coords(new std::vector<std::pair<float, float>>());
+					std::shared_ptr<std::vector<std::pair<float, float>>> Incoords(new std::vector<std::pair<float, float>>());
+					if (blobSize>0)
+					{
+						buffer.rdbuf()->sputn((const char*)plData, blobSize);
+						std::vector<int> linodeData;
+						readInts(buffer, linodeData);
+						for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
+						{
+							float lon = MapUtils::get31LongitudeX(*floatIt);
+							float lat = MapUtils::get31LatitudeY(*(floatIt+1));
+							coords->push_back(std::make_pair(lon, lat));
+						}
+						buffer.str(std::string());
+						if (closed)
+						{
+							lines.emplace(iid<<2, std::move(coords));
+						}
+						else
+						{
+							lines.emplace(iid<<2+1, std::move(coords));
+						}
+					}
+					plData = sqlite3_column_blob(mapSelStmt, 3);
+					blobSize = sqlite3_column_bytes(mapSelStmt, 3);
+					if (blobSize>0)
+					{
+						buffer.rdbuf()->sputn((const char*)plData, blobSize);
+						std::vector<int> linodeData;
+						readInts(buffer, linodeData);
+						for (auto floatIt = linodeData.begin(); floatIt != linodeData.end(); floatIt +=2)
+						{
+							float lon = MapUtils::get31LongitudeX(*floatIt);
+							float lat = MapUtils::get31LatitudeY(*(floatIt+1));
+							Incoords->push_back(std::make_pair(lon, lat));
+						}
+						buffer.str(std::string());
+						if (closed)
+						{
+							inlines.emplace(iid<<2, std::move(Incoords));
+						}
+						else
+						{
+							inlines.emplace(iid<<2+1, std::move(Incoords));
+						}
+					}
 				}
-				else
+
+
+				SkImage::Info info = {
+					1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+				};
+				SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
+				SkCanvas* painter = imageRender->getCanvas();
+				painter->drawColor(SK_ColorWHITE);
+				SkRect limits;
+				painter->getClipBounds(&limits);
+				SkScalar w = limits.width();
+				SkScalar h = limits.height();
+	
+	
+
+				double offsetX = std::get<0>(newbounds), offsetY = std::get<1>(newbounds);
+				double maxY = std::get<3>(newbounds), maxX = std::get<2>(newbounds);
+
+
+				double scale = 1.0;
+				if (maxX - offsetX > w || maxY - offsetY > h)
 				{
-					SkScalar pointX1 = (prevNode.first - offsetX) * scale;
-					SkScalar pointY1 = (prevNode.second - offsetY) * scale;
-					pointX1 = abs(pointX1);
-					pointY1 = abs(pointY1);
-					SkScalar pointX2 = (coordData.first - offsetX) * scale;
-					SkScalar pointY2 = (coordData.second - offsetY) * scale;
-					pointX2 = abs(pointX2);
-					pointY2 = abs(pointY2);
-					prevNode = coordData;
-					painter->drawLine(pointX1,pointY1, pointX2, pointY2, paint);
+					if ((maxX - offsetX - w) > (maxY - offsetY - h))
+					{
+						scale = w / (maxX - offsetX);
+					}
+					else
+					{
+						scale = w / (maxY - offsetY);
+					}
 				}
-			}
-			//if (closed)
-			//{
-			//	pathData.close();
-			//}
+				else if (maxX - offsetX < w && maxY - offsetY < h)
+				{
+					scale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
+				}
+
+
+				SkPaint paint;
+				paint.setColor(SK_ColorBLACK);
+				paint.setStyle(SkPaint::Style::kStrokeAndFill_Style);
+	
+
+				bool closed = true;
+				for (auto nData : lines)
+				{
+					if ((*nData.second).size() > 1)
+					{
+						if (nData.first % 2 == 1)
+						{
+							closed = false;
+						}
+						else
+						{
+							closed = true;
+						}
+
+
+						std::pair<float, float> prevNode(0,0);
+						for (auto coordData : *nData.second)
+						{
+							if (prevNode.first == 0)
+							{
+								prevNode = coordData;
+							}
+							else
+							{
+								SkScalar pointX1 = (prevNode.first - offsetX) * scale;
+								SkScalar pointY1 = (prevNode.second - offsetY) * scale;
+								pointX1 = abs(pointX1);
+								pointY1 = abs(pointY1);
+								SkScalar pointX2 = (coordData.first - offsetX) * scale;
+								SkScalar pointY2 = (coordData.second - offsetY) * scale;
+								pointX2 = abs(pointX2);
+								pointY2 = abs(pointY2);
+								prevNode = coordData;
+								painter->drawLine(pointX1,pointY1, pointX2, pointY2, paint);
+							}
+						}
+						//if (closed)
+						//{
+						//	pathData.close();
+						//}
 
 			
-		}
-	/*		else
-		{
-			std::pair<float, float> Node = (*(nData.second))[0];
-			SkScalar pointX1 = (Node.first - offsetX) * scale;
-			SkScalar pointY1 = (Node.second - offsetY) * scale;
-				pointX1 = abs(pointX1);
-				pointY1 = abs(pointY1);
-			painter->drawCircle(pointX1, pointY1, 2, paint);
-		}
-	*/
-	}
+					}
+				/*		else
+					{
+						std::pair<float, float> Node = (*(nData.second))[0];
+						SkScalar pointX1 = (Node.first - offsetX) * scale;
+						SkScalar pointY1 = (Node.second - offsetY) * scale;
+							pointX1 = abs(pointX1);
+							pointY1 = abs(pointY1);
+						painter->drawCircle(pointX1, pointY1, 2, paint);
+					}
+				*/
+				}
 	
-	SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
-    SkAutoDataUnref data(image->encode());
-    if (NULL == data.get()) {
-        return ;
-    }
-	char buff[10];
-	_ultoa_s(indexMapTree, buff,10);
-	std::string pathImage = "D:\\osmData\\resultPolyImage" + std::string(buff) + std::string(".png");
-    SkFILEWStream stream(pathImage.c_str());
-    stream.write(data->data(), data->size());
+				SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
+				SkAutoDataUnref data(image->encode());
+				if (NULL == data.get()) {
+					return ;
+				}
+				
+				std::string buffText("");
+				buffText+= boost::lexical_cast<std::string>(indexMapTree);
+				buffText+= "_";
+				buffText+= boost::lexical_cast<std::string>(iarrx);
+				buffText+= boost::lexical_cast<std::string>(iarry);
+				std::string pathImage = "D:\\osmData\\resultPolyImage" + buffText + std::string(".png");
+				SkFILEWStream stream(pathImage.c_str());
+				stream.write(data->data(), data->size());
+
+
+			}
+		}
+
 	}
 }

@@ -6,7 +6,8 @@
 #include "EntityBase.h"
 #include "EntityNode.h"
 #include "OBFResultDB.h"
-
+#include "OBFGeneratorDlg.h"
+#include "SkGraphics.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -69,6 +70,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_MFCBUTTON1, &COBFGeneratorDlg::OnBnClickedMfcbutton1)
 	ON_MESSAGE(WM_MYMESSAGE,  &COBFGeneratorDlg::OnMyMessage)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -783,3 +785,11 @@ int COBFGeneratorDlg::ParseFile()
 }
 
 
+
+
+void COBFGeneratorDlg::OnClose()
+{
+	// TODO: Add your message handler code here and/or call default
+	SkGraphics::Term();
+	CDialogEx::OnClose();
+}

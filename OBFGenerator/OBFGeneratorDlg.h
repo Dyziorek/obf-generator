@@ -83,4 +83,5 @@ public:
 	CStatic m_progress;
 
 	OBFResultDB results;
+	afx_msg void OnClose();
 };
