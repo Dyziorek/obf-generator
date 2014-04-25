@@ -765,16 +765,16 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext)
 	for (int indexMapTree = mapTree.size()-1; indexMapTree >= 0; indexMapTree--)
 	{
 		mapTree[indexMapTree].getTreeData(treeIds, bounds);
-		double stepx = (std::get<2>(bounds) - std::get<0>(bounds)) / 5;
-		double stepy = (std::get<3>(bounds) - std::get<1>(bounds)) / 4;
+		double stepx = (std::get<2>(bounds) - std::get<0>(bounds)) / 2;
+		double stepy = (std::get<3>(bounds) - std::get<1>(bounds)) / 2;
 		double basex = std::get<0>(bounds);
 		double basey = std::get<1>(bounds);
 		int maxCount = 0;
 		std::pair<int, int> tile;
 		 std::tuple<double, double, double, double> newbounds;
-		for (int iarrx = 0; iarrx < 5; iarrx++)
+		for (int iarrx = 0; iarrx < 2; iarrx++)
 		{
-			for (int iarry = 0; iarry < 4; iarry++)
+			for (int iarry = 0; iarry < 2; iarry++)
 			{
 				RTree::box newPart;
 						
