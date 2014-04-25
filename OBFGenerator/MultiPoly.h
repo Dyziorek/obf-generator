@@ -71,7 +71,7 @@ public:
 	void mergeWith(std::vector<std::shared_ptr<Ring>> inRing, std::vector<std::shared_ptr<Ring>> outRing);
 	void paintImage(SkCanvas* painter, double scale, double offsetX,double offsetY);
 	void generateImage(std::shared_ptr<EntityWay> lines, SkCanvas* painter, SkColor color, double scale,  double offsetX, double offsetY);
-	void getScaleOffsets(double* scale, double* offX, double* offy, SkRect limits);
+	void getScaleOffsets(double* scale, double* offX, double* offy, double* offmx, double* offmy, SkRect limits);
 	__int64 centerID;
 	__int64 id;
 	int level;

@@ -28,7 +28,7 @@ COBFGeneratorApp::COBFGeneratorApp()
 {
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
-	SkGraphics::Init();
+
 }
 
 COBFGeneratorApp::~COBFGeneratorApp()

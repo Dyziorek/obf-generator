@@ -71,6 +71,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_MFCBUTTON1, &COBFGeneratorDlg::OnBnClickedMfcbutton1)
 	ON_MESSAGE(WM_MYMESSAGE,  &COBFGeneratorDlg::OnMyMessage)
 	ON_WM_CLOSE()
+	ON_WM_CREATE()
 END_MESSAGE_MAP()
 
 
@@ -792,4 +793,15 @@ void COBFGeneratorDlg::OnClose()
 	// TODO: Add your message handler code here and/or call default
 	SkGraphics::Term();
 	CDialogEx::OnClose();
+}
+
+
+int COBFGeneratorDlg::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (CDialogEx::OnCreate(lpCreateStruct) == -1)
+		return -1;
+	SkGraphics::Init();
+	// TODO:  Add your specialized creation code here
+
+	return 0;
 }
