@@ -167,8 +167,10 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 
 void OBFResultDB::imageResult()
 {
+	OBFAddresStreetDB* addresor = (OBFAddresStreetDB*)addresIndexer;
+
 	((OBFMapDB*)mapIndexer)->paintPolys();
-	((OBFMapDB*)mapIndexer)->paintTreeData(*this);
+	((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, this->cities);
 }
 
 int OBFResultDB::iterateOverElements(int iterationPhase)

@@ -140,6 +140,8 @@ void MultiPoly::build()
 		outRing.insert(outRing.begin(), outRings.begin(), outRings.end());
 	}
 
+	if (false)
+	{
 	SkImage::Info info = {
         1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
     };
@@ -234,6 +236,9 @@ void MultiPoly::build()
 	std::string pathImage = "D:\\osmData\\resultImage" + std::string(buff) + std::string(".png");
     SkFILEWStream stream(pathImage.c_str());
     stream.write(data->data(), data->size());
+
+
+	}
 	
 	
 
@@ -526,7 +531,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 	}
 
 
-	void MultiPoly::getScaleOffsets(double* scale, double* offX, double* offy, SkRect limits)
+	void MultiPoly::getScaleOffsets(double* scale, double* offX, double* offy, double* maxx, double* maxy , SkRect limits)
 	{
 		SkScalar w = limits.width();
 		SkScalar h = limits.height();
@@ -604,6 +609,8 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			*scale = locscale;
 			*offX = offsetX;
 			*offy = offsetY;
+			*maxx = maxX;
+			*maxy = maxY;
 		}
 
 	}

@@ -84,4 +84,5 @@ public:
 
 	OBFResultDB results;
 	afx_msg void OnClose();
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 };
