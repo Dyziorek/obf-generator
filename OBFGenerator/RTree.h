@@ -12,13 +12,11 @@ namespace bgi = boost::geometry::index;
 class RTree
 {
 public:
-
-	
-
 	typedef bg::model::point<int, 2, bg::cs::cartesian> point;
     typedef bg::model::box<point> box;
     typedef boost::tuple<box, __int64, std::vector<short>> value;
 
+	std::list<boost::tuple<box, __int64, std::vector<short>>> initStore;
 	bgi::rtree<value, bgi::rstar<16>> spaceTree;
 
 public:
@@ -30,14 +28,19 @@ public:
 		box boxPoint(point(a, b), point(c,d));
 		std::vector<short> typesMap;
 		std::for_each(types.begin(), types.end(), [&typesMap](long data) { short smallData = data; typesMap.push_back(smallData);});
-		spaceTree.insert(boost::make_tuple(boxPoint, id, typesMap));
+		initStore.push_back(boost::make_tuple(boxPoint, id, typesMap));
+		//spaceTree.insert(boost::make_tuple(boxPoint, id, typesMap));
 	}
+
+
 
 	box calculateBounds()
 	{
 		if (spaceTree.size() == 0)
 		{
-			return box(point(0,0), point(0,0));
+			//return box(point(0,0), point(0,0));
+			spaceTree = bgi::rtree<value, bgi::rstar<16>>(initStore.begin(), initStore.end());
+			initStore.clear();
 		}
 		bgi::rtree<value, bgi::rstar<16>>::bounds_type boundary;
 		return spaceTree.bounds();

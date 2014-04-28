@@ -243,8 +243,10 @@ boost::atomic<BOOL> active;
 boost::atomic<int> NodeElems;
 boost::atomic<int> NodeElemTrans;
 boost::atomic<int> WayElems;
-boost::atomic<int> DenseElems;
 boost::atomic<int> RelElemns;
+boost::atomic<int> DenseElems;
+boost::atomic<int> WayElemsTrans;
+boost::atomic<int> RelElemnsTrans;
 boost::atomic<int> SqlCode;
 
 UINT __cdecl ProcDataGenerate()
@@ -365,17 +367,20 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 						SqlCode = sqlite3_clear_bindings(nodeStmt);
 						SqlCode = sqlite3_reset(nodeStmt);
 						NodeElems++;
+						NodeElemTrans++;
 					}
-					NodeElemTrans++;
-					if (NodeElems % 100000 == 0)
+					
+					if (NodeElems > 100000)
 					{
 						sqlite3_exec(dbCtx, "COMMIT TRANSACTION", NULL, NULL, &errMsg);
 						sqlite3_exec(dbCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+						NodeElems = 0;
 					}
 					//sqlite3_finalize(nodeStmt);
 				}
 				if (group.dense().IsInitialized())
 				{
+					DenseElems++;
 					int keyValId = 0;
 					__int64 idNode = 0;
 					DenseNodes nodeInfo = group.dense();
@@ -433,8 +438,8 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 						SqlCode = sqlite3_clear_bindings(nodeStmt);
 						SqlCode = sqlite3_reset(nodeStmt);
 						NodeElems++;
+						NodeElemTrans++;
 					}
-					NodeElemTrans++;
 					if (NodeElems > 100000 )
 					{
 						sqlite3_exec(dbCtx, "COMMIT TRANSACTION", NULL, NULL, &errMsg);
@@ -505,8 +510,8 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 							sqlite3_reset(wayStmt);
 							nodeID++;
 							WayElems++;
+							WayElemsTrans++;
 						});
-						NodeElemTrans++;
 					}
  				    if (WayElems > 100000)
 					{
@@ -584,6 +589,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 							sqlite3_reset(relStmt);
 							ord++;
 							RelElemns++;
+							RelElemnsTrans++;
 						});
 					}
 					if (RelElemns > 100000)
@@ -776,9 +782,10 @@ int COBFGeneratorDlg::ParseFile()
 	//sqlite3_close_v2(dbWayCtx);
 	//sqlite3_close_v2(dbCtx);
 	CString strMessage;
-	strMessage.Format(L"Completed %d nodes %d denses %d ways %d relations", NodeElems, DenseElems, WayElems, RelElemns);
+	strMessage.Format(L"Completed %d nodes %d denses %d ways %d relations\r\n", NodeElemTrans, DenseElems, WayElemsTrans, RelElemnsTrans);
 	wchar_t* msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 
 

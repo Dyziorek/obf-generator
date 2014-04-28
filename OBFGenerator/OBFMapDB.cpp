@@ -901,8 +901,8 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<Mu
 			(*polit)->getScaleOffsets(&scale, &offx, &offy,&offmx, &offmy, limits);
 			goffx = min(goffx,offx);
 			goffy = min(goffy,offy);
-			goffmx = max(goffx,offx);
-			goffmy = max(goffy,offy);
+			goffmx = max(goffx,offmx);
+			goffmy = max(goffy,offmy);
 
 			gscale = min(gscale, scale);
 		}
@@ -998,7 +998,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<Mu
 	
 		for (std::pair<std::shared_ptr<EntityNode>, MapObject> cityObj : cities)
 		{
-			if (cityObj.second.getType() == "" || cityObj.second.getType() == "CITY")
+			if ( cityObj.second.getType() == "CITY")
 			{
 			std::pair<double, double> Node = cityObj.second.getLatLon();
 			SkScalar pointX1 = (Node.second - offsetX) * scale;

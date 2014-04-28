@@ -35,3 +35,12 @@ private:
 	std::string type;
 };
 
+class CityObj :
+	public MapObject
+{
+public:
+	CityObj(void);
+	virtual ~CityObj(void);
+
+	bool isAlwaysVisible;
+};
