@@ -59,3 +59,13 @@ MapObject::~MapObject(void)
 			op += " [" + ref + "]";
 		mo.setName(op);
 	}
+
+
+ CityObj::CityObj(void)
+ {
+	 isAlwaysVisible = false;
+ }
+ 
+CityObj::~CityObj(void)
+{
+}

@@ -203,7 +203,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 	
 
 	BOOL administrative = (baseItem->getTag("boundary") == "administrative");
-	if (administrative  && baseItem->getTag("place") != "")
+	if (administrative  || baseItem->getTag("place") != "")
 	{
 		if (wayItem.get() != nullptr)
 		{
@@ -280,8 +280,12 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		if (baseItem->getTag("admin_level") != "")
 		{
 			std::string text = baseItem->getTag("admin_level");
-			polyline->level = std::stoi(text);
+			polyline->level = boost::lexical_cast<int>(text);
 		}
-		boundaries.insert(polyline);
+		// only named boundaries are registering
+		if (boundName != "")
+		{
+			boundaries.insert(polyline);
+		}
 	}
 }

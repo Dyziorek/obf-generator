@@ -183,7 +183,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				{
 					std::shared_ptr<EntityNode> ptrNode = std::static_pointer_cast<EntityNode, EntityBase>(itm);
 					std::string placeType = boost::to_upper_copy(itm->getTag("place"));
-					MapObject objCity;
+					CityObj objCity;
 					if (placeType == "CITY" ||placeType ==  "TOWN" )
 					{
 						SaverCityNode(*ptrNode, cityManager);
@@ -199,6 +199,12 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 					objCity.setId(itm->id);
 					MapObject::parseMapObject(&objCity, itm.get());
 					objCity.setLocation(ptrNode->lat, ptrNode->lon);
+
+					if (itm->getTag("capital") == "yes")
+					{
+						objCity.isAlwaysVisible = true;
+						objCity.setType("CITY");
+					}
 
 					cities.insert(std::make_pair(ptrNode, objCity));
 				}
@@ -352,8 +358,19 @@ void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
 				EntityNode* nodeData = reinterpret_cast<EntityNode*>(node.operator->());
 				nodeData->lat = sqlite3_column_double(selNodeStmt, 0);
 				nodeData->lon = sqlite3_column_double(selNodeStmt, 1);
-				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selNodeStmt, 2)));
-				nodeData->parseTags(tags);
+				const unsigned char* columnTextData = sqlite3_column_text(selNodeStmt, 2);
+				if (columnTextData != nullptr)
+				{
+					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selNodeStmt, 2)));
+					nodeData->parseTags(tags);
+				}
+				else
+				{
+					std::wstring error = L"Problem on tags colum data size: ";
+					error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(selNodeStmt, 2));
+					error += L"\r\n";
+					OutputDebugString(error.c_str());
+				}
 				//std::pair<int,std::shared_ptr<EntityBase>> mapPair = std::make_pair(0,node);
 				relItem->relations.insert(std::make_pair(std::make_pair(0,node), relIDMember.second.second));
 				dbRet = sqlite3_step(selNodeStmt);
@@ -406,8 +423,19 @@ void OBFResultDB::loadWays(EntityWay* wayItem)
 		int ord = sqlite3_column_int(selWayStmt, 1);
 		if (ord == 0)
 		{
-			std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 2)));
-			wayItem->parseTags(tags);
+			const unsigned char* columnTextData = sqlite3_column_text(selWayStmt, 2);
+			if (columnTextData != nullptr)
+			{
+				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 2)));
+				wayItem->parseTags(tags);
+			}
+			else
+			{
+				std::wstring error = L"Problem on tags colum data size: ";
+				error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(selWayStmt, 2));
+				error += L"\r\n";
+				OutputDebugString(error.c_str());
+			}
 		}
 		if (sqlite3_column_type(selWayStmt, 4) != SQLITE_NULL)
 		{
@@ -419,8 +447,20 @@ void OBFResultDB::loadWays(EntityWay* wayItem)
 				node->lon = sqlite3_column_double(selWayStmt, 4);
 				if (sqlite3_column_type(selWayStmt, 5) != SQLITE_NULL)
 				{
-					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 5)));
-					node->parseTags(tags);
+					const unsigned char* columnTextData = sqlite3_column_text(selWayStmt, 5);
+					if (columnTextData != nullptr)
+					{
+						std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selWayStmt, 5)));
+						node->parseTags(tags);
+					}
+					else
+					{
+						std::wstring error = L"Problem on tags colum data size: ";
+						error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(selWayStmt, 5));
+						error += L"\r\n";
+						OutputDebugString(error.c_str());
+					}
+
 				}
 				nodeList.push_back(node);
 			}
@@ -480,7 +520,8 @@ void OBFResultDB::loadRelationMembers(EntityRelation* relItem)
 void OBFResultDB::SaverCityNode(EntityNode nn, TileManager<MapObject>& manager)
 {
 	
-	MapObject objCity;
+	CityObj objCity;
+	
 	MapObject::parseMapObject(&objCity, &nn);
 	
 	manager.registerObject(nn.lat, nn.lon, objCity);
@@ -503,7 +544,7 @@ void OBFResultDB::storeCities(void)
 		sqlite3_bind_text(cityStmt, 4, mapCity.second.getName().c_str(), mapCity.second.getName().size(), SQLITE_TRANSIENT);
 		std::shared_ptr<EntityNode> nodeElem = mapCity.first;
 		sqlite3_bind_text(cityStmt, 5, nodeElem->getTag("em_name").c_str(), nodeElem->getTag("em_name").size(), SQLITE_TRANSIENT);
-		sqlite3_bind_text(cityStmt, 5, mapCity.second.getType().c_str(), mapCity.second.getType().size(), SQLITE_TRANSIENT);
+		sqlite3_bind_text(cityStmt, 6, mapCity.second.getType().c_str(), mapCity.second.getType().size(), SQLITE_TRANSIENT);
 
 		SqlCode = sqlite3_step(cityStmt);
 		if (SqlCode != SQLITE_DONE)
@@ -548,8 +589,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				nodeData->id = sqlite3_column_int64(itNodeStmt, 0);
 				nodeData->lat = sqlite3_column_double(itNodeStmt, 1);
 				nodeData->lon = sqlite3_column_double(itNodeStmt, 2);
-				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itNodeStmt, 3)));
-				nodeData->parseTags(tags);
+				const unsigned char* columnTextData = sqlite3_column_text(itNodeStmt, 3);
+				if (columnTextData != nullptr)
+				{
+					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itNodeStmt, 3)));
+					nodeData->parseTags(tags);
+				}
+				else
+				{
+					std::wstring error = L"Problem on tags colum data size: ";
+					error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itNodeStmt, 3));
+					error += L"\r\n";
+					OutputDebugString(error.c_str());
+				}
 				saver(nodeData);
 				//nodes.insert(std::make_pair(nodeId, nodeData));
 			}
@@ -584,8 +636,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 			{
 				std::shared_ptr<EntityRelation> nodeData(new EntityRelation);
 				nodeData->id = sqlite3_column_int64(itRelStmt, 1);
-				std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itRelStmt, 2)));
-				nodeData->parseTags(tags);
+				const unsigned char* columnTextData = sqlite3_column_text(itRelStmt, 2);
+				if (columnTextData != nullptr)
+				{
+					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itRelStmt, 2)));
+					nodeData->parseTags(tags);
+				}
+				else
+				{
+					std::wstring error = L"Problem on tags colum data size: ";
+					error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itRelStmt, 2));
+					error += L"\r\n";
+					OutputDebugString(error.c_str());
+				}
 				saver(nodeData);
 				//relNodes.insert(std::make_pair(nodeId, nodeData));
 			}
@@ -634,8 +697,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				wayData->id = wayID;
 				int ord =  sqlite3_column_int(itWayStmt, 2);
 				if (ord == 0){
-					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 3)));
-					wayData->parseTags(tags);
+					const unsigned char* columnTextData = sqlite3_column_text(itWayStmt, 3);
+					if (columnTextData != nullptr)
+					{
+						std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 3)));
+						wayData->parseTags(tags);
+					}
+					else
+					{
+						std::wstring error = L"Problem on tags colum data size: ";
+						error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itWayStmt, 3));
+						error += L"\r\n";
+						OutputDebugString(error.c_str());
+					}
 				}
 				if (sqlite3_column_type(itWayStmt, 4) != SQLITE_NULL)
 				{
@@ -646,8 +720,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 						entNode->id = nodeId;
 						entNode->lat = sqlite3_column_double(itWayStmt, 4);
 						entNode->lon = sqlite3_column_double(itWayStmt, 5);
-						std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 6)));
-						entNode->parseTags(ntags);
+						const unsigned char* columnTextData = sqlite3_column_text(itWayStmt, 6);
+						if (columnTextData != nullptr)
+						{
+							std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayStmt, 6)));
+							entNode->parseTags(tags);
+						}
+						else
+						{
+							std::wstring error = L"Problem on tags colum data size: ";
+							error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itWayStmt, 6));
+							error += L"\r\n";
+							OutputDebugString(error.c_str());
+						}
 						wayData->nodes.push_back(entNode);
 						wayData->nodeIDs.push_back(entNode->id);
 					}
@@ -715,8 +800,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 				wayData->id = wayID;
 				int ord =  sqlite3_column_int(itWayBoundStmt, 2);
 				if (ord == 0){
-					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 3)));
-					wayData->parseTags(tags);
+					const unsigned char* columnTextData = sqlite3_column_text(itWayBoundStmt, 3);
+					if (columnTextData != nullptr)
+					{
+						std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 3)));
+						wayData->parseTags(tags);
+					}
+					else
+					{
+						std::wstring error = L"Problem on tags colum data size: ";
+						error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itWayBoundStmt, 3));
+						error += L"\r\n";
+						OutputDebugString(error.c_str());
+					}
 				}
 				if (sqlite3_column_type(itWayBoundStmt, 4) != SQLITE_NULL)
 				{
@@ -727,8 +823,19 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 						entNode->id = nodeId;
 						entNode->lat = sqlite3_column_double(itWayBoundStmt, 4);
 						entNode->lon = sqlite3_column_double(itWayBoundStmt, 5);
-						std::string ntags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 6)));
-						entNode->parseTags(ntags);
+						const unsigned char* columnTextData = sqlite3_column_text(itWayBoundStmt, 6);
+						if (columnTextData != nullptr)
+						{
+							std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(itWayBoundStmt, 6)));
+							entNode->parseTags(tags);
+						}
+						else
+						{
+							std::wstring error = L"Problem on tags colum data size: ";
+							error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(itWayBoundStmt, 6));
+							error += L"\r\n";
+							OutputDebugString(error.c_str());
+						}
 						wayData->nodes.push_back(entNode);
 						wayData->nodeIDs.push_back(entNode->id);
 					}
