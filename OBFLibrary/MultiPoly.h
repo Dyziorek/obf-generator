@@ -16,14 +16,16 @@ class Ring : public EntityWay
 public:
 	Ring(EntityWay& way):EntityWay(way) { this->area = OsmMapUtils::getArea(nodes); }
 	Ring(void) {area = -1;}
+	virtual ~Ring(void) {}
+
 	double area;
-	boolean isClosed() {return nodeIDs.front() == nodeIDs.back(); }
+	bool isClosed() {return nodeIDs.front() == nodeIDs.back(); }
 	
-	boolean containsPoint(EntityNode node)
+	bool containsPoint(EntityNode node)
 	{
 		return containsPoint(node.lat, node.lon);
 	}
-	boolean containsPoint(double lat, double lon)
+	bool containsPoint(double lat, double lon)
 	{
 		int intersections = 0;
 		if (nodes.size() == 0) return false;
@@ -35,7 +37,7 @@ public:
 
 		return intersections %2 == 1;
 	}
-	boolean isIn(std::shared_ptr<Ring> r);
+	bool isIn(std::shared_ptr<Ring> r);
 
 	bool operator<(const Ring& op2) {return area < op2.area;}
 
@@ -52,7 +54,7 @@ public:
 		inRing = innerRings;
 		id = oid;
 	}
-	~MultiPoly(void);
+	virtual ~MultiPoly(void);
 
 	std::vector<std::shared_ptr<Ring>> inRing;
 	std::vector<std::shared_ptr<Ring>> outRing;
@@ -64,7 +66,7 @@ public:
 	void build();
 	void paint();
 	void paintList(std::vector<std::shared_ptr<EntityWay>> wayList, SkCanvas* painter);
-	void createData(std::shared_ptr<EntityRelation>& relItem, OBFResultDB& dbContext);
+	void createData(std::shared_ptr<EntityRelation>& relItem);
 	std::list<std::shared_ptr<Ring>> combineRings(std::vector<std::shared_ptr<EntityWay>> inList);
 	std::list<MultiPoly> splitPerRing();
 	std::shared_ptr<EntityWay> combineTwoWaysIfHasPoints(std::shared_ptr<EntityWay> w1, std::shared_ptr<EntityWay> w2);

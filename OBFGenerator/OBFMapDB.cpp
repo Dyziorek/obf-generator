@@ -95,7 +95,9 @@ void OBFMapDB::indexMultiPolygon(std::shared_ptr<EntityRelation>& relItem, OBFRe
 		return;
 	}
 	std::shared_ptr<MultiPoly> polyline(new MultiPoly);
-	polyline->createData(relItem, dbContext);
+	dbContext.loadRelationMembers(relItem.get());
+	dbContext.loadNodesOnRelation(relItem.get());
+	polyline->createData(relItem);
 	excludeFromMainIteration(polyline->inWays);
 	excludeFromMainIteration(polyline->outWays);
 
@@ -252,7 +254,7 @@ void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 		if (splitter.size() > 1)
 		{
 			auto latLon = baseItem->getLatLon();
-				boolean first = true;
+				bool first = true;
 				for(auto inst : splitter) {
 					if(first) {
 						baseItem->tags = inst;
@@ -285,7 +287,7 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB
 			if (typeUse.empty()) {
 				continue;
 			}
-			boolean hasMulti = (wayItem) && multiPolygonsWays.find(e->id) != multiPolygonsWays.end();
+			bool hasMulti = (wayItem) && multiPolygonsWays.find(e->id) != multiPolygonsWays.end();
 			if (hasMulti) {
 				auto set = multiPolygonsWays.at(e->id);
 				std::for_each(set.begin(), set.end(), [&](long iterVec){
@@ -303,10 +305,10 @@ void OBFMapDB::iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB
 				id |= 1;
 
 				// simplify route id>>1
-				boolean mostDetailedLevel = level == 0;
+				bool mostDetailedLevel = level == 0;
 				if (!mostDetailedLevel) {
 					int zoomToSimplify = mapZooms.getLevel(level).getMaxZoom() - 1;
-					boolean cycle = wayItem->getFirstNodeId() == wayItem->getLastNodeId();
+					bool cycle = wayItem->getFirstNodeId() == wayItem->getLastNodeId();
 					if (cycle) {
 						res = OsmMapUtils::simplifyCycleWay(wayItem->nodes, zoomToSimplify, zoomWaySmothness);
 					} else {
@@ -333,7 +335,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 		
 		std::vector<std::shared_ptr<EntityNode>> nodes;
 		OsmMapUtils::simplifyDouglasPeucker(in, zoom + 8 + zoomWaySmothness, 3, nodes, false);
-		boolean first = true;
+		bool first = true;
 		__int64 firstId = -1;
 		__int64 lastId = -1;
 		
@@ -415,7 +417,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
 			{
-		boolean init = false;
+		bool init = false;
 		int minX = INT_MAX;
 		int maxX = 0;
 		int minY = INT_MAX;
@@ -466,7 +468,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 
 			if (innerWays.size()) {
 				for (std::vector<std::shared_ptr<EntityNode>> ws : innerWays) {
-					boolean exist = false;
+					bool exist = false;
 					if (ws.size()) {
 						for (std::shared_ptr<EntityNode> n : ws) {
 							if (n) {

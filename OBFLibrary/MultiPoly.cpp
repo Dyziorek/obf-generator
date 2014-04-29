@@ -84,7 +84,7 @@ std::list<std::shared_ptr<Ring>> MultiPoly::combineRings(std::vector<std::shared
 		return result;
 }
 
-boolean Ring::isIn(std::shared_ptr<Ring> r) {
+bool Ring::isIn(std::shared_ptr<Ring> r) {
 		/*
 		 * bi-directional check is needed because some concave rings can intersect
 		 * and would only fail on one of the checks
@@ -245,9 +245,9 @@ void MultiPoly::build()
 }
 
 std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<EntityWay> w1, std::shared_ptr<EntityWay> w2) {
-		boolean combine = true;
-		boolean firstReverse = false;
-		boolean secondReverse = false;
+		bool combine = true;
+		bool firstReverse = false;
+		bool secondReverse = false;
 		if (w1->getFirstNodeId() == w2->getFirstNodeId()) {
 			firstReverse = true;
 			secondReverse = false;
@@ -265,7 +265,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		if (combine) {
 			std::shared_ptr<EntityWay> newWay(new EntityWay(MultiPoly::nextRandId()));
-			boolean nodePresent = w1->nodes.size() != 0;
+			bool nodePresent = w1->nodes.size() != 0;
 			int w1size = nodePresent ? w1->nodes.size() : w1->nodeIDs.size();
 			for (int i = 0; i < w1size; i++) {
 				int ind = firstReverse ? (w1size - 1 - i) : i;
@@ -343,18 +343,16 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		std::sort(inRing.begin(), inRing.end());
 	}
 
-	void MultiPoly::createData(std::shared_ptr<EntityRelation>& relItem, OBFResultDB& dbContext)
+	void MultiPoly::createData(std::shared_ptr<EntityRelation>& relItem)
 	{
 		inWays.clear();
 		outWays.clear();
 
-		dbContext.loadRelationMembers(relItem.get());
-		dbContext.loadNodesOnRelation(relItem.get());
 		for(auto entityItem : relItem->relations)
 		{
 			if (entityItem.first.first == 1)
 			{
-				boolean inner = (entityItem.second == "inner");
+				bool inner = (entityItem.second == "inner");
 				std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(entityItem.first.second);
 				if (inner)
 				{
@@ -683,7 +681,7 @@ std::list<MultiPoly> MultiPoly::splitPerRing() {
 
 		if (inners.size() != 0) {
 			std::wstring warn(L"Multipolygon ");
-			warn + boost::lexical_cast<std::wstring>(id) + L" has a mismatch in outer and inner rings";
+			warn += boost::lexical_cast<std::wstring>(id) + L" has a mismatch in outer and inner rings\r\n";
 			OutputDebugString(warn.c_str());
 		}
 

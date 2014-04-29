@@ -326,7 +326,7 @@ MapUtils::~MapUtils(void)
 	 */
 	  long  MapUtils::interleaveBits(long x, long y){
 		long c = 0;
-		for(byte b = 31; b>=0; b--){
+		for(BYTE b = 31; b>=0; b--){
 			c = (c << 1) | ((x >> b) & 1);
 			c = (c << 1) | ((y >> b) & 1);
 		}
@@ -568,21 +568,21 @@ MapUtils::~MapUtils(void)
 		}
 	}
 
-     boolean OsmMapUtils::ccw(EntityNode A, EntityNode B, EntityNode C) {
+     bool OsmMapUtils::ccw(EntityNode A, EntityNode B, EntityNode C) {
         return (C.lat-A.lat) * (B.lon-A.lon) > (B.lat-A.lat) *
                 (C.lon-A.lon);
     }
 
     // Return true if line segments AB and CD intersect
-     boolean OsmMapUtils::intersect2Segments(EntityNode A, EntityNode B, EntityNode C, EntityNode D) {
+     bool OsmMapUtils::intersect2Segments(EntityNode A, EntityNode B, EntityNode C, EntityNode D) {
         return ccw(A, C, D) != ccw(B, C, D) && ccw(A, B, C) != ccw(A, B, D);
     }
 
-	 std::vector<boolean> OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>>& n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>>& result, boolean avoidNooses) {
+	 std::vector<bool> OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>>& n, int zoom, int epsilon, std::vector<std::shared_ptr<EntityNode>>& result, bool avoidNooses) {
 		if (zoom > 31) {
 			zoom = 31;
 		}
-		std::vector<boolean> kept(n.size());
+		std::vector<bool> kept(n.size());
 		int first = 0;
 		int nsize = n.size();
 		while (first < nsize) {
@@ -602,8 +602,8 @@ MapUtils::~MapUtils(void)
 			return kept;
 		}
 		// check for possible cycle
-		boolean checkCycle = true;
-		boolean cycle = false;
+		bool checkCycle = true;
+		bool cycle = false;
 		while (checkCycle && last > first) {
 			checkCycle = false;
 
@@ -635,8 +635,8 @@ MapUtils::~MapUtils(void)
 		return kept;
 	}
 
-	 void OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>>& n, int zoom, int epsilon, std::vector<boolean>& kept,
-                                               int start, int end, boolean avoidNooses) {
+	 void OsmMapUtils::simplifyDouglasPeucker(std::vector<std::shared_ptr<EntityNode>>& n, int zoom, int epsilon, std::vector<bool>& kept,
+                                               int start, int end, bool avoidNooses) {
 		double dmax = -1;
 		int index = -1;
 		for (int i = start + 1; i <= end - 1; i++) {
@@ -649,7 +649,7 @@ MapUtils::~MapUtils(void)
 				index = i;
 			}
 		}
-        boolean nooseFound = false;
+        bool nooseFound = false;
         if(avoidNooses && index >= 0) {
             std::shared_ptr<EntityNode> st = n[start];
             std::shared_ptr<EntityNode> e = n[end];
@@ -704,13 +704,13 @@ MapUtils::~MapUtils(void)
 		double lat = pos.first;
 		double lon = 180;
 		double firstLon = -360;
-		boolean firstDirectionUp = false;
+		bool firstDirectionUp = false;
 		double previousLon = -360;
 
 		double clockwiseSum = 0;
 
 		std::shared_ptr<EntityNode> prev = NULL;
-		boolean firstWay = true;
+		bool firstWay = true;
 		for (std::shared_ptr<EntityWay> w : ways) {
 			std::vector<std::shared_ptr<EntityNode>> ns = w->nodes;
 			int startInd = 0;
@@ -724,16 +724,16 @@ MapUtils::~MapUtils(void)
 				std::shared_ptr<EntityNode> next = ns[i];
 				double rlon = ray_intersect_lon(prev, next, lat, lon);
 				if (rlon != -360) {
-					boolean skipSameSide = (prev->lat <= lat) == (next->lat <= lat);
+					bool skipSameSide = (prev->lat <= lat) == (next->lat <= lat);
 					if (skipSameSide) {
 						continue;
 					}
-					boolean directionUp = prev->lat <= lat;
+					bool directionUp = prev->lat <= lat;
 					if (firstLon == -360) {
 						firstDirectionUp = directionUp;
 						firstLon = rlon;
 					} else {
-						boolean clockwise = (!directionUp) == (previousLon < rlon);
+						bool clockwise = (!directionUp) == (previousLon < rlon);
 						if (clockwise) {
 							clockwiseSum += abs(previousLon - rlon);
 						} else {
@@ -747,7 +747,7 @@ MapUtils::~MapUtils(void)
 		}
 
 		if (firstLon != -360) {
-			boolean clockwise = (!firstDirectionUp) == (previousLon < firstLon);
+			bool clockwise = (!firstDirectionUp) == (previousLon < firstLon);
 			if (clockwise) {
 				clockwiseSum += abs(previousLon - firstLon);
 			} else {
