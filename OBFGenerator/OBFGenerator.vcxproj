@@ -90,17 +90,17 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;D:\LocalRepos\OBFGenerator\OBFLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Debug\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ShowProgress>NotSet</ShowProgress>
+      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Debug\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;ObfLibrary.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ShowProgress>LinkVerbose</ShowProgress>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <LinkStatus>true</LinkStatus>
-      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug;D:\LocalRepos\OBFGenerator\Debug</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -209,14 +209,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h" />
-    <ClInclude Include="ArchiveIO.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BlockReader.h" />
-    <ClInclude Include="EntityBase.h" />
-    <ClInclude Include="EntityNode.h" />
-    <ClInclude Include="MapObject.h" />
-    <ClInclude Include="MapUtils.h" />
-    <ClInclude Include="MultiPoly.h" />
     <ClInclude Include="OBFGenerator.h" />
     <ClInclude Include="OBFGeneratorDlg.h" />
     <ClInclude Include="OBFResultDB.h" />
@@ -226,19 +220,11 @@
     <ClInclude Include="proto\fileformat.pb.h" />
     <ClInclude Include="proto\osmformat.pb.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="sqlite3.h" />
-    <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Amenity.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
-    <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -282,12 +268,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="EntityBase.cpp" />
-    <ClCompile Include="EntityNode.cpp" />
-    <ClCompile Include="MapObject.cpp" />
-    <ClCompile Include="MapRoutingTypes.cpp" />
-    <ClCompile Include="MapUtils.cpp" />
-    <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFElementDB.cpp" />
     <ClCompile Include="OBFGenerator.cpp" />
     <ClCompile Include="OBFGeneratorDlg.cpp">
@@ -297,7 +277,6 @@
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PreprocessToFile>
     </ClCompile>
     <ClCompile Include="OBFMapDB.cpp" />
-    <ClCompile Include="OBFRenderingTypes.cpp" />
     <ClCompile Include="OBFResultDB.cpp" />
     <ClCompile Include="portable_binary_iarchive.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -323,23 +302,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="RTree.cpp">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="sqlite3.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;NDEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
-    <ClCompile Include="TileManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="OBFGenerator.rc" />

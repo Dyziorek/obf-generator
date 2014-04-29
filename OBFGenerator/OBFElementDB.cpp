@@ -235,7 +235,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 						{
 							if (innerEntityItem.first.first == 1)
 							{
-								boolean inner = (innerEntityItem.second == "inner");
+								bool inner = (innerEntityItem.second == "inner");
 								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(innerEntityItem.first.second);
 								if (inner)
 								{

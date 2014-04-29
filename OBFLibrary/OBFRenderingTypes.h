@@ -66,7 +66,7 @@ public:
 		return type;
 	}
 	
-	static boolean isRegisteredType(AmenityType type) {
+	static bool isRegisteredType(AmenityType type) {
 		//return amenityTypes.containsKey(type.name);
 		return type.ordinal >= 0;
 	}
@@ -148,7 +148,7 @@ public:
 		}
 		
 public:
-	boolean isApplicable(std::map<std::string, std::string> e ){
+	bool isApplicable(std::map<std::string, std::string> e ){
 			if(value == "") {
 				return e.find(tag) != e.end();
 			}
@@ -159,7 +159,7 @@ public:
 			return false;
 		}
 		
-		boolean operator==(TagValuePattern obj) {
+		bool operator==(TagValuePattern obj) {
 			if (this == &obj)
 				return true;
 
@@ -188,27 +188,27 @@ class MapRulType {
 public:
 		std::vector<MapRulType> names;
 		TagValuePattern tagValuePattern;
-		boolean additional;
-		boolean additionalText;
+		bool additional;
+		bool additionalText;
 		std::set<TagValuePattern> applyToTagValue;
 		
 		std::string poiPrefix;
 		AmenityType poiCategory;
 		// poi_category was specially removed for one tag/value, to skip unnecessary objects
-		boolean poiSpecified;
+		bool poiSpecified;
 		
 		
 		MapRulType* targetTagValue;
 		
-		boolean relation;
+		bool relation;
 		// creation of only section
-		boolean onlyMap;
-		boolean onlyPoi;
+		bool onlyMap;
+		bool onlyPoi;
 		
 		// Needed only for map rules
 		int minzoom;
 		int maxzoom;
-		boolean onlyPoint;
+		bool onlyPoint;
 		std::string namePrefix;
 		
 		
@@ -282,20 +282,20 @@ public:
 			return this->id == op2.id;
 		}
 public:
-		boolean isEmpty() const
+		bool isEmpty() const
 		{
 			return id == -1;
 		}
-		boolean isPOI(){
+		bool isPOI(){
 			return !onlyMap;
 		}
 		
-		boolean isPOISpecified() {
+		bool isPOISpecified() {
 			return isPOI() && poiSpecified;
 
 		}
 		
-		boolean isMap(){
+		bool isMap(){
 			return !onlyPoi;
 		}
 		
@@ -367,23 +367,23 @@ public:
 			return minzoom;
 		}
 		
-		boolean isAdditional() {
+		bool isAdditional() {
 			return additional;
 		}
 		
-		boolean isAdditionalOrText() {
+		bool isAdditionalOrText() {
 			return additional || additionalText;
 		}
 		
-		boolean isText() {
+		bool isText() {
 			return additionalText;
 		}
 		
-		boolean isOnlyPoint() {
+		bool isOnlyPoint() {
 			return onlyPoint;
 		}
 		
-		boolean isRelation() {
+		bool isRelation() {
 			return relation;
 		}
 		
@@ -400,16 +400,16 @@ public:
 
 	class MapRouteTag {
 	public:
-		boolean relation;
+		bool relation;
 		std::string tag;
 		std::string value;
 		std::string tag2;
 		std::string value2;
-		boolean _register;
-		boolean amend;
-		boolean base; 
-		boolean text;
-		boolean replace;
+		bool _register;
+		bool amend;
+		bool base; 
+		bool text;
+		bool replace;
 		
 	};
 
@@ -490,17 +490,17 @@ public:
 		return routeTags;
 	}
 	
-	static byte RESTRICTION_NO_RIGHT_TURN;
-	static byte RESTRICTION_NO_LEFT_TURN;
-	static byte RESTRICTION_NO_U_TURN;
-	static byte RESTRICTION_NO_STRAIGHT_ON;
-	static byte RESTRICTION_ONLY_RIGHT_TURN;
-	static byte RESTRICTION_ONLY_LEFT_TURN;
-	static byte RESTRICTION_ONLY_STRAIGHT_ON;
+	static BYTE RESTRICTION_NO_RIGHT_TURN;
+	static BYTE RESTRICTION_NO_LEFT_TURN;
+	static BYTE RESTRICTION_NO_U_TURN;
+	static BYTE RESTRICTION_NO_STRAIGHT_ON;
+	static BYTE RESTRICTION_ONLY_RIGHT_TURN;
+	static BYTE RESTRICTION_ONLY_LEFT_TURN;
+	static BYTE RESTRICTION_ONLY_STRAIGHT_ON;
 
 	static std::list<std::map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const std::map<std::string, std::string> tags);
 	static bool splitIsNeeded(const std::map<std::string, std::string> tags) {
-		boolean seamark = false;
+		bool seamark = false;
 		for(auto s : tags) {
 			if(boost::algorithm::starts_with(s.first, "seamark:")) {
 				seamark = true;

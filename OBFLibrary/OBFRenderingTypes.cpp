@@ -12,13 +12,13 @@ char OBFRenderingTypes::TAG_DELIMETER = '/';
 
 std::map<std::string, AmenityType> AmenityType::amenityTypes;
 
-byte OBFRenderingTypes::RESTRICTION_NO_RIGHT_TURN = 1;
-byte OBFRenderingTypes::RESTRICTION_NO_LEFT_TURN = 2;
-byte OBFRenderingTypes::RESTRICTION_NO_U_TURN = 3;
-byte OBFRenderingTypes::RESTRICTION_NO_STRAIGHT_ON = 4;
-byte OBFRenderingTypes::RESTRICTION_ONLY_RIGHT_TURN = 5;
-byte OBFRenderingTypes::RESTRICTION_ONLY_LEFT_TURN = 6;
-byte OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
+BYTE OBFRenderingTypes::RESTRICTION_NO_RIGHT_TURN = 1;
+BYTE OBFRenderingTypes::RESTRICTION_NO_LEFT_TURN = 2;
+BYTE OBFRenderingTypes::RESTRICTION_NO_U_TURN = 3;
+BYTE OBFRenderingTypes::RESTRICTION_NO_STRAIGHT_ON = 4;
+BYTE OBFRenderingTypes::RESTRICTION_ONLY_RIGHT_TURN = 5;
+BYTE OBFRenderingTypes::RESTRICTION_ONLY_LEFT_TURN = 6;
+BYTE OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
 
 std::map<AmenityType, std::map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
 std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
@@ -506,7 +506,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 
 	std::list<std::map<std::string, std::string>> OBFRenderingTypes::splitTagsIntoDifferentObjects(const std::map<std::string, std::string> tags) {
 		// check open sea maps tags
-		boolean split = splitIsNeeded(tags);
+		bool split = splitIsNeeded(tags);
 		if(!split) {
 			 std::list<std::map<std::string, std::string>> listMap;
 			 listMap.push_back(tags);
@@ -609,7 +609,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 					rType = rType->targetTagValue;
 				}
 				if (rType->isAdditionalOrText()) {
-					boolean applied = rType->applyToTagValue.size() == 0;
+					bool applied = rType->applyToTagValue.size() == 0;
 					if(!applied) {
 						std::set<TagValuePattern>::iterator it = rType->applyToTagValue.begin();
 						while(!applied && it != rType->applyToTagValue.end()) {
@@ -650,7 +650,7 @@ bool OBFRenderingTypes::encodeEntityWithType(bool isNode, std::map<std::string, 
 		outTypes.clear();
 		outAddTypes.clear();
 		namesToEncode.clear();
-		boolean area = false;
+		bool area = false;
 		if (tags.find("area") != tags.end())
 		{
 			area = tags.at("area") == "yes" || tags.at("area") == "true";
@@ -681,7 +681,7 @@ bool OBFRenderingTypes::encodeEntityWithType(bool isNode, std::map<std::string, 
 				if (!rType->isAdditionalOrText()) {
 					outTypes.push_back(rType->id);
 				} else {
-					boolean applied = rType->applyToTagValue.empty();
+					bool applied = rType->applyToTagValue.empty();
 					if(!applied) {
 						auto it = rType->applyToTagValue.begin();
 						while(!applied && it != rType->applyToTagValue.end()) {

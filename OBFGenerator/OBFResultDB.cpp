@@ -685,7 +685,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 			if (ways.find(wayID) == ways.end())
 			{
 				std::shared_ptr<EntityWay> wayData;
-				boolean newId = (wayID != prevId);
+				bool newId = (wayID != prevId);
 				if (prevEntity && !newId)
 				{
 					 wayData = prevEntity;
@@ -788,7 +788,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 			if (waybounds.find(wayID) == waybounds.end())
 			{
 				std::shared_ptr<EntityWay> wayData;
-				boolean newId = (wayID != prevId);
+				bool newId = (wayID != prevId);
 				if (prevEntity && !newId)
 				{
 					 wayData = prevEntity;
