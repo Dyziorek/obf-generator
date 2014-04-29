@@ -280,7 +280,14 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		if (baseItem->getTag("admin_level") != "")
 		{
 			std::string text = baseItem->getTag("admin_level");
-			polyline->level = boost::lexical_cast<int>(text);
+			try
+			{
+				polyline->level = boost::lexical_cast<int>(text);
+			}
+			catch (boost::bad_lexical_cast& lexx)
+			{
+				polyline->level = 7;
+			}
 		}
 		// only named boundaries are registering
 		if (boundName != "")
