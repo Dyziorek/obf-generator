@@ -6,12 +6,12 @@ char MapRoutingTypes::TAG_DELIMETER = '/'; //$NON-NLS-1$
 
 std::set<std::string> MapRoutingTypes::TAGS_TO_SAVE;
 std::set<std::string> MapRoutingTypes::TAGS_TO_ACCEPT;
-std::map<std::string, std::string> MapRoutingTypes::TAGS_TO_REPLACE;
+boost::unordered_map<std::string, std::string> MapRoutingTypes::TAGS_TO_REPLACE;
 std::set<std::string> MapRoutingTypes::TAGS_RELATION_TO_ACCEPT;
 std::set<std::string> MapRoutingTypes::TAGS_TEXT;
 std::set<std::string> MapRoutingTypes::BASE_TAGS_TEXT;
 std::set<std::string> MapRoutingTypes::BASE_TAGS_TO_SAVE;
-std::map<std::string, std::string> MapRoutingTypes::BASE_TAGS_TO_REPLACE;
+boost::unordered_map<std::string, std::string> MapRoutingTypes::BASE_TAGS_TO_REPLACE;
 
 MapRoutingTypes::MapRoutingTypes(void)
 {
@@ -29,7 +29,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 		return false;
 	}
 	
-	std::string MapRoutingTypes::getMap(std::map<std::string, std::string> s, std::string tag, std::string value) {
+	std::string MapRoutingTypes::getMap(boost::unordered_map<std::string, std::string>& s, std::string tag, std::string value) {
 		//std::string r = s.find(tag);
 		if (s.find(tag) != s.end()) {
 			return s.find(tag)->second;
@@ -43,7 +43,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 	
 	
 	
-	bool MapRoutingTypes::startsWith(std::set<std::string> s, std::string tag, std::string value) {
+	bool MapRoutingTypes::startsWith(std::set<std::string>& s, std::string tag, std::string value) {
 		for(std::string st : s) {
 			if(fa::starts_with(tag, st)) {
 				return true;
@@ -152,8 +152,8 @@ MapRoutingTypes::~MapRoutingTypes(void)
 		return nameRuleType;
 	}
 	
-	std::map<std::string, std::string> MapRoutingTypes::getRouteRelationPropogatedTags(EntityBase& e) {
-		std::map<std::string, std::string> propogated; 
+	boost::unordered_map<std::string, std::string> MapRoutingTypes::getRouteRelationPropogatedTags(EntityBase& e) {
+		boost::unordered_map<std::string, std::string> propogated; 
 		bool foundProp = false;
 		for(std::pair<std::string, std::string> es : e.tags) {
 			std::string tag = es.first;
@@ -184,7 +184,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 
 	
 	
-	bool MapRoutingTypes::encodeEntity(EntityWay& et, std::vector<int> outTypes, std::map<MapRouteType, std::string> names){
+	bool MapRoutingTypes::encodeEntity(EntityWay& et, std::vector<int>& outTypes, std::map<MapRouteType, std::string>& names){
 		EntityWay e = et;
 		bool init = false;
 		for(std::pair<std::string, std::string> es : e.tags) {
@@ -218,7 +218,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 		return true;
 	}
 	
-	bool MapRoutingTypes::encodeBaseEntity(EntityWay& et, std::vector<int> outTypes, std::map<MapRouteType, std::string> names){
+	bool MapRoutingTypes::encodeBaseEntity(EntityWay& et, std::vector<int>& outTypes, std::map<MapRouteType, std::string>& names){
 		EntityWay e = et;
 		bool init = false;
 		for(std::pair<std::string, std::string> es : e.tags) {
@@ -262,7 +262,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 	
 
 	
-	void MapRoutingTypes::encodePointTypes(EntityWay& e, std::map<__int64, std::vector<int>> pointTypes){
+	void MapRoutingTypes::encodePointTypes(EntityWay& e, std::map<__int64, std::vector<int>>& pointTypes){
 		pointTypes.clear();
 		for(std::shared_ptr<EntityNode> nd : e.nodes ) {
 			if (nd.get() != nullptr) {

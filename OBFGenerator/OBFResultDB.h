@@ -71,13 +71,11 @@ public:
 
 	void mainIteration(std::shared_ptr<EntityBase>& relItem);
 	virtual void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
-	TileManager<MapObject> cityManager;
-	TileManager<MapObject> townManager;
-	std::map<std::shared_ptr<EntityNode>, MapObject> cities;
 	std::set<std::shared_ptr<EntityRelation>> relations;
 	void addBatch(Amenity am);
 	void addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
 	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
+	void addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name);
 	void flush();
 	std::map<__int64, std::shared_ptr<EntityNode>> nodes;
 	std::map<__int64, std::shared_ptr<EntityWay>> ways;

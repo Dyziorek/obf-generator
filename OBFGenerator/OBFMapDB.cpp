@@ -250,7 +250,7 @@ void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 				}
 			}
 		}
-		std::list<std::map<std::string, std::string>>  splitter = renderEncoder.splitTagsIntoDifferentObjects(baseItem->tags);
+		std::list<boost::unordered_map<std::string, std::string>>  splitter = renderEncoder.splitTagsIntoDifferentObjects(baseItem->tags);
 		if (splitter.size() > 1)
 		{
 			auto latLon = baseItem->getLatLon();

@@ -54,6 +54,12 @@
     <ClInclude Include="ArchiveIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EntityBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

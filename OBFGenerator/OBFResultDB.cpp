@@ -170,7 +170,7 @@ void OBFResultDB::imageResult()
 	OBFAddresStreetDB* addresor = (OBFAddresStreetDB*)addresIndexer;
 
 	((OBFMapDB*)mapIndexer)->paintPolys();
-	((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, this->cities);
+	((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, addresor->cities);
 }
 
 int OBFResultDB::iterateOverElements(int iterationPhase)
@@ -181,35 +181,11 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 			[=](std::shared_ptr<EntityBase> itm) {  
 				if (itm->getTag("place") != std::string(""))
 				{
-					std::shared_ptr<EntityNode> ptrNode = std::static_pointer_cast<EntityNode, EntityBase>(itm);
-					std::string placeType = boost::to_upper_copy(itm->getTag("place"));
-					CityObj objCity;
-					if (placeType == "CITY" ||placeType ==  "TOWN" )
-					{
-						SaverCityNode(*ptrNode, cityManager);
-						objCity.setType(placeType);
-					}
-					else if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
-					{
-						SaverCityNode(*ptrNode, townManager);
-						objCity.setType(placeType);
-					}
-
-				
-					objCity.setId(itm->id);
-					MapObject::parseMapObject(&objCity, itm.get());
-					objCity.setLocation(ptrNode->lat, ptrNode->lon);
-
-					if (itm->getTag("capital") == "yes")
-					{
-						objCity.isAlwaysVisible = true;
-						objCity.setType("CITY");
-					}
-
-					cities.insert(std::make_pair(ptrNode, objCity));
+					 std::shared_ptr<EntityNode> ptrNode = std::static_pointer_cast<EntityNode, EntityBase>(itm);
+					 ((OBFAddresStreetDB*)addresIndexer)->iterateOverCity(ptrNode);
 				}
 		});
-		storeCities();
+		((OBFAddresStreetDB*)addresIndexer)->storeCities(*this);
 	}
 	if (iterationPhase == PHASEINDEXADDRREL)
 	{
@@ -528,45 +504,7 @@ void OBFResultDB::SaverCityNode(EntityNode nn, TileManager<MapObject>& manager)
 
 }
 
-void OBFResultDB::storeCities(void)
-{
 
-	//"insert into city (id, latitude, longitude, name, name_en, city_type) values (?1, ?2, ?3, ?4, ?5, ?6)"
-	char* errMsg;
-	int cityList = 0;
-	int SqlCode;
-	sqlite3_exec(dbAddrCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
-	for (auto mapCity: cities)
-	{
-		sqlite3_bind_int64(cityStmt, 1, mapCity.second.getID());
-		sqlite3_bind_double(cityStmt, 2, mapCity.second.getLatLon().first);
-		sqlite3_bind_double(cityStmt, 3, mapCity.second.getLatLon().second);
-		sqlite3_bind_text(cityStmt, 4, mapCity.second.getName().c_str(), mapCity.second.getName().size(), SQLITE_TRANSIENT);
-		std::shared_ptr<EntityNode> nodeElem = mapCity.first;
-		sqlite3_bind_text(cityStmt, 5, nodeElem->getTag("em_name").c_str(), nodeElem->getTag("em_name").size(), SQLITE_TRANSIENT);
-		sqlite3_bind_text(cityStmt, 6, mapCity.second.getType().c_str(), mapCity.second.getType().size(), SQLITE_TRANSIENT);
-
-		SqlCode = sqlite3_step(cityStmt);
-		if (SqlCode != SQLITE_DONE)
-		{
-			//NodeElems = -100;
-		}
-		SqlCode = sqlite3_clear_bindings(cityStmt);
-		SqlCode = sqlite3_reset(cityStmt);
-
-		cityList++;
-		if (cityList > 10000)
-		{
-			sqlite3_exec(dbAddrCtx, "END TRANSACTION", NULL, NULL, &errMsg);
-			sqlite3_exec(dbAddrCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
-			cityList = 0;
-		}
-	}
-	if (cityList > 0)
-	{
-		sqlite3_exec(dbAddrCtx, "END TRANSACTION", NULL, NULL, &errMsg);
-	}
-}
 
 int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_ptr<EntityBase>)> saver)
 {
@@ -890,6 +828,10 @@ void OBFResultDB::addBatch(__int64 id, bool area, std::stringstream& bCoord, std
 	storeData->addBatch(id,area, bCoord, bInCoord, bTypes, bAddtTypes, name );
 }
 
+void addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base)
+{
+	storeData->addBatchRoute(id,types, ptTypes, ptIds, coords, name, base );
+}
 
 void OBFResultDB::flush()
 {
