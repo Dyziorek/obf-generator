@@ -52,6 +52,8 @@ public:
 		}
 };
 
+
+
 class MapRoutingTypes
 {
 
@@ -62,12 +64,12 @@ public:
 private:
 	static std::set<std::string> TAGS_TO_SAVE;
 	static std::set<std::string> TAGS_TO_ACCEPT;
-	static std::map<std::string, std::string> TAGS_TO_REPLACE;
+	static boost::unordered_map<std::string, std::string> TAGS_TO_REPLACE;
 	static std::set<std::string> TAGS_RELATION_TO_ACCEPT;
 	static std::set<std::string> TAGS_TEXT;
 	static std::set<std::string> BASE_TAGS_TEXT;
 	static std::set<std::string> BASE_TAGS_TO_SAVE;
-	static std::map<std::string, std::string> BASE_TAGS_TO_REPLACE;
+	static boost::unordered_map<std::string, std::string> BASE_TAGS_TO_REPLACE;
 	static char TAG_DELIMETER; //$NON-NLS-1$
 	
 	std::map<std::string, MapRouteType> types;
@@ -77,11 +79,11 @@ private:
 	
     bool contains(std::set<std::string> s, std::string tag, std::string value);
 	
-	std::string getMap(std::map<std::string, std::string> s, std::string tag, std::string value);
+	std::string getMap(boost::unordered_map<std::string, std::string>& s, std::string tag, std::string value);
 	
 	
 	
-	bool startsWith(std::set<std::string> s, std::string tag, std::string value);
+	bool startsWith(std::set<std::string>& s, std::string tag, std::string value);
 
 	MapRouteType registerRule(std::string tag, std::string val);
 	
@@ -103,15 +105,15 @@ public:
 	
 	MapRouteType getNameRuleType() ;
 	
-	std::map<std::string, std::string> getRouteRelationPropogatedTags(EntityBase& e) ;
+	boost::unordered_map<std::string, std::string> getRouteRelationPropogatedTags(EntityBase& e) ;
 
-	bool encodeEntity(EntityWay& et, std::vector<int> outTypes, std::map<MapRouteType, std::string> names);
+	bool encodeEntity(EntityWay& et, std::vector<int>& outTypes, std::map<MapRouteType, std::string>& names);
 	
 	
-	bool encodeBaseEntity(EntityWay& et, std::vector<int> outTypes, std::map<MapRouteType, std::string> names);
+	bool encodeBaseEntity(EntityWay& et, std::vector<int> &outTypes, std::map<MapRouteType, std::string>& names);
 
 	
-	void encodePointTypes(EntityWay& e, std::map<__int64, std::vector<int>> pointTypes);
+	void encodePointTypes(EntityWay& e, std::map<__int64, std::vector<int>>& pointTypes);
 	
 	MapRouteType getTypeByInternalId(int id) ;
 	

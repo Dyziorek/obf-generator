@@ -148,7 +148,7 @@ public:
 		}
 		
 public:
-	bool isApplicable(std::map<std::string, std::string> e ){
+	bool isApplicable(boost::unordered_map<std::string, std::string>& e ){
 			if(value == "") {
 				return e.find(tag) != e.end();
 			}
@@ -454,9 +454,9 @@ public:
 	
 	std::string getAmenitySubtypePrefix(std::string tag, std::string val);
 
-	std::map<std::string, std::string> getAmenityAdditionalInfo(std::map<std::string, std::string> tags, AmenityType type, std::string subtype);
+	boost::unordered_map<std::string, std::string> getAmenityAdditionalInfo(boost::unordered_map<std::string, std::string> tags, AmenityType type, std::string subtype);
 
-	static std::map<AmenityType, std::map<std::string, std::string>> amenityNameVal;
+	static std::map<AmenityType, boost::unordered_map<std::string, std::string>> amenityNameVal;
 	static std::map<std::string, AmenityType> namedAmenity;
 	static std::list<MapRouteTag> routeTags;
 	static NamedRuleContainer namedRulType;
@@ -472,7 +472,7 @@ public:
 	MapRulType* getMapRuleType(std::string tag, std::string val);
 	MapRulType* getRuleType(std::string tag, std::string val, bool poi);
 	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
-	static std::list<std::map<std::string, std::string>> splitTagsIntoDifferentObjects(const std::map<std::string, std::string> tags);
+	static std::list<boost::unordered_map<std::string, std::string>> splitTagsIntoDifferentObjects(const boost::unordered_map<std::string, std::string>& tags);
 	boost::ptr_map<std::string, MapRulType>& getRuleTypes()
 	{
 		if (namedRulType.size() == 0)
@@ -498,8 +498,8 @@ public:
 	static BYTE RESTRICTION_ONLY_LEFT_TURN;
 	static BYTE RESTRICTION_ONLY_STRAIGHT_ON;
 
-	static std::list<std::map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const std::map<std::string, std::string> tags);
-	static bool splitIsNeeded(const std::map<std::string, std::string> tags) {
+	static std::list<boost::unordered_map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const boost::unordered_map<std::string, std::string>& tags);
+	static bool splitIsNeeded(const boost::unordered_map<std::string, std::string>& tags) {
 		bool seamark = false;
 		for(auto s : tags) {
 			if(boost::algorithm::starts_with(s.first, "seamark:")) {
@@ -515,7 +515,7 @@ public:
 
 	 bool encodeEntityWithType(std::shared_ptr<EntityBase> e, int zoom, std::list<long>& outTypes, 
 			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
-	 bool encodeEntityWithType(bool isNode, std::map<std::string, std::string> tags, int zoom, std::list<long>& outTypes, 
+	 bool encodeEntityWithType(bool isNode, boost::unordered_map<std::string, std::string>& tags, int zoom, std::list<long>& outTypes, 
 			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed);
 
 

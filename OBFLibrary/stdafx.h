@@ -30,6 +30,7 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/container/map.hpp>
+#include <boost/unordered_map.hpp>
 #include "zlib.h"
 
 #include <boost/thread/thread.hpp>

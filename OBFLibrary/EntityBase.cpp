@@ -140,7 +140,7 @@ void EntityBase::parseTags(std::string tagList)
 	*/
 		bool oddVal = true;
 	std::string tagName;
-	BOOST_FOREACH(const std::string token,tokens){
+	BOOST_FOREACH(const std::string token, tokens){
 		if (oddVal)
 		{
 			tagName = token;

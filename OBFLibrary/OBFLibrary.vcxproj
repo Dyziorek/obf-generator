@@ -81,11 +81,13 @@
   <ItemGroup>
     <ClInclude Include="Amenity.h" />
     <ClInclude Include="ArchiveIO.h" />
+    <ClInclude Include="EntityBase.h" />
     <ClInclude Include="EntityNode.h" />
     <ClInclude Include="MapObject.h" />
     <ClInclude Include="MapRoutingTypes.h" />
     <ClInclude Include="MapUtils.h" />
     <ClInclude Include="MultiPoly.h" />
+    <ClInclude Include="RTree.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="..\OBFGenerator\TileManager.h" />

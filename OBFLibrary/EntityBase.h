@@ -9,7 +9,7 @@ class EntityBase
 public:
 	EntityBase(void);
 	virtual ~EntityBase(void);
-	std::map<std::string, std::string> tags;
+	boost::unordered_map<std::string, std::string> tags;
 
 	void parseTags(std::string tagList);
 

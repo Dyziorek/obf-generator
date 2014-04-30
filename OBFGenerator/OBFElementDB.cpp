@@ -2,6 +2,7 @@
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
 #include "Amenity.h"
+#include "ArchiveIO.h"
 
 OBFpoiDB::OBFpoiDB(void)
 {
@@ -25,7 +26,7 @@ void OBFpoiDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB
 			{
 			if (propagatedTags.find(entryRel.first) == propagatedTags.end())
 			{
-				propagatedTags.insert(std::make_pair(entryRel.first, std::map<std::string, std::string>()));
+				propagatedTags.insert(std::make_pair(entryRel.first, boost::unordered_map<std::string, std::string>()));
 			}
 			propagatedTags.find(entryRel.first)->second.insert(std::make_pair(strId.first, strId.second));
 			}
@@ -38,13 +39,13 @@ void OBFpoiDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 {
 	tempAmenityList.clear();
 	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
-	std::map<std::string, std::string> tags;
+	boost::unordered_map<std::string, std::string> tags;
 	if (propagatedTags.find(baseItem->id) != propagatedTags.end())
 	{
 		tags = propagatedTags.at(baseItem->id);
 	}
 	if (!tags.empty()) {
-		std::map<std::string, std::string>::iterator iterator = tags.begin();
+		boost::unordered_map<std::string, std::string>::iterator iterator = tags.begin();
 		while (iterator != tags.end()) {
 			auto ts = *iterator;
 			if (baseItem->getTag(ts.first) == "") {
@@ -112,7 +113,7 @@ void OBFrouteDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResult
 {
 	indexHighwayRestrictions(entry, dbContext);
 
-	std::map<std::string, std::string> propagated = routingTypes.getRouteRelationPropogatedTags(*entry.get());
+	boost::unordered_map<std::string, std::string> propagated = routingTypes.getRouteRelationPropogatedTags(*entry.get());
 	if (propagated.size() >0)
 	{
 		if (entry->entityIDs.size() == 0)
@@ -125,7 +126,7 @@ void OBFrouteDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResult
 		{
 			if (propagatedTags.find(entryRel.first) == propagatedTags.end())
 			{
-				propagatedTags.insert(std::make_pair(entryRel.first, std::map<std::string, std::string>()));
+				propagatedTags.insert(std::make_pair(entryRel.first, boost::unordered_map<std::string, std::string>()));
 			}
 			propagatedTags.find(entryRel.first)->second.insert(propagated.begin(), propagated.end());
 		}
@@ -181,7 +182,158 @@ void OBFrouteDB::indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry,
 }
 
 
+void OBFrouteDB::iterateMainEntity(std::shared_ptr<EntityBase>& it, OBFResultDB& dbCtx)
+{
+	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(it);
+	if (wayItem) {
+		auto tagsIt = propagatedTags.find(wayItem->id);
+		if (tagsIt != propagatedTags.end()) {
+			boost::unordered_map<std::string, std::string>::iterator itTag = tagsIt->second.begin();
+				while (itTag != tagsIt->second.end()) {
+					auto ts = *itTag;
+					if (wayItem->getTag(ts.first) == "") {
+						wayItem->putTag(ts.first, ts.second);
+					}
+				}
+			}
+			
+			boolean encoded = routingTypes.encodeEntity(*wayItem, outTypes, names) ;
+			if (encoded) {
+				// Load point with  tags!
+				dbCtx.loadWays(wayItem.get());
+				routingTypes.encodePointTypes(*wayItem, pointTypes);
+				if(wayItem->nodes.size() >= 2) {
+					addWayToIndex(wayItem->id, wayItem->nodes, dbCtx, routeTree, false);
+				}
+			}
+			encoded = routingTypes.encodeBaseEntity(*wayItem, outTypes, names) && wayItem->nodes.size() >= 2;
+			if (encoded ) {
+				std::vector<std::shared_ptr<EntityNode>> result;
+				std::vector<std::shared_ptr<EntityNode>> source = wayItem->nodes;
+				std::vector<bool> kept = OsmMapUtils::simplifyDouglasPeucker(source, 11 /*zoom*/+ 8 + 1 /*smoothness*/, 3, result, false);
+				int indexToInsertAt = 0;
+				int originalInd = 0;				
+				for(int i = 0; i < kept.size(); i ++) {
+					std::shared_ptr<EntityNode> n = source[i];
+					if(n) {
+						long y31 = MapUtils::get31TileNumberY(n->lat);
+						long x31 = MapUtils::get31TileNumberX(n->lon);
+						long long point = (x31 << 31) + y31;
+						registerBaseIntersectionPoint(point, !kept[i], wayItem->, indexToInsertAt, originalInd);
+						originalInd++;
+						if(kept[i]) {
+							indexToInsertAt ++;
+						}
+					}
+				}
+				
+				
+				addWayToIndex(e.getId(), result, dbCtx, baserouteTree, true);
+				//generalizeWay(e);
 
+			}
+		}
+		
+
+}
+
+
+void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree, bool base)  {
+		boolean init = false;
+		int minX = INT_MAX;
+		int maxX = 0;
+		int minY = INT_MAX;
+		int maxY = 0;
+		
+
+		std::stringstream bcoordinates;
+		std::stringstream bpointIds;
+		std::stringstream bpointTypes;
+		std::stringstream btypes;
+
+		try {
+			for (int j = 0; j < outTypes.size(); j++) {
+				writeSmallInt(btypes, outTypes[j]);
+			}
+
+			for (std::shared_ptr<EntityNode> n : nodes) {
+				if (n) {
+					// write id
+					writeLongInt(bpointIds, n->id);
+					// write point type
+					std::map<__int64, std::vector<int>>::iterator typesit = pointTypes.find(n->id);
+						if (typesit != pointTypes.end()) {
+							std::vector<int> types = typesit->second;
+						for (int j = 0; j < types.size(); j++) {
+							writeSmallInt(bpointTypes, types[j]);
+						}
+					}
+					writeSmallInt(bpointTypes, 0);
+					// write coordinates
+					int y = MapUtils::get31TileNumberY(n->lat);
+					int x = MapUtils::get31TileNumberX(n->lon);
+					minX = min(minX, x);
+					maxX = max(maxX, x);
+					minY = min(minY, y);
+					maxY = max(maxY, y);
+					init = true;
+					writeInt(bcoordinates, x);
+					writeInt(bcoordinates, y);
+				}
+			}
+
+		} catch (std::bad_exception est) {
+			
+		}
+		if (init) {
+			// conn.prepareStatement("insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?, ?, ?, ?, ?, ?, ?)");
+			insertStat.setLong(1, id);
+			insertStat.setBytes(2, btypes.toByteArray());
+			insertStat.setBytes(3, bpointTypes.toByteArray());
+			insertStat.setBytes(4, bpointIds.toByteArray());
+			insertStat.setBytes(5, bcoordinates.toByteArray());
+			insertStat.setString(6, encodeNames(names));
+
+			dbContext.addBatchRoute(insertStat, false);
+			try {
+				rTree.insert(new LeafElement(new Rect(minX, minY, maxX, maxY), id));
+			} catch (RTreeInsertException e1) {
+				throw new IllegalArgumentException(e1);
+			} catch (IllegalValueException e1) {
+				throw new IllegalArgumentException(e1);
+			}
+		}
+	}
+
+  long OBFrouteDB::SHIFT_INSERT_AT = 12;
+  long OBFrouteDB::SHIFT_ORIGINAL = 16;
+  long OBFrouteDB::SHIFT_ID = 64 - (SHIFT_INSERT_AT + SHIFT_ORIGINAL);
+
+ void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool register,long long wayId, int insertAt, int originalInd) {
+		Long exNode = basemapRemovedNodes.get(pointLoc);
+		if(insertAt > (1l << SHIFT_INSERT_AT)) {
+			throw new IllegalStateException("Way index too big");
+		}
+		if(originalInd > (1l << SHIFT_ORIGINAL)) {
+			throw new IllegalStateException("Way index 2 too big");
+		}
+		if(wayId > (1l << SHIFT_ID)) {
+			throw new IllegalStateException("Way id too big");
+		}
+		long genKey = register ? ((wayId << (SHIFT_ORIGINAL+SHIFT_INSERT_AT)) + (originalInd << SHIFT_INSERT_AT) + insertAt) : -1l; 
+		if(exNode == null) {
+			basemapRemovedNodes.put(pointLoc, genKey);
+		} else {
+			if(exNode != -1) {
+				putIntersection(pointLoc, exNode);
+			}
+			basemapRemovedNodes.put(pointLoc, -1l);
+			if(genKey != -1) {
+				putIntersection(pointLoc, genKey);
+			}
+		}
+		
+	}
 
 OBFAddresStreetDB::OBFAddresStreetDB(void)
 {
@@ -294,5 +446,78 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		{
 			boundaries.insert(polyline);
 		}
+	}
+}
+
+
+void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
+{
+	std::shared_ptr<EntityNode> ptrNode = cityNode;
+	std::string placeType = boost::to_upper_copy(cityNode->getTag("place"));
+	CityObj objCity;
+	if (placeType == "CITY" ||placeType ==  "TOWN" )
+	{
+		SaverCityNode(*ptrNode, cityManager);
+		objCity.setType(placeType);
+	}
+	else if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
+	{
+		SaverCityNode(*ptrNode, townManager);
+		objCity.setType(placeType);
+	}
+
+				
+	objCity.setId(cityNode->id);
+	MapObject::parseMapObject(&objCity, cityNode.get());
+	objCity.setLocation(ptrNode->lat, ptrNode->lon);
+
+	if (cityNode->getTag("capital") == "yes")
+	{
+		objCity.isAlwaysVisible = true;
+		objCity.setType("CITY");
+	}
+
+	cities.insert(std::make_pair(ptrNode, objCity));
+
+}
+
+
+void OBFAddresStreetDB::storeCities(OBFResultDB& dbContext)
+{
+
+	//"insert into city (id, latitude, longitude, name, name_en, city_type) values (?1, ?2, ?3, ?4, ?5, ?6)"
+	char* errMsg;
+	int cityList = 0;
+	int SqlCode;
+	sqlite3_exec(dbContext.dbAddrCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+	for (auto mapCity: cities)
+	{
+		sqlite3_bind_int64(dbContext.cityStmt, 1, mapCity.second.getID());
+		sqlite3_bind_double(dbContext.cityStmt, 2, mapCity.second.getLatLon().first);
+		sqlite3_bind_double(dbContext.cityStmt, 3, mapCity.second.getLatLon().second);
+		sqlite3_bind_text(dbContext.cityStmt, 4, mapCity.second.getName().c_str(), mapCity.second.getName().size(), SQLITE_TRANSIENT);
+		std::shared_ptr<EntityNode> nodeElem = mapCity.first;
+		sqlite3_bind_text(dbContext.cityStmt, 5, nodeElem->getTag("em_name").c_str(), nodeElem->getTag("em_name").size(), SQLITE_TRANSIENT);
+		sqlite3_bind_text(dbContext.cityStmt, 6, mapCity.second.getType().c_str(), mapCity.second.getType().size(), SQLITE_TRANSIENT);
+
+		SqlCode = sqlite3_step(dbContext.cityStmt);
+		if (SqlCode != SQLITE_DONE)
+		{
+			//NodeElems = -100;
+		}
+		SqlCode = sqlite3_clear_bindings(dbContext.cityStmt);
+		SqlCode = sqlite3_reset(dbContext.cityStmt);
+
+		cityList++;
+		if (cityList > 10000)
+		{
+			sqlite3_exec(dbContext.dbAddrCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+			sqlite3_exec(dbContext.dbAddrCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+			cityList = 0;
+		}
+	}
+	if (cityList > 0)
+	{
+		sqlite3_exec(dbContext.dbAddrCtx, "END TRANSACTION", NULL, NULL, &errMsg);
 	}
 }

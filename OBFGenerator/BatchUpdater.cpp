@@ -53,6 +53,23 @@ void BatchUpdater::addBatch(__int64 id, bool area, std::stringstream& bCoord, st
 	}
 }
 
+void BatchUpdater::addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base)
+{
+	routeData routeElem;
+	routeElem.id = id;
+	routeElem.types = types.str();
+	routeElem.ptTypes = ptTypes.str();
+	routeElem.ptIds = ptIds.str();
+	routeElem.coords = coords.str();
+	routeElem.base = base;
+
+	routeList.push_back(routeElem);
+	if (routeList.size() > 10000)
+	{
+		flush();
+	}
+}
+
 void BatchUpdater::flush(bool bFlush)
 {
 	USES_CONVERSION;
@@ -168,7 +185,7 @@ void BatchUpdater::flush(bool bFlush)
 
 }
 
-std::string BatchUpdater::encodeAdditionalInfo(std::map<std::string, std::string> tempNames, std::string name, std::string nameEn) {
+std::string BatchUpdater::encodeAdditionalInfo(boost::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn) {
 		if(!(name == "")) {
 			tempNames.insert(std::make_pair("name", name));
 		}
