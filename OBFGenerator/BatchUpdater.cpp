@@ -61,12 +61,23 @@ void BatchUpdater::addBatchRoute(__int64 id, std::stringstream& types, std::stri
 	routeElem.ptTypes = ptTypes.str();
 	routeElem.ptIds = ptIds.str();
 	routeElem.coords = coords.str();
-	routeElem.base = base;
 
+	if (base)
+	{
+		baserouteList.push_back(routeElem);
+		if (baserouteList.size() > 10000)
+		{
+			flush();
+		}
+
+	}
+	else
+	{
 	routeList.push_back(routeElem);
 	if (routeList.size() > 10000)
 	{
 		flush();
+	}
 	}
 }
 
@@ -183,6 +194,76 @@ void BatchUpdater::flush(bool bFlush)
 		binaryMapList.clear();
 	}
 
+	if (routeList.size() > 10000 || bFlush)
+	{
+		// "insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)",
+		sqlite3_stmt* routeStmt = workContext.routeStmt;
+		sqlite3* dbCtx = workContext.dbMapCtx;
+		char* errMsg;
+		int SqlCode;
+		sqlite3_exec(dbCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+		for (routeData routeData : routeList)
+		{
+			SqlCode = sqlite3_bind_int64(routeStmt, 1, routeData.id);
+			SqlCode = sqlite3_bind_blob(routeStmt, 2, routeData.types.c_str(), routeData.types.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 3, routeData.ptTypes.c_str(), routeData.ptTypes.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 4, routeData.ptIds.c_str(), routeData.ptIds.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 5, routeData.coords.c_str(), routeData.coords.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_text(routeStmt, 6, routeData.name.c_str(), routeData.name.size(), SQLITE_TRANSIENT);
+			
+			SqlCode = sqlite3_step(routeStmt);
+			if (SqlCode != SQLITE_DONE)
+			{
+				if (SqlCode == SQLITE_CONSTRAINT)
+				{
+					if (errMsg != nullptr)
+					{
+						std::wstring errorCode = A2W(errMsg);
+						OutputDebugString(errorCode.c_str());
+					}
+				}
+			}
+			SqlCode = sqlite3_clear_bindings(routeStmt);
+			SqlCode = sqlite3_reset(routeStmt);
+		}
+		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+		routeList.clear();
+	}
+	if (baserouteList.size() > 10000 || bFlush)
+	{
+		// "insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"
+		sqlite3_stmt* routeStmt = workContext.baseRouteStmt;
+		sqlite3* dbCtx = workContext.dbMapCtx;
+		char* errMsg;
+		int SqlCode;
+		sqlite3_exec(dbCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+		for (routeData routeData : baserouteList)
+		{
+			SqlCode = sqlite3_bind_int64(routeStmt, 1, routeData.id);
+			SqlCode = sqlite3_bind_blob(routeStmt, 2, routeData.types.c_str(), routeData.types.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 3, routeData.ptTypes.c_str(), routeData.ptTypes.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 4, routeData.ptIds.c_str(), routeData.ptIds.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_blob(routeStmt, 5, routeData.coords.c_str(), routeData.coords.size(), SQLITE_TRANSIENT);
+			SqlCode = sqlite3_bind_text(routeStmt, 6, routeData.name.c_str(), routeData.name.size(), SQLITE_TRANSIENT);
+			
+			SqlCode = sqlite3_step(routeStmt);
+			if (SqlCode != SQLITE_DONE)
+			{
+				if (SqlCode == SQLITE_CONSTRAINT)
+				{
+					if (errMsg != nullptr)
+					{
+						std::wstring errorCode = A2W(errMsg);
+						OutputDebugString(errorCode.c_str());
+					}
+				}
+			}
+			SqlCode = sqlite3_clear_bindings(routeStmt);
+			SqlCode = sqlite3_reset(routeStmt);
+		}
+		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
+		baserouteList.clear();
+	}
 }
 
 std::string BatchUpdater::encodeAdditionalInfo(boost::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn) {

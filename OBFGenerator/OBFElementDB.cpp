@@ -219,7 +219,7 @@ void OBFrouteDB::iterateMainEntity(std::shared_ptr<EntityBase>& it, OBFResultDB&
 						long y31 = MapUtils::get31TileNumberY(n->lat);
 						long x31 = MapUtils::get31TileNumberX(n->lon);
 						long long point = (x31 << 31) + y31;
-						registerBaseIntersectionPoint(point, !kept[i], wayItem->, indexToInsertAt, originalInd);
+						registerBaseIntersectionPoint(point, !kept[i], wayItem->id, indexToInsertAt, originalInd);
 						originalInd++;
 						if(kept[i]) {
 							indexToInsertAt ++;
@@ -228,7 +228,7 @@ void OBFrouteDB::iterateMainEntity(std::shared_ptr<EntityBase>& it, OBFResultDB&
 				}
 				
 				
-				addWayToIndex(e.getId(), result, dbCtx, baserouteTree, true);
+				addWayToIndex(wayItem->id, result, dbCtx, baserouteTree, true);
 				//generalizeWay(e);
 
 			}
@@ -287,21 +287,11 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		}
 		if (init) {
 			// conn.prepareStatement("insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?, ?, ?, ?, ?, ?, ?)");
-			insertStat.setLong(1, id);
-			insertStat.setBytes(2, btypes.toByteArray());
-			insertStat.setBytes(3, bpointTypes.toByteArray());
-			insertStat.setBytes(4, bpointIds.toByteArray());
-			insertStat.setBytes(5, bcoordinates.toByteArray());
-			insertStat.setString(6, encodeNames(names));
 
-			dbContext.addBatchRoute(insertStat, false);
-			try {
-				rTree.insert(new LeafElement(new Rect(minX, minY, maxX, maxY), id));
-			} catch (RTreeInsertException e1) {
-				throw new IllegalArgumentException(e1);
-			} catch (IllegalValueException e1) {
-				throw new IllegalArgumentException(e1);
-			}
+
+			dbContext.addBatchRoute(id, btypes, bpointTypes, bpointIds, bcoordinates, encodeNames(names), base);
+			rTree.insertBox(minX, minY, maxX, maxY, id, std::list<long>());
+
 		}
 	}
 
@@ -309,30 +299,60 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
   long OBFrouteDB::SHIFT_ORIGINAL = 16;
   long OBFrouteDB::SHIFT_ID = 64 - (SHIFT_INSERT_AT + SHIFT_ORIGINAL);
 
- void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool register,long long wayId, int insertAt, int originalInd) {
-		Long exNode = basemapRemovedNodes.get(pointLoc);
+ void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool registerId,long long wayId, int insertAt, int originalInd) {
+		
+		boost::unordered_map<__int64, __int64>::iterator exNode = basemapRemovedNodes.find(pointLoc);
 		if(insertAt > (1l << SHIFT_INSERT_AT)) {
-			throw new IllegalStateException("Way index too big");
+			throw new std::bad_exception("Way index too big");
 		}
 		if(originalInd > (1l << SHIFT_ORIGINAL)) {
-			throw new IllegalStateException("Way index 2 too big");
+			throw new std::bad_exception("Way index 2 too big");
 		}
 		if(wayId > (1l << SHIFT_ID)) {
-			throw new IllegalStateException("Way id too big");
+			throw new std::bad_exception("Way id too big");
 		}
-		long genKey = register ? ((wayId << (SHIFT_ORIGINAL+SHIFT_INSERT_AT)) + (originalInd << SHIFT_INSERT_AT) + insertAt) : -1l; 
-		if(exNode == null) {
-			basemapRemovedNodes.put(pointLoc, genKey);
+		long genKey = registerId ? ((wayId << (SHIFT_ORIGINAL+SHIFT_INSERT_AT)) + (originalInd << SHIFT_INSERT_AT) + insertAt) : -1l; 
+		if(exNode == basemapRemovedNodes.end()) {
+			basemapRemovedNodes.insert(std::make_pair(pointLoc, genKey));
 		} else {
-			if(exNode != -1) {
-				putIntersection(pointLoc, exNode);
+			if(exNode->second != -1) {
+				putIntersection(pointLoc, exNode->second);
 			}
-			basemapRemovedNodes.put(pointLoc, -1l);
+			basemapRemovedNodes.insert(std::make_pair(pointLoc, -1ll));
 			if(genKey != -1) {
 				putIntersection(pointLoc, genKey);
 			}
 		}
 		
+	}
+
+ void OBFrouteDB::putIntersection(long long  point, long long wayNodeId) {
+		if(wayNodeId != -1){
+//			long x = point >> 31;
+//			long y = point - (x << 31);
+//			System.out.println("Put intersection at " + (float) MapUtils.get31LatitudeY((int) y) + " " + (float)MapUtils.get31LongitudeX((int) x));
+			long SHIFT = SHIFT_INSERT_AT + SHIFT_ORIGINAL;
+			int ind = (int) (wayNodeId & ((1 << SHIFT) - 1));
+			long long wayId = wayNodeId >> SHIFT;
+			if(basemapNodesToReinsert.find(wayId) == basemapNodesToReinsert.end()) {
+				basemapNodesToReinsert.insert(std::make_pair(wayId, RouteMissingPoints()));
+			}
+			RouteMissingPoints mp = basemapNodesToReinsert.at(wayId);
+			mp.pointsMap.insert(std::make_pair(ind, point));
+		}
+		
+	}
+
+ std::string OBFrouteDB::encodeNames(std::map<MapRouteType, std::string> tempNames) {
+		std::stringstream strm;
+		for (std::pair<MapRouteType, std::string> e : tempNames) {
+			if (e.second.size()) {
+				strm << "~";
+				strm << e.first.getInternalId();
+				strm << e.second;
+			}
+		}
+		return  strm.str();
 	}
 
 OBFAddresStreetDB::OBFAddresStreetDB(void)

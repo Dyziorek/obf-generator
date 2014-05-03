@@ -828,7 +828,7 @@ void OBFResultDB::addBatch(__int64 id, bool area, std::stringstream& bCoord, std
 	storeData->addBatch(id,area, bCoord, bInCoord, bTypes, bAddtTypes, name );
 }
 
-void addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base)
+void OBFResultDB::addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base)
 {
 	storeData->addBatchRoute(id,types, ptTypes, ptIds, coords, name, base );
 }

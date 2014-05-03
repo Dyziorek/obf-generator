@@ -68,7 +68,9 @@ public:
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& item, OBFResultDB& dbContext);
 	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree,  bool base);
-	void registerBaseIntersectionPoint(long long pointLoc, bool register, long long wayId, int insertAt, int originalInd);
+	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
+	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
+	void putIntersection(long long  point, long long wayNodeId);
 	boost::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
 	boost::unordered_map<__int64, __int64> basemapRemovedNodes;
 	boost::unordered_map<__int64, RouteMissingPoints> basemapNodesToReinsert;

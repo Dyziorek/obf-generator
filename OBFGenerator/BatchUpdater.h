@@ -31,7 +31,6 @@ struct binMapData
 struct routeData
 {
 	__int64 id;
-	bool base;
 	std::string types;
 	std::string ptTypes;
 	std::string ptIds;
@@ -50,6 +49,7 @@ public:
 	std::list<lowLevelMapData> lowLevelMapList;
 	std::list<binMapData> binaryMapList;
 	std::list<routeData> routeList;
+	std::list<routeData> baserouteList;
 	void addBatch(Amenity itemToAdd);
 	void addBatch(__int64 id, __int64 firstId, __int64 lastId, std::string& name, std::stringstream& bNodes,std::stringstream& bTypes,std::stringstream& bAddtTypes,int level);
 	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
