@@ -61,7 +61,7 @@ void BatchUpdater::addBatchRoute(__int64 id, std::stringstream& types, std::stri
 	routeElem.ptTypes = ptTypes.str();
 	routeElem.ptIds = ptIds.str();
 	routeElem.coords = coords.str();
-
+	routeElem.name = name;
 	if (base)
 	{
 		baserouteList.push_back(routeElem);

@@ -54,7 +54,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 
 	MapRouteType MapRoutingTypes::registerRule(std::string tag, std::string val) {
 		std::string id = constructRuleKey(tag, val);
-		if(types.find(id) != types.end()) {
+		if(types.find(id) == types.end()) {
 			MapRouteType rt;
 			// first one is always 1
 			rt.id = types.size() + 1;

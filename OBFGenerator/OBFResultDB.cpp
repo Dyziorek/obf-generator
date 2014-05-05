@@ -75,7 +75,7 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	if ((err = fopen_s(&fp,"D:\\osmData\\tempLocalRoute.db", "r"))== 0)
 	{
 		fclose(fp);
-		remove("D:\\osmData\\tempLocalRout.db");
+		remove("D:\\osmData\\tempLocalRoute.db");
 	}
 	fp = NULL;
 	if ((err = fopen_s(&fp,"D:\\osmData\\tempLocalAddr.db", "r"))== 0)
@@ -112,8 +112,8 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_exec(dbRouteCtx, "create index route_objects_ind  on route_objects (id)" , &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbRouteCtx, "create index baseroute_objects_ind  on route_objects (id)", &OBFResultDB::shell_callback,this,&errMsg);
 
-	dbRes = sqlite3_prepare_v2(dbMapCtx, "insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &routeStmt, NULL);
-	dbRes = sqlite3_prepare_v2(dbMapCtx, "insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &baseRouteStmt, NULL);
+	dbRes = sqlite3_prepare_v2(dbRouteCtx, "insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &routeStmt, NULL);
+	dbRes = sqlite3_prepare_v2(dbRouteCtx, "insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &baseRouteStmt, NULL);
 	
 	dbRes = sqlite3_exec(dbAddrCtx,"create table street (id bigint primary key, latitude double, longitude double, name varchar(1024), name_en varchar(1024), city bigint, citypart varchar(1024))", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbAddrCtx,"create index street_cnp on street (city,citypart,name,id)", &OBFResultDB::shell_callback,this,&errMsg);

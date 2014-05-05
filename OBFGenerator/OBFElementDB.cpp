@@ -302,16 +302,16 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
  void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool registerId,long long wayId, int insertAt, int originalInd) {
 		
 		boost::unordered_map<__int64, __int64>::iterator exNode = basemapRemovedNodes.find(pointLoc);
-		if(insertAt > (1l << SHIFT_INSERT_AT)) {
+		if(insertAt > (1ll << SHIFT_INSERT_AT)) {
 			throw new std::bad_exception("Way index too big");
 		}
-		if(originalInd > (1l << SHIFT_ORIGINAL)) {
+		if(originalInd > (1ll << SHIFT_ORIGINAL)) {
 			throw new std::bad_exception("Way index 2 too big");
 		}
-		if(wayId > (1l << SHIFT_ID)) {
+		if(wayId > (1ll << SHIFT_ID)) {
 			throw new std::bad_exception("Way id too big");
 		}
-		long genKey = registerId ? ((wayId << (SHIFT_ORIGINAL+SHIFT_INSERT_AT)) + (originalInd << SHIFT_INSERT_AT) + insertAt) : -1l; 
+		long long genKey = registerId ? ((wayId << (SHIFT_ORIGINAL+SHIFT_INSERT_AT)) + (originalInd << SHIFT_INSERT_AT) + insertAt) : -1ll; 
 		if(exNode == basemapRemovedNodes.end()) {
 			basemapRemovedNodes.insert(std::make_pair(pointLoc, genKey));
 		} else {

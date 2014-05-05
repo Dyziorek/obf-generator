@@ -35,6 +35,73 @@ private:
 	static long SHIFT_ORIGINAL;
 	static long SHIFT_ID;
 
+	static long getBaseId(int x31, int y31) {
+		__int64 x = x31;
+		__int64 y = y31;
+		return (x << 31) + y;
+	}
+	 class GeneralizedWay {
+	 private:
+		 __int64 id;
+		 int mainType;
+		boost::unordered_set<int> addtypes;
+		std::vector<int> px;
+		std::vector<int> py;
+		
+		std::map<MapRouteType, std::string> names;
+
+	 public:
+		 GeneralizedWay(__int64 id) {
+			this->id = id;
+		}
+		
+		double getDistance() {
+			double dx = 0;
+			for (int i = 1; i < px.size(); i++) {
+				dx += MapUtils::getDistance(MapUtils::get31LatitudeY(py[i - 1]), MapUtils::get31LongitudeX(px[i - 1]),
+						MapUtils::get31LatitudeY(py[i]), MapUtils::get31LongitudeX(px[i]));
+			}
+			return dx;
+		}
+		
+		__int64 getLocation(int ind) {
+			return getBaseId(px[ind], py[ind]);
+		}
+		
+		int size(){
+			return px.size();
+		}
+		
+		// Gives route direction of EAST degrees from NORTH ]-PI, PI]
+		double directionRoute(int startPoint, boolean plus) {
+			float dist = 5;
+			int x = this->px[startPoint];
+			int y = this->py[startPoint];
+			int nx = startPoint;
+			int px = x;
+			int py = y;
+			double total = 0;
+			do {
+				if (plus) {
+					nx++;
+					if (nx >= size()) {
+						break;
+					}
+				} else {
+					nx--;
+					if (nx < 0) {
+						break;
+					}
+				}
+				px = this->px[nx];
+				py = this->py[nx];
+				// translate into meters
+				total += abs(px - x) * 0.011d + abs(py - y) * 0.01863d;
+			} while (total < dist);
+			return atan2( x - px, y - py );
+		}
+	};
+
 	class RouteMissingPoints 
 	{
 	public:
@@ -77,6 +144,7 @@ public:
 	std::map<long long, boost::unordered_map<std::string, std::string>> propagatedTags;
 	OBFRenderingTypes renderer;
 	MapRoutingTypes routingTypes;
+
 };
 
 class OBFAddresStreetDB :

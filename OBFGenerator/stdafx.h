@@ -68,6 +68,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/container/map.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 #include "zlib.h"
 
 #include <boost/thread/thread.hpp>
