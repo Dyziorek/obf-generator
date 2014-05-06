@@ -67,6 +67,7 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/container/map.hpp>
+#include <boost/container/list.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 #include "zlib.h"

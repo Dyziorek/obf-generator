@@ -55,6 +55,11 @@ private:
 			this->id = id;
 		}
 		
+		 bool operator==(GeneralizedWay const& op2) const
+		 {
+			 return id == op2.id && mainType == op2.mainType;
+		 }
+
 		double getDistance() {
 			double dx = 0;
 			for (int i = 1; i < px.size(); i++) {
@@ -96,9 +101,117 @@ private:
 				px = this->px[nx];
 				py = this->py[nx];
 				// translate into meters
-				total += abs(px - x) * 0.011d + abs(py - y) * 0.01863d;
+				total += abs(px - x) * 0.011l + abs(py - y) * 0.01863l;
 			} while (total < dist);
 			return atan2( x - px, y - py );
+		}
+	};
+
+	  class GeneralizedCluster {
+	  public:
+		  int x;
+		  int y;
+		  int zoom;
+		
+		GeneralizedCluster(int x, int y, int z){
+			this->x = x;
+			this->y = y;
+			this->zoom = z;
+		}
+		
+		boost::unordered::unordered_set<GeneralizedWay> ways;
+		// either LinkedList<GeneralizedWay> or GeneralizedWay
+		typedef boost::unordered_map<__int64, boost::container::list<GeneralizedWay>>::iterator mapIt;
+		boost::unordered_map<__int64, boost::container::list<GeneralizedWay>> map;
+		
+		
+		void replaceWayFromLocation(GeneralizedWay deleteWay, int ind, GeneralizedWay toReplace){
+			ways.erase(deleteWay);
+			__int64 loc = deleteWay.getLocation(ind);
+			mapIt o = map.find(loc);
+			if(o != map.end() && o->second.size() == 1){
+				if(deleteWay == o->second.front()) {
+					boost::container::list<GeneralizedWay> intData;
+					intData.push_back(toReplace);
+					map.insert(std::make_pair(loc,intData));
+				} else if(!(toReplace ==  o->second.front())){
+					addWay(toReplace, loc);
+				}
+			} else if(o != map.end() && o->second.size() > 1){
+				o->second.remove(deleteWay);
+				auto oRes = std::find(o->second.begin(), o->second.end(), toReplace);
+				if( oRes == o->second.end()){
+					o->second.push_back(toReplace);
+				}
+			} else {
+				boost::container::list<GeneralizedWay> intData;
+				intData.push_back(toReplace);
+				map.insert(std::make_pair(loc, intData));
+			}
+		}
+		
+		 void removeWayFromLocation(GeneralizedWay deleteWay, int ind){
+			removeWayFromLocation(deleteWay, ind, false);
+		}
+		
+		void removeWayFromLocation(GeneralizedWay deleteWay, int ind, boolean deleteAll) {
+			__int64 loc = deleteWay.getLocation(ind);
+			boolean ex = false;
+			if (!deleteAll) {
+				for (int t = 0; t < deleteWay.size(); t++) {
+					if (t != ind && map.find(deleteWay.getLocation(t)) != map.end() ) {
+						ex = true;
+						break;
+					}
+				}
+			}
+			if (!ex || deleteAll) {
+				ways.erase(deleteWay);
+			}
+
+			mapIt o = map.find(loc);
+			if (o != map.end() && o->second.size() == 1) {
+				if(deleteWay == o->second.front()) {
+					map.erase(loc);
+				}
+			} else if (o != map.end() && o->second.size() > 1) {
+				o->second.remove(deleteWay);
+				if (o->second.size() == 1) {
+					boost::container::list<GeneralizedWay> intData;
+					intData.push_back(o->second.front());
+					map.insert(std::make_pair(loc, intData));
+				} else if (o->second.size() == 0) {
+					map.erase(loc);
+				}
+			}
+		}
+		
+		void addWayFromLocation(GeneralizedWay w, int i) {
+			ways.insert(w);
+			__int64 loc = w.getLocation(i);
+			addWay(w, loc);
+		}
+
+	  private:
+		void addWay(GeneralizedWay w, long loc) {
+			mapIt o = map.find(loc);
+			if (o != map.end()) {
+				if ( o->second.size() > 1) {
+					auto oRes = std::find(o->second.begin(), o->second.end(), w);
+					if(oRes == o->second.end() ){
+						o->second.push_back(w);
+					}
+				} else if(!(o->second.front() == w)){
+					boost::container::list<GeneralizedWay> intData;
+					intData.push_back(o->second.front());
+					intData.push_back(w);
+					map.insert(std::make_pair(loc, intData));
+				}
+			} else {
+				boost::container::list<GeneralizedWay> intData;
+				intData.push_back(w);
+				map.insert(std::make_pair(loc, intData));
+			}
 		}
 	};
 
