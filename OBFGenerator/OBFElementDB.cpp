@@ -355,6 +355,10 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		return  strm.str();
 	}
 
+ void OBFrouteDB::processLowLevelWays(OBFResultDB& dbContext){
+
+ }
+
 OBFAddresStreetDB::OBFAddresStreetDB(void)
 {
 }

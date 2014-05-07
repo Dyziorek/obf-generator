@@ -41,7 +41,7 @@ private:
 		return (x << 31) + y;
 	}
 	 class GeneralizedWay {
-	 private:
+	 public:
 		 __int64 id;
 		 int mainType;
 		boost::unordered_set<int> addtypes;
@@ -107,6 +107,27 @@ private:
 		}
 	};
 
+
+	 struct hashWay : std::unary_function<GeneralizedWay, size_t>
+	 {
+		 template<typename hasherWay>
+		 size_t operator()(hasherWay const &hashVal) const
+		 {
+			size_t seed = 0;
+			boost::hash_combine(seed, hashVal.id);
+			boost::hash_combine(seed, hashVal.mainType);
+		 }
+	 };
+
+	 struct equalWay : std::binary_function<GeneralizedWay, GeneralizedWay, bool>
+	 {
+		 template<typename Gen1, typename Gen2>
+		 bool operator()(Gen1 const &op1, Gen2 const &op2) const
+		 {
+			 return op1 == op2;
+		 }
+	 };
+
 	  class GeneralizedCluster {
 	  public:
 		  int x;
@@ -119,7 +140,7 @@ private:
 			this->zoom = z;
 		}
 		
-		boost::unordered::unordered_set<GeneralizedWay> ways;
+		boost::unordered::unordered_set<GeneralizedWay, hashWay, equalWay> ways;
 		// either LinkedList<GeneralizedWay> or GeneralizedWay
 		typedef boost::unordered_map<__int64, boost::container::list<GeneralizedWay>>::iterator mapIt;
 		boost::unordered_map<__int64, boost::container::list<GeneralizedWay>> map;
@@ -247,6 +268,7 @@ public:
 	void indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& item, OBFResultDB& dbContext);
+	void processLowLevelWays(OBFResultDB& dbContext);
 	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree,  bool base);
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
 	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
@@ -263,10 +285,11 @@ public:
 class OBFAddresStreetDB :
 	public OBFResultDB
 {
+
 public:
-	TileManager<MapObject> cityManager;
-	TileManager<MapObject> townManager;
-	std::map<std::shared_ptr<EntityNode>, MapObject> cities;
+	TileManager<CityObj> cityManager;
+	TileManager<CityObj> townManager;
+	std::map<std::shared_ptr<EntityNode>, CityObj> cities;
 
 	std::set<__int64> visitedBoundaryWays;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
