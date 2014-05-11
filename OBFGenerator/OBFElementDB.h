@@ -41,7 +41,7 @@ private:
 		return (x << 31) + y;
 	}
 	 class GeneralizedWay {
-	 private:
+	 public:
 		 __int64 id;
 		 int mainType;
 		boost::unordered_set<int> addtypes;
@@ -107,6 +107,29 @@ private:
 		}
 	};
 
+
+	 struct equalWay : std::binary_function<GeneralizedWay, GeneralizedWay, bool>
+	 {
+		 template<typename GeneralizedWayType1, typename GeneralizedWayType2>
+		 bool operator()(GeneralizedWayType1 const &op1, GeneralizedWayType2 const &op2) const
+		 {
+			 return op1 == op2;
+		 }
+	 };
+
+
+	 struct hashWay : std::unary_function<GeneralizedWay, size_t>
+	 {
+		 template <typename GeneralizedWayType>
+		 size_t operator()(GeneralizedWayType const &ival) const
+		 {
+			 std::size_t seed = 0;
+			 boost::hash_combine(seed, ival.id);
+			 boost::hash_combine(seed, ival.mainType);
+			 return seed;
+		 }
+	 };
+
 	  class GeneralizedCluster {
 	  public:
 		  int x;
@@ -119,7 +142,8 @@ private:
 			this->zoom = z;
 		}
 		
-		boost::unordered::unordered_set<GeneralizedWay> ways;
+		
+		boost::unordered::unordered_set<GeneralizedWay, hashWay, equalWay> ways;
 		// either LinkedList<GeneralizedWay> or GeneralizedWay
 		typedef boost::unordered_map<__int64, boost::container::list<GeneralizedWay>>::iterator mapIt;
 		boost::unordered_map<__int64, boost::container::list<GeneralizedWay>> map;
