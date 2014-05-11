@@ -767,7 +767,7 @@ struct tpl_hash
 	}
 };
 
-void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<MultiPoly>>& boundsLines, std::map<std::shared_ptr<EntityNode>, MapObject>& cities)
+void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<MultiPoly>>& boundsLines, std::map<std::shared_ptr<EntityNode>, CityObj>& cities)
 {
 
 	std::vector<std::pair<__int64, std::vector<short>>> treeIds;
@@ -998,7 +998,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<Mu
 		*/
 		}
 	
-		for (std::pair<std::shared_ptr<EntityNode>, MapObject> cityObj : cities)
+		for (std::pair<std::shared_ptr<EntityNode>, CityObj> cityObj : cities)
 		{
 			if ( cityObj.second.getType() == "CITY")
 			{

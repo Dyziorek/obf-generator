@@ -108,25 +108,23 @@ private:
 	};
 
 
-	 struct equalWay : std::binary_function<GeneralizedWay, GeneralizedWay, bool>
+	 struct hashWay : std::unary_function<GeneralizedWay, size_t>
 	 {
-		 template<typename GeneralizedWayType1, typename GeneralizedWayType2>
-		 bool operator()(GeneralizedWayType1 const &op1, GeneralizedWayType2 const &op2) const
+		 template<typename hasherWay>
+		 size_t operator()(hasherWay const &hashVal) const
 		 {
-			 return op1 == op2;
+			size_t seed = 0;
+			boost::hash_combine(seed, hashVal.id);
+			boost::hash_combine(seed, hashVal.mainType);
 		 }
 	 };
 
-
-	 struct hashWay : std::unary_function<GeneralizedWay, size_t>
+	 struct equalWay : std::binary_function<GeneralizedWay, GeneralizedWay, bool>
 	 {
-		 template <typename GeneralizedWayType>
-		 size_t operator()(GeneralizedWayType const &ival) const
+		 template<typename Gen1, typename Gen2>
+		 bool operator()(Gen1 const &op1, Gen2 const &op2) const
 		 {
-			 std::size_t seed = 0;
-			 boost::hash_combine(seed, ival.id);
-			 boost::hash_combine(seed, ival.mainType);
-			 return seed;
+			 return op1 == op2;
 		 }
 	 };
 
@@ -141,7 +139,6 @@ private:
 			this->y = y;
 			this->zoom = z;
 		}
-		
 		
 		boost::unordered::unordered_set<GeneralizedWay, hashWay, equalWay> ways;
 		// either LinkedList<GeneralizedWay> or GeneralizedWay
@@ -271,6 +268,7 @@ public:
 	void indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& item, OBFResultDB& dbContext);
+	void processLowLevelWays(OBFResultDB& dbContext);
 	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree,  bool base);
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
 	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
@@ -287,10 +285,11 @@ public:
 class OBFAddresStreetDB :
 	public OBFResultDB
 {
+
 public:
-	TileManager<MapObject> cityManager;
-	TileManager<MapObject> townManager;
-	std::map<std::shared_ptr<EntityNode>, MapObject> cities;
+	TileManager<CityObj> cityManager;
+	TileManager<CityObj> townManager;
+	std::map<std::shared_ptr<EntityNode>, CityObj> cities;
 
 	std::set<__int64> visitedBoundaryWays;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;

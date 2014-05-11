@@ -493,7 +493,7 @@ void OBFResultDB::loadRelationMembers(EntityRelation* relItem)
 
 }
 
-void OBFResultDB::SaverCityNode(EntityNode nn, TileManager<MapObject>& manager)
+void OBFResultDB::SaverCityNode(EntityNode nn, TileManager<CityObj>& manager)
 {
 	
 	CityObj objCity;
