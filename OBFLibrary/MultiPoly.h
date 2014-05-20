@@ -53,6 +53,8 @@ public:
 		outRing.push_back(outerRing);
 		inRing = innerRings;
 		id = oid;
+		centerID = -1;
+		updateRings();
 	}
 	virtual ~MultiPoly(void);
 
@@ -70,13 +72,18 @@ public:
 	std::list<std::shared_ptr<Ring>> combineRings(std::vector<std::shared_ptr<EntityWay>> inList);
 	std::list<MultiPoly> splitPerRing();
 	std::shared_ptr<EntityWay> combineTwoWaysIfHasPoints(std::shared_ptr<EntityWay> w1, std::shared_ptr<EntityWay> w2);
+	std::unique_ptr<std::pair<double, double>> getCenterPoint();
+	bool isValid();
 	void mergeWith(std::vector<std::shared_ptr<Ring>> inRing, std::vector<std::shared_ptr<Ring>> outRing);
 	void paintImage(SkCanvas* painter, double scale, double offsetX,double offsetY);
+	bool containsPoint(std::pair<double, double> point);
 	void generateImage(std::shared_ptr<EntityWay> lines, SkCanvas* painter, SkColor color, double scale,  double offsetX, double offsetY);
 	void getScaleOffsets(double* scale, double* offX, double* offy, double* offmx, double* offmy, SkRect limits);
 	__int64 centerID;
 	__int64 id;
 	int level;
+	std::string polyName;
+	std::string polyAltName;
 private:
 	float maxLat;
 	float minLat;

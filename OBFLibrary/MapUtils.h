@@ -160,7 +160,7 @@ public:
 
 	 static std::pair<double, double>  getCenter(EntityBase* e);
 
-	 static std::pair<double, double>  getWeightCenter(std::vector<std::pair<double, double> > EntityNodes);
+	 static std::pair<double, double>  getWeightCenter(std::vector<std::pair<double, double> > points);
 
 	 static std::pair<double, double>  getWeightCenterForNodes(std::vector<std::shared_ptr<EntityNode>> EntityNodes);
 

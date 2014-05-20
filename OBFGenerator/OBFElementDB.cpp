@@ -368,13 +368,86 @@ OBFAddresStreetDB::~OBFAddresStreetDB(void)
 {
 }
 
+
+// from java methods: net.osmand.data.preparation.address.IndexAddressCreator:indexBoundariesRelation(Entity, OsmDbAccessorContext) && extractBoundary
 void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)
+{
+	std::shared_ptr<MultiPoly> boundary = extractBoundary(baseItem, dbContext);
+	if (boundary && boundary->isValid())
+	{
+		std::unique_ptr<std::pair<double, double>> latLon = boundary->getCenterPoint();
+		std::list<CityObj> citiesToLookup;
+		std::vector<CityObj> closestCities = cityManager.getClosestObjects(latLon->first, latLon->second, 3);
+		citiesToLookup.insert(citiesToLookup.end(), closestCities.begin(), closestCities.end());
+		std::vector<CityObj> closestCities = townManager.getClosestObjects(latLon->first, latLon->second, 3);
+		citiesToLookup.insert(citiesToLookup.end(), closestCities.begin(), closestCities.end());
+
+		std::unique_ptr<CityObj> foundCity;
+		std::string boundaryName = boost::to_lower_copy(boundary->polyName);
+		std::string altBoundaryName = boundary->polyAltName == "" ? "" : boost::to_lower_copy(boundary->polyAltName);
+		if(boundary->centerID != -1) {
+				for (CityObj c : citiesToLookup) {
+					if (c.getID() == boundary->centerID) {
+						foundCity.reset(&c);
+						break;
+					}
+				}
+			}
+			if(!foundCity) {
+				for (CityObj c : citiesToLookup) {
+					if (( boost::iequals(boundaryName,c.getName()) || boost::iequals(altBoundaryName,c.getName())) 
+						&& boundary->containsPoint(c.getLatLon())) {
+						foundCity.release();
+						foundCity.reset(&c);
+						break;
+					}
+				}
+			}
+			// We should not look for similarities, this can be 'very' wrong (we can find much bigger region)....
+			// but here we just find what is the center of the boundary
+			// False case : London Borough of Richmond upon Thames (bigger) -> Richmond!
+			if (cityFound == null) {
+				for (City c : citiesToSearch) {
+					std::string lower = c.getName().toLowerCase();
+					if (nameContains(boundaryName, lower) || nameContains(altBoundaryName, lower)) {
+						if (boundary.containsPoint(c.getLocation())) {
+							cityFound = c;
+							break;
+						}
+					}
+				}
+			}
+			// Monaco doesn't have place=town point, but has boundary with tags & admin_level
+			// It could be wrong if the boundary doesn't match center point
+			if(cityFound == null /*&& !boundary.hasAdminLevel() */&& 
+					(boundary.getCityType() == CityType.TOWN ||
+					boundary.getCityType() == CityType.HAMLET || 
+					boundary.getCityType() == CityType.SUBURB || 
+					boundary.getCityType() == CityType.VILLAGE)) {
+				if(e instanceof Relation) {
+					ctx.loadEntityRelation((Relation) e);
+				}
+				cityFound = createMissingCity(e, boundary.getCityType());
+				boundary.setAdminCenterId(cityFound.getId());
+			}
+			if (cityFound != null) {
+				putCityBoundary(boundary, cityFound);
+			} else {
+				
+				logBoundaryChanged(boundary, null);
+				notAssignedBoundaries.add(boundary);
+			}
+			attachAllCitiesToBoundary(boundary);
+	}
+}
+
+std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)
 {
 	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
 	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(baseItem);
 	
 	if (wayItem.get() == nullptr && relItem.get() == nullptr)
-		return;
+		return std::shared_ptr<MultiPoly>();
 
 	
 
@@ -384,7 +457,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		if (wayItem.get() != nullptr)
 		{
 			if (visitedBoundaryWays.find(wayItem->id) != visitedBoundaryWays.end())
-				return;
+				return std::shared_ptr<MultiPoly>();
 		}
 		std::string boundName = baseItem->getTag("name");
 		if (relItem != nullptr)
@@ -453,6 +526,8 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		polyline->build();
 		polyline->centerID = centrID;
 		polyline->id = baseItem->id;
+		polyline->polyName = boundName;
+		polyline->polyAltName = baseItem->getTag("short_name");
 		if (baseItem->getTag("admin_level") != "")
 		{
 			std::string text = baseItem->getTag("admin_level");
@@ -470,9 +545,11 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		{
 			boundaries.insert(polyline);
 		}
-	}
-}
 
+		return polyline;
+	}
+	return std::shared_ptr<MultiPoly>();
+}
 
 void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 {

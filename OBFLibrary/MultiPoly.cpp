@@ -118,6 +118,8 @@ MultiPoly::MultiPoly(void)
 	minLat = 90;
 	maxLon = -180;
 	minLon = 180;
+	id = -1;
+	centerID = -1;
 }
 
 
@@ -292,6 +294,71 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 
 	}
 
+	std::unique_ptr<std::pair<double, double>> MultiPoly::getCenterPoint() {
+		std::vector<std::shared_ptr<EntityNode>> points;
+		for (std::shared_ptr<Ring> w : inRing) {
+			points.insert(points.end(),w->nodes.begin(), w->nodes.end());
+		}
+		
+		for (std::shared_ptr<Ring> w : outRing) {
+			points.insert(points.end(),w->nodes.begin(), w->nodes.end());
+		}
+		
+		std::pair<double,double> center = OsmMapUtils::getWeightCenterForNodes(points);
+		if (center.first != -1000){
+			return std::unique_ptr<std::pair<double,double>>(&center);
+		}
+		std::unique_ptr<std::pair<double,double>>(nullptr);
+	}
+
+	bool MultiPoly::containsPoint(std::pair<double, double> point)
+	{
+		// fast check
+		if(maxLat + 0.3 < point.first || minLat - 0.3 > point.first || 
+			maxLon + 0.3 < point.second || minLon - 0.3 > point.second) {
+			return false;
+		}
+		
+		std::shared_ptr<Ring> containedInOuter;
+		// use a sortedset to get the smallest outer containing the point
+		for (std::shared_ptr<Ring> outer : outRing) {
+			if (outer->containsPoint(point.first, point.second)) {
+				containedInOuter = outer;
+				break;
+			}
+		}
+		
+		if (containedInOuter!) {
+			return false;
+		}
+		
+		//use a sortedSet to get the smallest inner Ring
+		std::shared_ptr<Ring> containedInInner;
+		for (std::shared_ptr<Ring> inner : inRing) {
+			if (inner->containsPoint(point.first, point.second)) {
+				containedInInner = inner;
+				break;
+			}
+		}
+
+		if (containedInInner) return true;
+		if (outRing.size() == 1) {
+			// return immediately false 
+			return false;
+		}
+		
+		// if it is both, in an inner and in an outer, check if the inner is indeed the smallest one
+		std::set<std::shared_ptr<Ring>> s = ;
+		if(containedInnerInOuter.find(containedInInner) == containedInnerInOuter.end()) {
+			throw std::out_of_range("");
+		}
+		return containedInnerInOuter.find(containedInOuter) == containedInnerInOuter.end();
+	}
+
+	bool MultiPoly::isValid()
+	{
+		return level > 4 && getCenterPoint() && polyName != "";
+	}
 
  long MultiPoly::initialValue = -1000;
  long MultiPoly::randomInterval = 5000;
