@@ -37,7 +37,7 @@ public:
 	void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
 	void iterateMainEntityPost(std::shared_ptr<EntityBase>& e, OBFResultDB& dbContext) ;
 	void processLowLevelWays(OBFResultDB& dbContext);
-	void paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<MultiPoly>>& bounds, std::map<std::shared_ptr<EntityNode>, MapObject>& cities);
+	void paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<MultiPoly>>& bounds, std::map<std::shared_ptr<EntityNode>, CityObj>& cities);
 	void parseAndSort(const void* blobData, int blobSize, std::list<long>& toData);
 	bool checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> nodes, int zoom, int minz, int maxz);
 	std::vector<std::shared_ptr<EntityNode>> simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>> ns, int zoom, int zoomWaySmothness);
