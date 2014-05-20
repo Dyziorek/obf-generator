@@ -295,6 +295,7 @@ public:
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
 	OBFAddresStreetDB(void);
 	virtual ~OBFAddresStreetDB(void);
+	std::shared_ptr<MultiPoly> extractBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void iterateOverCity(std::shared_ptr<EntityNode>& cityNode);
 	void storeCities(OBFResultDB& dbContext);
