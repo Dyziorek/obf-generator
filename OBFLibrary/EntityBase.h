@@ -17,6 +17,8 @@ public:
 
 	void putTag(std::string name, std::string value) { tags.insert(std::make_pair(name, value)); }
 
+	boost::unordered_set<std::string> getIsInNames();
+
 	bool operator<(const EntityBase& op1) const { return id < op1.id;}
 	__int64 id;
 	virtual std::pair<double, double> getLatLon() {return std::make_pair(-1000, -1000);}

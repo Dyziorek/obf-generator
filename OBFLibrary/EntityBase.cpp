@@ -154,3 +154,24 @@ void EntityBase::parseTags(std::string tagList)
 	}
 	
 }
+
+boost::unordered_set<std::string> EntityBase::getIsInNames() {
+		std::string values = getTag("is_in");
+		if (values == "") {
+			return boost::unordered_set<std::string>();
+		}
+		if (values.find(';') != std::string::npos) {
+			boost::char_separator<char> sep(";");
+			boost::tokenizer< boost::char_separator<char> > tokens(values, sep);
+			std::vector<std::string> splitted;
+			BOOST_FOREACH(const std::string token, tokens){ splitted.push_back(token);}
+			boost::unordered_set<std::string> set(splitted.size());
+			for (int i = 0; i < splitted.size(); i++) {
+				set.insert(boost::trim_copy(splitted[i]));
+			}
+			return set;
+		}
+		boost::unordered_set<std::string> bset;
+		bset.insert(boost::trim_copy(values));
+		return bset;
+	}

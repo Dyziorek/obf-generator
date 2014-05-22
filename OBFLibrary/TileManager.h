@@ -9,7 +9,7 @@ private:
 private:
 	void putObjects(int tx, int ty, std::vector<TObject> r){
 		if(longObjectMap.find(evTile(tx, ty)) != longObjectMap.end()){
-			for (TObject &vec : longObjectMap.find(evTile(tx, ty)).second)
+			for (TObject &vec : longObjectMap[evTile(tx, ty)])
 				r.push_back(vec);
 		}
 #ifdef _DEBUG
@@ -114,7 +114,7 @@ public:
 		}
 		int dp = 0;
 		std::vector<TObject> l;
-		while (l.isEmpty()) {
+		while (l.size() == 0) {
 			l = getClosestObjects(latitude, longitude, dp, dp + defaultStep);
 			dp += defaultStep;
 		}
@@ -126,8 +126,8 @@ public:
 	}
 		
 	 std::vector<TObject> getClosestObjects(double latitude, double longitude, int startDepth, int depth){
-		int tileX = (int) MapUtils.getTileNumberX(zoom, longitude);
-		int tileY = (int) MapUtils.getTileNumberY(zoom, latitude);
+		int tileX = (int) MapUtils::getTileNumberX(zoom, longitude);
+		int tileY = (int) MapUtils::getTileNumberY(zoom, latitude);
 		std::vector<TObject> result;
 		
 		if(startDepth <= 0){

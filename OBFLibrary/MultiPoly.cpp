@@ -127,6 +127,14 @@ MultiPoly::~MultiPoly(void)
 {
 }
 
+bool MultiPoly::operator==(const MultiPoly &other) const
+{
+	return polyName == other.polyName
+		&& centerID == other.centerID 
+		&& polyAltName == other.polyAltName 
+		&& polyType == other.polyType;
+}
+
 void MultiPoly::build()
 {
 	std::list<std::shared_ptr<Ring>> innerRings = combineRings(inWays);
@@ -308,7 +316,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		if (center.first != -1000){
 			return std::unique_ptr<std::pair<double,double>>(&center);
 		}
-		std::unique_ptr<std::pair<double,double>>(nullptr);
+		return std::unique_ptr<std::pair<double,double>>(nullptr);
 	}
 
 	bool MultiPoly::containsPoint(std::pair<double, double> point)
@@ -328,7 +336,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			}
 		}
 		
-		if (containedInOuter!) {
+		if (!containedInOuter) {
 			return false;
 		}
 		
@@ -348,7 +356,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		
 		// if it is both, in an inner and in an outer, check if the inner is indeed the smallest one
-		std::set<std::shared_ptr<Ring>> s = ;
+		std::set<std::shared_ptr<Ring>> s = containedInnerInOuter[containedInInner];
 		if(containedInnerInOuter.find(containedInInner) == containedInnerInOuter.end()) {
 			throw std::out_of_range("");
 		}

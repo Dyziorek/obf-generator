@@ -69,3 +69,24 @@ MapObject::~MapObject(void)
 CityObj::~CityObj(void)
 {
 }
+
+std::size_t CityObj::operator()(CityObj const& obj) const
+{
+		std::size_t seed = 0;
+		CityObj& objCon = const_cast<CityObj&>(obj);
+		boost::hash_combine(seed, objCon.getName());
+		boost::hash_combine(seed, objCon.getEnName());
+		boost::hash_combine(seed, objCon.getType());
+		boost::hash_combine(seed, objCon.getID());
+		boost::hash_combine(seed, objCon.getLatLon().first);
+		boost::hash_combine(seed, objCon.getLatLon().second);
+		return seed;
+}
+
+bool CityObj::operator==(const CityObj & x) const
+{
+	CityObj& obj1 = const_cast<CityObj&>(*this);
+	CityObj& obj2 = const_cast<CityObj&>(x);
+
+	return obj1.getName() == obj2.getName() && obj1.getID() == obj2.getID();
+}

@@ -285,18 +285,58 @@ public:
 class OBFAddresStreetDB :
 	public OBFResultDB
 {
+public:
+	struct cityhash
+        : std::unary_function<CityObj, std::size_t>
+    {
+        cityhash() {}
 
+        std::size_t operator()(CityObj const& xobj) const
+        {
+            std::size_t seed = 0;
+			CityObj& x = const_cast<CityObj&>(xobj);
+			boost::hash_combine(seed, x.getName());
+			boost::hash_combine(seed, x.getEnName());
+			boost::hash_combine(seed, x.getType());
+			boost::hash_combine(seed, x.getID());
+			boost::hash_combine(seed, x.getLatLon().first);
+			boost::hash_combine(seed, x.getLatLon().second);
+
+            return seed;
+        }
+    };
+
+	struct cityeqal : std::binary_function<CityObj, CityObj, bool>
+	{
+		
+        bool operator()(CityObj const& x1, CityObj const& x2) const
+        {
+			CityObj& obj1 = const_cast<CityObj&>(x1);
+			CityObj& obj2 = const_cast<CityObj&>(x2);
+            return obj1.getName() == obj2.getName() && obj1.getID() == obj2.getID();
+        }
+	};
 public:
 	TileManager<CityObj> cityManager;
 	TileManager<CityObj> townManager;
 	std::map<std::shared_ptr<EntityNode>, CityObj> cities;
-
+	CityObj createMissingCity(std::shared_ptr<EntityBase>& cityNode, std::string t);
 	std::set<__int64> visitedBoundaryWays;
+	boost::unordered_map<CityObj, std::shared_ptr<MultiPoly>, cityhash, cityeqal> cityBoundaries;
+	boost::unordered_map<std::shared_ptr<MultiPoly>, std::list<CityObj>> boundaryToContainingCities;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
+	std::set<std::shared_ptr<MultiPoly>> notAssignedBoundaries;
 	OBFAddresStreetDB(void);
 	virtual ~OBFAddresStreetDB(void);
 	std::shared_ptr<MultiPoly> extractBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void iterateOverCity(std::shared_ptr<EntityNode>& cityNode);
+	void tryToAssignBoundaryToFreeCities();
 	void storeCities(OBFResultDB& dbContext);
+	void storeCity(std::shared_ptr<EntityNode>& cityNode, CityObj objData, OBFResultDB& dbContext);
+	std::shared_ptr<MultiPoly> putCityBoundary(std::shared_ptr<MultiPoly> boundary, CityObj cityFound);
+	int getCityBoundaryImportance(std::shared_ptr<MultiPoly> b, CityObj c);
+	void indexAddressRelation(std::shared_ptr<EntityRelation>& i, OBFResultDB& dbContext);
+	std::set<long long> getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
+
 };

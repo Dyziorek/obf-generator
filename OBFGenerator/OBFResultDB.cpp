@@ -195,7 +195,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				
 				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
 
-				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(std::static_pointer_cast<EntityBase,EntityRelation>(relItem), *this);
+				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(itm, *this);
 				
 
 				((OBFMapDB*)mapIndexer)->indexMapAndPolygonRelations(relItem, *this);
@@ -223,6 +223,13 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				numbers++;
 		});
 
+		((OBFAddresStreetDB*)addresIndexer)->tryToAssignBoundaryToFreeCities();
+
+		iterateOverElements(NODEREL,
+			[&](std::shared_ptr<EntityBase> itm) { 
+				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
+				((OBFAddresStreetDB*)addresIndexer)->indexAddressRelation(relItem, *this);
+		});
 		strbuf.str(L"");
 		strbuf.clear();
 		strbuf << L"Counter boundaries: ";
@@ -493,14 +500,14 @@ void OBFResultDB::loadRelationMembers(EntityRelation* relItem)
 
 }
 
-void OBFResultDB::SaverCityNode(EntityNode nn, TileManager<CityObj>& manager)
+void OBFResultDB::SaverCityNode(EntityBase* nn, TileManager<CityObj>& manager)
 {
 	
 	CityObj objCity;
 	
-	MapObject::parseMapObject(&objCity, &nn);
+	MapObject::parseMapObject(&objCity, nn);
 	
-	manager.registerObject(nn.lat, nn.lon, objCity);
+	manager.registerObject(objCity.getLatLon().first, objCity.getLatLon().second, objCity);
 
 }
 
