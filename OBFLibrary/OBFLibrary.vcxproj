@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClInclude Include="Amenity.h" />
     <ClInclude Include="ArchiveIO.h" />
+    <ClInclude Include="Building.h" />
     <ClInclude Include="EntityBase.h" />
     <ClInclude Include="EntityNode.h" />
     <ClInclude Include="MapObject.h" />
@@ -92,9 +93,11 @@
     <ClInclude Include="sqlite3ext.h" />
     <ClInclude Include="..\OBFGenerator\TileManager.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Street.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Building.cpp" />
     <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -107,6 +110,7 @@
     <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFRenderingTypes.cpp" />
     <ClCompile Include="RTree.cpp" />
+    <ClCompile Include="Street.cpp" />
     <ClCompile Include="TileManager.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>

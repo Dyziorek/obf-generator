@@ -4,6 +4,8 @@
 #define WAY_ID	1
 #define REL_ID	2
 
+typedef std::pair<double, double> LatLon;
+
 class EntityBase
 {
 public:

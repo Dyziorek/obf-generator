@@ -66,6 +66,19 @@ public:
 		return relData;
 	}
 
+	std::vector<std::shared_ptr<EntityBase>> getMembers(std::string name)
+	{
+		std::vector<std::shared_ptr<EntityBase>> members;
+			for(auto relationMember : relations)
+			{
+				if (relationMember.second == name)
+				{
+					members.push_back(relationMember.first.second);
+				}
+			}
+		return members;
+	}
+
 	bool operator<(const EntityRelation& op1) const { return id < op1.id;}
 	std::pair<double, double> getLatLon(){return std::make_pair(-1000, -1000);}
 };

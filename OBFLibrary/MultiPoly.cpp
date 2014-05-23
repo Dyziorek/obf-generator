@@ -312,12 +312,10 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			points.insert(points.end(),w->nodes.begin(), w->nodes.end());
 		}
 		
-		std::pair<double,double> center = OsmMapUtils::getWeightCenterForNodes(points);
-		if (center.first != -1000){
-			return std::unique_ptr<std::pair<double,double>>(&center);
+		std::pair<double,double>* center = new std::pair<double,double>(OsmMapUtils::getWeightCenterForNodes(points));
+		
+		return std::unique_ptr<std::pair<double,double>>(center);
 		}
-		return std::unique_ptr<std::pair<double,double>>(nullptr);
-	}
 
 	bool MultiPoly::containsPoint(std::pair<double, double> point)
 	{
@@ -365,7 +363,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 
 	bool MultiPoly::isValid()
 	{
-		return level > 4 && getCenterPoint() && polyName != "";
+		return level > 4 && getCenterPoint()->first != -1000 && polyName != "";
 	}
 
  long MultiPoly::initialValue = -1000;

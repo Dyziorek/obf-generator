@@ -2,6 +2,9 @@
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
 #include "Amenity.h"
+#include "Building.h"
+#include "Street.h"
+#include "DBAStreet.h"
 #include "ArchiveIO.h"
 
 OBFpoiDB::OBFpoiDB(void)
@@ -378,15 +381,7 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 			dbContext.loadRelationMembers(i.get());
 			dbContext.loadNodesOnRelation(i.get());
 			
-			std::vector<std::shared_ptr<EntityBase>> members;
-			for(auto relationMember : i->relations)
-			{
-				if (relationMember.second == "street")
-				{
-					members.push_back(relationMember.first.second);
-				}
-			}
-			//Collection<Entity> members = i->relations;
+			std::vector<std::shared_ptr<EntityBase>> members = i->getMembers("street");
 			for(std::shared_ptr<EntityBase> street : members) { // find the first street member with name and use it as a street name
 				std::string name = street->getTag("name");
 				if (name != "") {
@@ -403,26 +398,35 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 				isInNames = i->getIsInNames();
 			}
 			
+			DBAStreet streetDAO(dbContext);
+
 			if (streetName != "") {
-				boost::unordered_set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
-				if (!idsOfStreet.isEmpty()) {
-					Collection<Entity> houses = i.getMembers("house"); // both house and address roles can have address
-					houses.addAll(i.getMembers("address"));
-					for (Entity house : houses) {
-						std::string hname = house.getTag(OSMTagKey.ADDR_HOUSE_NAME);
-						if(hname == null) {
-							hname = house.getTag(OSMTagKey.ADDR_HOUSE_NUMBER);
+				std::set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
+				if (idsOfStreet.size() > 0) {
+					std::vector<std::shared_ptr<EntityBase>> houses = i->getMembers("house"); // both house and address roles can have address
+					std::vector<std::shared_ptr<EntityBase>> addresses = i->getMembers("address");
+					houses.insert(houses.end(), addresses.begin(), addresses.end());
+					for (std::shared_ptr<EntityBase> house : houses) {
+						std::string hname = house->getTag("addr:housename");
+						if(hname == "") {
+							hname = house->getTag("addr:housenumber");
 						}
-						if (hname == null)
+						if (hname == "")
 							continue;
 						
 						if (!streetDAO.findBuilding(house)) {
+							std::shared_ptr<EntityRelation> houseRel = std::static_pointer_cast<EntityRelation, EntityBase>(house);
 							// process multipolygon (relation) houses - preload members to create building with correct latlon
-							if (house instanceof Relation)
-								ctx.loadEntityRelation((Relation) house);
-							Building building = EntityParser.parseBuilding(house);
-							if (building.getLocation() == null) {
-								log.warn("building with empty location! id: " + house.getId());
+							if (houseRel)
+							{
+								dbContext.loadRelationMembers(houseRel.get());
+								dbContext.loadNodesOnRelation(houseRel.get());
+							}
+							Building building;
+							MapObject::parseMapObject(&building, house.get());
+							building.setBuilding(house.get());
+							if (building.getLatLon().first == -1000) {
+								//log.warn("building with empty location! id: " + house->id);
 							}
 							building.setName(hname);
 							
@@ -445,7 +449,7 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 		std::list<CityObj> nearestObjects;
 		std::vector<CityObj> objects = cityManager.getClosestObjects(location.first,location.second);
 		nearestObjects.insert(nearestObjects.end(), objects.begin(), objects.end());
-		std::vector<CityObj> objects = townManager.getClosestObjects(location.first,location.second);
+		objects = townManager.getClosestObjects(location.first,location.second);
 		nearestObjects.insert(nearestObjects.end(), objects.begin(), objects.end());
 		//either we found a city boundary the street is in
 		for (CityObj c : nearestObjects) {
@@ -461,9 +465,9 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 			return dist1 < dist2;
 		});
 
-		/*Collections.sort(nearestObjects, new Comparator<City>() {
+		/*Collections.sort(nearestObjects, new Comparator<CityObj>() {
 			@Override
-			public int compare(City c1, City c2) {
+			public int compare(CityObj c1, CityObj c2) {
 				double r1 = relativeDistance(location, c1);
 				double r2 = relativeDistance(location, c2);
 				return Double.compare(r1, r2);
@@ -488,15 +492,85 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 			return std::set<long long>();
 		}
 		if ( boost::empty(nameEn)) {
+
 			nameEn = boost::trim_copy(name);
 		}
 
+		DBAStreet streetDAO(dbContext);
 		std::set<long long> values;
 		for (CityObj city : result) {
-			long streetId = getOrRegisterStreetIdForCity(name, nameEn, location, city);
-			values.add(streetId);
+			std::string cityPart = findCityPart(location, city);
+		
+			std::unique_ptr<SimpleStreet> foundStreet = streetDAO.findStreet(name, city, cityPart);
+			if (!foundStreet) {
+				// by default write city with cityPart of the city
+				if(cityPart == "") {
+					cityPart = city.getName();
+				}
+				values.insert(streetDAO.insertStreet(name, nameEn, location, city, cityPart));
+			} else {
+				values.insert(foundStreet->getId());
+			}
 		}
+		return values;
 	}
+
+std::string OBFAddresStreetDB::findCityPart(LatLon location, CityObj city) {
+		std::string cityPart = city.getName();
+		boolean found = false;
+		std::shared_ptr<MultiPoly> cityBoundary = cityBoundaries[city];
+		if (cityBoundary) {
+			std::list<CityObj> subcities = boundaryToContainingCities[cityBoundary];
+			if (subcities.size() > 0) {
+				for (CityObj subpart : subcities) {
+					if (!(subpart == city)) {
+						std::shared_ptr<MultiPoly> subBoundary = cityBoundaries[subpart];
+						if (cityBoundary && subBoundary && subBoundary->level > cityBoundary->level) {
+							// old code
+							cityPart = findNearestCityOrSuburb(subBoundary, location); // subpart.getName();
+							// ?FIXME
+							if(subBoundary->containsPoint(location)) {
+								cityPart = subpart.getName();
+								found = true;
+								break;	
+							}
+						}
+					}
+				}
+			}
+		}
+		if (!found) {
+			std::shared_ptr<MultiPoly> b = cityBoundaries[city];
+			cityPart = findNearestCityOrSuburb(b, location);
+		}
+		return cityPart;
+	}
+
+ std::string OBFAddresStreetDB::findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location) 
+ {
+		std::string result = "";
+		double dist = HUGE_VAL;
+		std::list<CityObj> list;
+		if(greatestBoundary) {
+			result = greatestBoundary->polyName;
+			list = boundaryToContainingCities[greatestBoundary];
+		} else {
+			std::vector<CityObj> cities = cityManager.getClosestObjects(location.first,location.second);
+			list.insert(list.end(), cities.begin(), cities.end());
+			cities = townManager.getClosestObjects(location.first,location.second);
+			list.insert(list.end(), cities.begin(), cities.end());
+		}
+		if(list.size()) {
+			for (CityObj c : list) {
+				double actualDistance = MapUtils::getDistance(location.first, location.second, c.getLatLon().first, c.getLatLon().second);
+				if (actualDistance < 1.5 * c.getRadius() && actualDistance < dist) {
+					result = c.getName();
+					dist = actualDistance;
+				}
+			}
+		}
+		return result;
+}
 
 // from java methods: net.osmand.data.preparation.address.IndexAddressCreator:indexBoundariesRelation(Entity, OsmDbAccessorContext) && extractBoundary
 void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)

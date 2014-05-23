@@ -338,5 +338,7 @@ public:
 	int getCityBoundaryImportance(std::shared_ptr<MultiPoly> b, CityObj c);
 	void indexAddressRelation(std::shared_ptr<EntityRelation>& i, OBFResultDB& dbContext);
 	std::set<long long> getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
+	std::string findCityPart(LatLon location, CityObj city);
+	std::string findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location);
 
 };
