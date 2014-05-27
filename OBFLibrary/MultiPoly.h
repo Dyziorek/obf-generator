@@ -44,6 +44,7 @@ public:
 	void generateImage(SkCanvas* painter, SkColor color, double scale, double offsetX, double offsetY);
 };
 
+
 class MultiPoly
 {
 public:
@@ -57,6 +58,7 @@ public:
 		updateRings();
 	}
 	virtual ~MultiPoly(void);
+	bool operator==(const MultiPoly &other) const;
 
 	std::vector<std::shared_ptr<Ring>> inRing;
 	std::vector<std::shared_ptr<Ring>> outRing;
@@ -84,15 +86,33 @@ public:
 	int level;
 	std::string polyName;
 	std::string polyAltName;
+	std::string polyType;
+	void updateRings();
 private:
 	float maxLat;
 	float minLat;
 	float maxLon;
 	float minLon;
-	void updateRings();
+	
 	static long numberCalls;
 	static long initialValue;
 	static long randomInterval;
 	static long long nextRandId();
 };
 
+namespace boost
+{
+	template<>
+	struct hash<MultiPoly>
+	{
+		std::size_t operator()(const MultiPoly& k) const
+		{
+			size_t seed;
+			hash_combine(seed, k.centerID);
+			hash_combine(seed, k.polyName);
+			hash_combine(seed, k.polyAltName);
+			hash_combine(seed, k.polyType);
+			hash_combine(seed, k.level);
+		};
+	};
+}

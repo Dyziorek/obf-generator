@@ -6,8 +6,8 @@ class MapObject
 public:
 	MapObject(void) {name = ""; type = ""; lat = -1000; lon = -1000;}
 	virtual ~MapObject(void);
-	std::string getName(){return name;}
-	std::string getEnName(){return enName;}
+	const std::string getName(){return name;}
+	const std::string getEnName(){return enName;}
 	void setName(std::string tags) { name = tags;}
 	void setEnName(std::string tags) { enName= tags;}
 
@@ -83,8 +83,41 @@ class CityObj :
 public:
 	CityObj(void);
 	virtual ~CityObj(void);
+	std::size_t operator()(CityObj const& obj) const;
+	bool operator==(const CityObj & x) const;
 	boost::unordered_map<std::string, std::string, icaseString::ihash, icaseString::iequal_to> streets;
 	bool isAlwaysVisible;
+	double getRadius(){
+		if (getType() == "city")
+			return 10000;
+		if (getType() == "town")
+			return 5000;
+		if (getType() == "village")
+			return 1300;
+		if (getType() == "hamlet")
+			return 1000;
+		if (getType() == "suburb")
+			return 400;
+		if (getType() == "district")
+			return 400;
+		return 400;
+	}
 };
 
 
+namespace boost
+{
+	template<>
+	struct hash<CityObj>
+	{
+		std::size_t operator()(const CityObj& hashWork) const
+		{
+			size_t seed;
+			CityObj& objCon = const_cast<CityObj&>(hashWork);
+			hash_combine(seed, objCon.getName());
+			hash_combine(seed, objCon.getEnName());
+			hash_combine(seed, objCon.getID());
+			return seed;
+		}
+	};
+}

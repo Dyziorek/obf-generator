@@ -63,7 +63,7 @@ public:
 	static int shell_callback(void *pArg, int nArg, char **azArg, char **azCol);
 	int iterateOverElements(int type, std::function<void (std::shared_ptr<EntityBase>)>saver);
 	int iterateOverElements(int typeElem);
-	void SaverCityNode(EntityNode, TileManager<CityObj>& manager);
+	void SaverCityNode(EntityBase*, TileManager<CityObj>& manager);
 	void loadRelationMembers(EntityRelation* relItem);
 	void loadWays(EntityWay* wayItem);
 	void loadNodesOnRelation(EntityRelation* relItem);

@@ -211,6 +211,7 @@
     <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BlockReader.h" />
+    <ClInclude Include="DBAStreet.h" />
     <ClInclude Include="OBFGenerator.h" />
     <ClInclude Include="OBFGeneratorDlg.h" />
     <ClInclude Include="OBFResultDB.h" />
@@ -268,6 +269,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="DBAStreet.cpp" />
     <ClCompile Include="OBFElementDB.cpp" />
     <ClCompile Include="OBFGenerator.cpp" />
     <ClCompile Include="OBFGeneratorDlg.cpp">

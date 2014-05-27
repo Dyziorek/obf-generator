@@ -4,6 +4,8 @@
 #define WAY_ID	1
 #define REL_ID	2
 
+typedef std::pair<double, double> LatLon;
+
 class EntityBase
 {
 public:
@@ -16,6 +18,8 @@ public:
 	std::string getTag(std::string name) { if ( tags.find(name) != tags.end()) return tags.find(name)->second; return std::string("");}
 
 	void putTag(std::string name, std::string value) { tags.insert(std::make_pair(name, value)); }
+
+	boost::unordered_set<std::string> getIsInNames();
 
 	bool operator<(const EntityBase& op1) const { return id < op1.id;}
 	__int64 id;

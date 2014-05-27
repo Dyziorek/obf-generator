@@ -5,8 +5,12 @@
 #include <boost/tokenizer.hpp>
 #include <boost\algorithm\string.hpp>
 #include <boost\lexical_cast.hpp>
+#include <boost\property_tree\ptree.hpp>
+#include <boost\property_tree\xml_parser.hpp>
+
 
 namespace fa = boost::algorithm;
+namespace pt = boost::property_tree;
 
 char OBFRenderingTypes::TAG_DELIMETER = '/';
 
@@ -76,6 +80,21 @@ void OBFRenderingTypes::loadXmlData()
 {
 	registerRuleType(nameRule);
 	registerRuleType(nameEnRule);
+	pt::ptree treeData;
+	pt::read_xml("D:\\osmdata\\rendering_types.xml",treeData);
+
+	pt::ptree::iterator elemIt = treeData.begin();
+	for (elemIt; elemIt != treeData.end(); elemIt++)
+	{
+		std::string firstElem = elemIt->first;
+		auto secondElem = elemIt->second;
+		for (pt::ptree::iterator elemIn = secondElem.begin(); elemIn != secondElem.end(); elemIn++)
+		{
+			std::string firstInElem = elemIn->first;
+			auto secondInElem = elemIn->second;
+		}
+	}
+
 	tinyxml2::XMLDocument xDoc;
 	xDoc.LoadFile("D:\\osmdata\\rendering_types.xml");
 	std::string poiParentCategory, poiParentPrefix;
