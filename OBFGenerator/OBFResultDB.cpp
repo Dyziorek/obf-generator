@@ -3,13 +3,23 @@
 #include "EntityBase.h"
 #include "EntityNode.h"
 #include "MapObject.h"
+#include "Amenity.h"
+#include "BatchUpdater.h"
 #include "OBFResultDB.h"
 #include "MapUtils.h"
+#pragma push_macro("realloc")
+#undef realloc
+#include "SkCanvas.h"
+#include "SkSurface.h"
+#include "SkImage.h"
+#include "SkData.h"
+#include "SkStream.h"
+#include "SkGraphics.h"
+#pragma pop_macro("realloc")
 #include "MultiPoly.h"
 #include "OBFMapDB.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
-#include "BatchUpdater.h"
 
 
 OBFResultDB::OBFResultDB(void) 
@@ -107,6 +117,12 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_prepare_v2(dbMapCtx, "insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?1, ?2, ?3, ?4, ?5, ?6, ?7)", sizeof("insert into binary_map_objects(id, area, coordinates, innerPolygons, types, additionalTypes, name) values(?1, ?2, ?3, ?4, ?5, ?6, ?7)"), &mapStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbMapCtx, "insert into low_level_map_objects(id, start_node, end_node, name, nodes, type, addType, level) values(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", sizeof("insert into low_level_map_objects(id, start_node, end_node, name, nodes, type, addType, level) values(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?)"), &lowStmt, NULL);
 
+	dbRes = sqlite3_exec(dbMapCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbMapCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbMapCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbMapCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbMapCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
+
 	dbRes = sqlite3_exec(dbRouteCtx,"create table route_objects (id bigint primary key, types binary, pointTypes binary, pointIds binary, pointCoordinates binary, name varchar(4096))", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbRouteCtx,"create table baseroute_objects (id bigint primary key, types binary, pointTypes binary, pointIds binary, pointCoordinates binary, name varchar(4096))", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbRouteCtx, "create index route_objects_ind  on route_objects (id)" , &OBFResultDB::shell_callback,this,&errMsg);
@@ -115,6 +131,12 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_prepare_v2(dbRouteCtx, "insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into route_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &routeStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbRouteCtx, "insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into baseroute_objects(id, types, pointTypes, pointIds, pointCoordinates, name) values(?1, ?2, ?3, ?4, ?5, ?6)"), &baseRouteStmt, NULL);
 	
+	dbRes = sqlite3_exec(dbRouteCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbRouteCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbRouteCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbRouteCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbRouteCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
+
 	dbRes = sqlite3_exec(dbAddrCtx,"create table street (id bigint primary key, latitude double, longitude double, name varchar(1024), name_en varchar(1024), city bigint, citypart varchar(1024))", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbAddrCtx,"create index street_cnp on street (city,citypart,name,id)", &OBFResultDB::shell_callback,this,&errMsg);
     dbRes = sqlite3_exec(dbAddrCtx,"create index street_city on street (city)", &OBFResultDB::shell_callback,this,&errMsg);
@@ -140,12 +162,23 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_prepare_v2(dbAddrCtx, "SELECT way FROM street_node WHERE ?1 = way", sizeof("SELECT way FROM street_node WHERE ?1 = way"),&searchStrNodeStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbAddrCtx, "insert into city (id, latitude, longitude, name, name_en, city_type) values (?1, ?2, ?3, ?4, ?5, ?6)", sizeof("insert into city (id, latitude, longitude, name, name_en, city_type) values (?1, ?2, ?3, ?4, ?5, ?6)"), &cityStmt, NULL);
 
+	dbRes = sqlite3_exec(dbAddrCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbAddrCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbAddrCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbAddrCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbAddrCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
+
 	dbRes = sqlite3_exec(dbPoiCtx, "create table poi (id bigint, x int, y int, type varchar(1024), subtype varchar(1024), additionalTags varchar(8096), primary key(id, type, subtype))", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbPoiCtx, "create index poi_loc on poi (x, y, type, subtype)", &OBFResultDB::shell_callback,this,&errMsg);
 	dbRes = sqlite3_exec(dbPoiCtx, "create index poi_id on poi (id, type, subtype)", &OBFResultDB::shell_callback,this,&errMsg);
 		
 	
 	dbRes = sqlite3_prepare_v2(dbPoiCtx, "INSERT INTO poi (id, x, y, type, subtype, additionalTags) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", sizeof("INSERT INTO poi (id, x, y, type, subtype, additionalTags) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"),  &poiNodeStmt, NULL); //$NON-NLS-1$
+	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
 	// reopen node way rel dbx and attach them into single connection
 	//dbRes = sqlite3_open("D:\\osmData\\tempLocalNode.db", &dbCtx);
 	//sqlite_exec(

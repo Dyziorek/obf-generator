@@ -6,14 +6,17 @@
 #include "OBFRenderingTypes.h"
 #include "OBFResultDB.h"
 #include "MapUtils.h"
-#include "MultiPoly.h"
-#include "OBFMapDB.h"
+#pragma push_macro("realloc")
+#undef realloc
 #include "SkCanvas.h"
 #include "SkSurface.h"
 #include "SkImage.h"
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#pragma pop_macro("realloc")
+#include "MultiPoly.h"
+#include "OBFMapDB.h"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/container/list.hpp>
@@ -21,12 +24,6 @@
 #include "ArchiveIO.h"
 
 
-#include "SkCanvas.h"
-#include "SkSurface.h"
-#include "SkImage.h"
-#include "SkData.h"
-#include "SkStream.h"
-#include "SkGraphics.h"
 
 
 namespace io = boost::iostreams;

@@ -3,11 +3,9 @@
 //
 
 #include "stdafx.h"
-#include "EntityBase.h"
-#include "EntityNode.h"
-#include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
+#include "vld.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif

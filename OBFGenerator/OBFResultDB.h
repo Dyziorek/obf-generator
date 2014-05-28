@@ -1,8 +1,6 @@
 #pragma once
 
 #include "TileManager.h"
-#include "MultiPoly.h"
-#include "BatchUpdater.h"
 
 class MapObject;
 
