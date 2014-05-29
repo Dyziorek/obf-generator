@@ -7,7 +7,7 @@
 #include "OBFGenerator.h"
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
-
+#include "vld.h"
 
 
 #ifdef _DEBUG

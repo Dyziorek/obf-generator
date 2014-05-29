@@ -7,7 +7,7 @@ private:
 	int zoom;
 
 private:
-	void putObjects(int tx, int ty, std::vector<TObject> r){
+	void putObjects(int tx, int ty, std::vector<TObject>& r){
 		if(longObjectMap.find(evTile(tx, ty)) != longObjectMap.end()){
 			for (TObject &vec : longObjectMap[evTile(tx, ty)])
 				r.push_back(vec);
@@ -49,7 +49,7 @@ public:
 
 	int getZoom() {return zoom;}
 
-	bool isEmpty() { return longObjectMap.size() > 0;}
+	bool isEmpty() { return longObjectMap.size() == 0;}
 
 	int getObjectCount() { int size = 0;
 		std::for_each(longObjectMap.begin(), longObjectMap.end(), 

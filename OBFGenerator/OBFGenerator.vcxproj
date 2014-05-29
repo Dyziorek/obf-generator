@@ -100,7 +100,7 @@
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <LinkStatus>true</LinkStatus>
-      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug;$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug\lib;C:\Program Files (x86)\Visual Leak Detector\lib\Win32;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Debug;$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
