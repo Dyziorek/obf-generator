@@ -558,7 +558,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			const void* pData = sqlite3_column_blob(lowLevelWayIt, 3);
 			int blobSize = sqlite3_column_bytes(lowLevelWayIt, 3);
 			
-			std::string name(reinterpret_cast<const char*>(sqlite3_column_text(lowLevelWayIt, 4)));
+			std::string name((const char*)(sqlite3_column_text(lowLevelWayIt, 4)));
 			int level = sqlite3_column_int(lowLevelWayIt, 7);
 			
 			int maxZoom = mapZooms.getLevel(level).getMaxZoom();
@@ -700,6 +700,8 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			dbCode = sqlite3_step(lowLevelWayIt);
 		}
 		while (dbCode == SQLITE_ROW);
+		
+		
 	}
 
 

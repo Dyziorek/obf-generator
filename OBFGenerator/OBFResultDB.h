@@ -20,6 +20,7 @@ class OBFResultDB
 public:
 	OBFResultDB(void);
 	~OBFResultDB(void);
+	void close(void);
 	sqlite3* dbMapCtx;
 	sqlite3_stmt* mapStmt;
 	sqlite3_stmt* lowStmt;

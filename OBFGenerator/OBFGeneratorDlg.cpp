@@ -5,7 +5,9 @@
 #include "stdafx.h"
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
-#include "vld.h"
+#ifdef _DEBUG_VLD
+	#include "vld.h"
+#endif
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -70,6 +72,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_MESSAGE(WM_MYMESSAGE,  &COBFGeneratorDlg::OnMyMessage)
 	ON_WM_CLOSE()
 	ON_WM_CREATE()
+	ON_BN_CLICKED(IDC_BUTTON1, &COBFGeneratorDlg::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
 
@@ -150,6 +153,11 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);*/
 	//sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	results.PrepareDB(dbCtx);
+	#ifdef _DEBUG_VLD
+	VLDMarkAllLeaksAsReported();
+	#endif
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -295,7 +303,9 @@ UINT __cdecl ProcDataGenerate()
 
 UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx  ,sqlite3_stmt* nodeStmt,	sqlite3_stmt* wayStmt ,	sqlite3_stmt* relStmt)
 {
-	
+	#ifdef _DEBUG_VLD
+	VLDDisable();
+	#endif
 	while (1)
 	{	
 		while(thSaveQueue.empty())
@@ -599,7 +609,9 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 			}
 		}
 	}
-
+	#ifdef _DEBUG_VLD
+	VLDEnable();
+	#endif
 }
 
 void COBFGeneratorDlg::OnBnClickedMfcbutton1()
@@ -638,11 +650,11 @@ int COBFGeneratorDlg::PrepareTempDB()
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 
-	results.PrepareDB(dbCtx);
 
 	std::wstring buff = L"Phase index cities\r\n";
 	OutputDebugString(buff.c_str());
 	results.iterateOverElements(PHASEINDEXCITY);
+
 
 	strMessage.Format(L"Iterating over address relations");
 	delete[] msgTxt;
@@ -797,6 +809,7 @@ void COBFGeneratorDlg::OnClose()
 {
 	// TODO: Add your message handler code here and/or call default
 	SkGraphics::Term();
+	results.close();
 	CDialogEx::OnClose();
 }
 
@@ -809,4 +822,29 @@ int COBFGeneratorDlg::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// TODO:  Add your specialized creation code here
 
 	return 0;
+}
+
+
+void COBFGeneratorDlg::OnBnClickedButton1()
+{
+	// TODO: Add your control notification handler code here
+	#ifdef _DEBUG_VLD
+		VLDMarkAllLeaksAsReported();
+	#endif
+}
+
+
+void COBFGeneratorDlg::OnCancel()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	results.close();
+	CDialogEx::OnCancel();
+}
+
+
+void COBFGeneratorDlg::OnOK()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	results.close();
+	CDialogEx::OnOK();
 }

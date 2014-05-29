@@ -29,7 +29,56 @@ OBFResultDB::OBFResultDB(void)
 
 OBFResultDB::~OBFResultDB(void)
 {
+	sqlite3_finalize(mapStmt);
+	sqlite3_finalize(lowStmt);
+	
+	sqlite3_finalize(routeStmt);
+	sqlite3_finalize(baseRouteStmt);
+	
+	sqlite3_finalize(streetStmt);
+	sqlite3_finalize(streetNodeStmt);
+	sqlite3_finalize(buildStmt);
+	sqlite3_finalize(searchStrStmt);
+	sqlite3_finalize(searchStrNoCityStmt);
+	sqlite3_finalize(updateCityStmt);
+	sqlite3_finalize(searchBuildStmt);
+	sqlite3_finalize(removeBuildStmt);
+	sqlite3_finalize(searchStrNodeStmt);
+	sqlite3_finalize(cityStmt);
+	
+	
+	
+
+	// selectors from d
+	sqlite3_finalize(selNodeStmt);
+	sqlite3_finalize(selWayStmt);
+	sqlite3_finalize(selRelStmt);
+	sqlite3_finalize(itNodeStmt);
+	sqlite3_finalize(itWayStmt);
+	sqlite3_finalize(itRelStmt);
+	sqlite3_finalize(itWayBoundStmt);
+
+
+	
+	sqlite3_finalize(poiNodeStmt);
+	
+	sqlite3_close(dbPoiCtx);
+	sqlite3_close(dbRouteCtx);
+	sqlite3_close(dbAddrCtx);
+	sqlite3_close(dbTransCtx);
+	sqlite3_close(dbMapCtx);
 }
+
+void OBFResultDB::close(void)
+{
+	delete (OBFMapDB*)mapIndexer;
+	delete (OBFpoiDB*)poiIndexer;
+	delete (OBFtransportDB*)transIndexer;
+	delete (OBFrouteDB*)routeIndexer;
+	delete (OBFAddresStreetDB*)addresIndexer;
+	delete storeData;
+}
+
 
 int OBFResultDB::shell_callback(void *pArg, int nArg, char **azArg, char **azCol)
 {
@@ -323,7 +372,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASECOMBINE)
 	{
-		((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
+		//((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
 	}
 	return 0;
 }
