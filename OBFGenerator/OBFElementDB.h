@@ -35,7 +35,7 @@ private:
 	static long SHIFT_ORIGINAL;
 	static long SHIFT_ID;
 
-	static long getBaseId(int x31, int y31) {
+	static __int64 getBaseId(int x31, int y31) {
 		__int64 x = x31;
 		__int64 y = y31;
 		return (x << 31) + y;

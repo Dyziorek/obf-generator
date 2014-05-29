@@ -61,8 +61,8 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
-#include "boost/iostreams/device/back_inserter.hpp"
-#include "boost/iostreams/copy.hpp"
+#include <boost/iostreams/device/back_inserter.hpp>
+#include <boost/iostreams/copy.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/algorithm/string.hpp>
@@ -83,5 +83,15 @@
 #include "EntityNode.h"
 #include "MapObject.h"
 #include "MapUtils.h"
+#include "Amenity.h"
+#include "BatchUpdater.h"
 #include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"
+
+//
+//#ifdef _DEBUG 
+//	#ifndef DBG_NEW  
+//		#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
+//		#define new DBG_NEW 
+//	#endif
+//#endif  // _DEBUG

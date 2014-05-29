@@ -1,4 +1,11 @@
 #include "stdafx.h"
+#include "SkCanvas.h"
+#include "SkSurface.h"
+#include "SkImage.h"
+#include "SkData.h"
+#include "SkStream.h"
+#include "SkGraphics.h"
+#include "MultiPoly.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
 #include "Amenity.h"
@@ -488,7 +495,7 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 		}
 		//return registerStreetInCities(name, nameEn, location, result);
 
-		if (result.size()) {
+		if (result.size() == 0) {
 			return std::set<long long>();
 		}
 		if ( boost::empty(nameEn)) {
@@ -649,7 +656,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 			}
 			
 
-			std::list<CityObj> list(1);
+			std::list<CityObj> list(0);
 			for (auto c : cities) {
 				if (boundary->containsPoint(c.second.getLatLon())) {
 					list.push_back(c.second);
@@ -659,7 +666,10 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 				boundaryToContainingCities[boundary] = list;
 			}
 			
-
+			if (foundCity)
+			{
+				foundCity.release();
+			}
 	}
 }
 
@@ -786,7 +796,7 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 				dbContext.loadNodesOnRelation(relItem.get());
 			}
 		}
-		__int64 centrID = 0;
+		__int64 centrID = -1;
 		std::shared_ptr<MultiPoly> polyline(new MultiPoly);
 		if (relItem != nullptr)
 		{

@@ -85,4 +85,7 @@ public:
 	OBFResultDB results;
 	afx_msg void OnClose();
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnBnClickedButton1();
+	virtual void OnCancel();
+	virtual void OnOK();
 };

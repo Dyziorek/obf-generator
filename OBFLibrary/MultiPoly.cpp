@@ -1,11 +1,11 @@
 #include "stdafx.h"
-#include "MultiPoly.h"
 #include "SkCanvas.h"
 #include "SkSurface.h"
 #include "SkImage.h"
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#include "MultiPoly.h"
 
 //SkAutoGraphics ag;
 long MultiPoly::numberCalls = 0;

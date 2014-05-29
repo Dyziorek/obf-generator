@@ -6,14 +6,17 @@
 #include "OBFRenderingTypes.h"
 #include "OBFResultDB.h"
 #include "MapUtils.h"
-#include "MultiPoly.h"
-#include "OBFMapDB.h"
+#pragma push_macro("realloc")
+#undef realloc
 #include "SkCanvas.h"
 #include "SkSurface.h"
 #include "SkImage.h"
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#pragma pop_macro("realloc")
+#include "MultiPoly.h"
+#include "OBFMapDB.h"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/container/list.hpp>
@@ -21,12 +24,6 @@
 #include "ArchiveIO.h"
 
 
-#include "SkCanvas.h"
-#include "SkSurface.h"
-#include "SkImage.h"
-#include "SkData.h"
-#include "SkStream.h"
-#include "SkGraphics.h"
 
 
 namespace io = boost::iostreams;
@@ -561,7 +558,7 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			const void* pData = sqlite3_column_blob(lowLevelWayIt, 3);
 			int blobSize = sqlite3_column_bytes(lowLevelWayIt, 3);
 			
-			std::string name(reinterpret_cast<const char*>(sqlite3_column_text(lowLevelWayIt, 4)));
+			std::string name((const char*)(sqlite3_column_text(lowLevelWayIt, 4)));
 			int level = sqlite3_column_int(lowLevelWayIt, 7);
 			
 			int maxZoom = mapZooms.getLevel(level).getMaxZoom();
@@ -703,6 +700,8 @@ void  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			dbCode = sqlite3_step(lowLevelWayIt);
 		}
 		while (dbCode == SQLITE_ROW);
+		
+		
 	}
 
 

@@ -1,6 +1,5 @@
 #pragma once
 #include "Amenity.h"
-#include "OBFResultDB.h"
 #include "sqlite3.h"
 
 
@@ -14,6 +13,7 @@ struct lowLevelMapData
 	std::string types;
 	std::string addtypes;
 	int level;
+	~lowLevelMapData(){}
 };
 
 struct binMapData
@@ -25,6 +25,7 @@ struct binMapData
 	std::string types;
 	std::string addtypes;
 	std::string name;
+	~binMapData(){}
 };
 
 
@@ -37,6 +38,8 @@ struct routeData
 	std::string coords;
 	std::string name;
 };
+
+class OBFResultDB;
 
 class BatchUpdater
 {
