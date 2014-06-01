@@ -77,6 +77,8 @@ void OBFResultDB::close(void)
 	delete (OBFrouteDB*)routeIndexer;
 	delete (OBFAddresStreetDB*)addresIndexer;
 	delete storeData;
+	OBFRenderingTypes::rules.clear();
+	OBFRenderingTypes::namedRulType.clear();
 }
 
 

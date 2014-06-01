@@ -140,6 +140,9 @@ public:
 	TagValuePattern()
 	{
 	}
+	~TagValuePattern()
+	{
+	}
 	std::string tag;
 	std::string value;
 		TagValuePattern(std::string t, std::string v) {
