@@ -154,9 +154,6 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);*/
 	//sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	results.PrepareDB(dbCtx);
-	#ifdef _DEBUG_VLD
-	VLDMarkAllLeaksAsReported();
-	#endif
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -303,9 +300,6 @@ UINT __cdecl ProcDataGenerate()
 
 UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx  ,sqlite3_stmt* nodeStmt,	sqlite3_stmt* wayStmt ,	sqlite3_stmt* relStmt)
 {
-	#ifdef _DEBUG_VLD
-	VLDDisable();
-	#endif
 	while (1)
 	{	
 		while(thSaveQueue.empty())
@@ -609,9 +603,6 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 			}
 		}
 	}
-	#ifdef _DEBUG_VLD
-	VLDEnable();
-	#endif
 }
 
 void COBFGeneratorDlg::OnBnClickedMfcbutton1()
@@ -687,7 +678,13 @@ int COBFGeneratorDlg::PrepareTempDB()
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 
 	results.imageResult();
-	strMessage.Format(L"Pass completed");
+	int pCount[4], pHigh[4];
+	sqlite3_status(SQLITE_STATUS_MALLOC_COUNT, &pCount[0], &pHigh[0], FALSE);
+	sqlite3_status(SQLITE_STATUS_MALLOC_SIZE, &pCount[1], &pHigh[1], FALSE);
+	sqlite3_status(SQLITE_STATUS_MEMORY_USED, &pCount[2], &pHigh[2], FALSE);
+	sqlite3_status(SQLITE_STATUS_PAGECACHE_SIZE, &pCount[3], &pHigh[3], FALSE);
+	strMessage.Format(L"Pass completed\r\n Status: \r\n Malloc Count: %d, %d\r\n Malloc Size: %d, %d\r\n Malloc Used: %d, %d\r\n Malloc Page Cache: %d, %d\r\n", 
+		pCount[0], pHigh[0], pCount[1], pHigh[1],pCount[2], pHigh[2],pCount[3], pHigh[3]);
 	delete[] msgTxt;
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);

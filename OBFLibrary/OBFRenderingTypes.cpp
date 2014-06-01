@@ -178,7 +178,7 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 		}
 		if (namedRulType.find(constructRuleKey(targetTag, targetTagVal)) != namedRulType.end())
 		{
-			entity->targetTagValue = &namedRulType.at(constructRuleKey(targetTag, targetTagVal));
+			entity->targetTagValue.  =  namedRulType.at(constructRuleKey(targetTag, targetTagVal));
 		}
 
 	}
