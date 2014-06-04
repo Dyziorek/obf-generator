@@ -45,9 +45,12 @@ public:
 	DBAStreet(OBFResultDB& dbContext);
 	std::unique_ptr<SimpleStreet> findStreet(std::string name,CityObj city,std::string cityPart);
 	std::unique_ptr<SimpleStreet> findStreet(std::string name,CityObj city);
+	bool findStreetNode(std::shared_ptr<EntityBase> node);
 	__int64 insertStreet(std::string name,std::string nameEn,LatLon location,CityObj city,std::string cityPart);
 	bool findBuilding(std::shared_ptr<EntityBase> house);
-	void writeBuilding(std::set<long long> idsOfStreet, Building building);
+	void writeBuilding(boost::unordered_set<long long>& idsOfStreet, Building building);
+	void removeBuilding(std::shared_ptr<EntityBase> house);
+	void writeStreetWayNodes(boost::unordered_set<long long>& idsOfStreet,std::shared_ptr<EntityWay> wayItem);
 	~DBAStreet(void);
 };
 

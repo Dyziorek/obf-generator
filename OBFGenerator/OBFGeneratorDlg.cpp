@@ -143,7 +143,7 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
-	dbRes = sqlite3_exec(dbCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
+	dbRes = sqlite3_exec(dbCtx, "PRAGMA cache_size=0", NULL, NULL, &errMsg);
 	/*dbRes = sqlite3_exec(dbCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
@@ -634,7 +634,16 @@ LRESULT COBFGeneratorDlg::OnMyMessage(WPARAM wparm, LPARAM lParm)
 
 int COBFGeneratorDlg::PrepareTempDB()
 {
+	char* errMsg;
+	int dbRes;
+	// first index all after initial insert(s)
+	dbRes = sqlite3_exec(dbCtx, "create index IdIndex ON node (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdWSearchIndex ON ways (wayid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdRIndex ON relations (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	dbRes = sqlite3_exec(dbCtx, "create index IdRelIndex ON relations (relid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 
+	
 	CString strMessage;
 	strMessage.Format(L"Iterating over for city");
 	wchar_t* msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
@@ -807,6 +816,7 @@ void COBFGeneratorDlg::OnClose()
 	// TODO: Add your message handler code here and/or call default
 	SkGraphics::Term();
 	results.close();
+	
 	CDialogEx::OnClose();
 }
 
@@ -835,6 +845,7 @@ void COBFGeneratorDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
 	results.close();
+	
 	CDialogEx::OnCancel();
 }
 
@@ -843,5 +854,6 @@ void COBFGeneratorDlg::OnOK()
 {
 	// TODO: Add your specialized code here and/or call the base class
 	results.close();
+	
 	CDialogEx::OnOK();
 }

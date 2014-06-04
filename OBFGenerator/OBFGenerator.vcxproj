@@ -79,6 +79,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\boost_1_55;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -151,17 +152,19 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;..\OBFLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-1_55.lib;libboost_iostreams-vc110-mt-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Release\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatRelease\zlibstat.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-1_55.lib;libboost_iostreams-vc110-mt-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Release\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatRelease\zlibstat.lib;OBFLibrary.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\boost_1_55\stage\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Release;$(TargetDir)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <ShowProgress>NotSet</ShowProgress>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -269,6 +272,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</PreprocessToFile>
     </ClCompile>
     <ClCompile Include="DBAStreet.cpp" />
     <ClCompile Include="OBFElementDB.cpp" />

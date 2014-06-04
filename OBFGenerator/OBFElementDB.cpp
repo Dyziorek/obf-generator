@@ -401,14 +401,14 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 			
 			if (streetName == "") { // use relation name as a street name
 				streetName = i->getTag("name");
-				LatLon = i->relations.begin()->first.second->getLatLon(); // get coordinates from any relation member
+				LatLon = std::get<1>(i->relations.begin()->second)->getLatLon(); // get coordinates from any relation member
 				isInNames = i->getIsInNames();
 			}
 			
 			DBAStreet streetDAO(dbContext);
 
 			if (streetName != "") {
-				std::set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
+				boost::unordered_set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
 				if (idsOfStreet.size() > 0) {
 					std::vector<std::shared_ptr<EntityBase>> houses = i->getMembers("house"); // both house and address roles can have address
 					std::vector<std::shared_ptr<EntityBase>> addresses = i->getMembers("address");
@@ -422,7 +422,7 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 							continue;
 						
 						if (!streetDAO.findBuilding(house)) {
-							std::shared_ptr<EntityRelation> houseRel = std::static_pointer_cast<EntityRelation, EntityBase>(house);
+							std::shared_ptr<EntityRelation> houseRel = std::dynamic_pointer_cast<EntityRelation, EntityBase>(house);
 							// process multipolygon (relation) houses - preload members to create building with correct latlon
 							if (houseRel)
 							{
@@ -446,9 +446,9 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 	}
 
 
-std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext) {
+boost::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext) {
 		if (name == "" || location.first == -1000) {
-			return std::set<long long>();
+			return boost::unordered_set<long long>();
 		
 		}
 		boost::trim(name);
@@ -469,7 +469,7 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 		nearestObjects.sort([&location](CityObj& param1, CityObj& param2){
 			double dist1 = MapUtils::getDistance(location.first, location.second, param1.getLatLon().first, param1.getLatLon().second) / param1.getRadius();
 			double dist2 = MapUtils::getDistance(location.first, location.second, param2.getLatLon().first, param2.getLatLon().second) / param2.getRadius();
-			return dist1 < dist2;
+			return dist1 > dist2;
 		});
 
 		/*Collections.sort(nearestObjects, new Comparator<CityObj>() {
@@ -496,7 +496,7 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 		//return registerStreetInCities(name, nameEn, location, result);
 
 		if (result.size() == 0) {
-			return std::set<long long>();
+			return boost::unordered_set<long long>();
 		}
 		if ( boost::empty(nameEn)) {
 
@@ -504,7 +504,7 @@ std::set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std:
 		}
 
 		DBAStreet streetDAO(dbContext);
-		std::set<long long> values;
+		boost::unordered_set<long long> values;
 		for (CityObj city : result) {
 			std::string cityPart = findCityPart(location, city);
 		
@@ -788,7 +788,7 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 				return std::shared_ptr<MultiPoly>();
 		}
 		std::string boundName = baseItem->getTag("name");
-		if (relItem != nullptr)
+		if (relItem)
 		{
 			dbContext.loadRelationMembers(relItem.get());
 			if (relItem->entityIDs.size() > 0)
@@ -798,22 +798,22 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 		}
 		__int64 centrID = -1;
 		std::shared_ptr<MultiPoly> polyline(new MultiPoly);
-		if (relItem != nullptr)
+		if (relItem)
 		{
 			for(auto entityItem : relItem->relations)
 			{
-				if (entityItem.first.first == 2)
+				if (std::get<0>(entityItem.second) == 2)
 				{
-					std::shared_ptr<EntityRelation> relSubItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(entityItem.first.second);
+					std::shared_ptr<EntityRelation> relSubItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(std::get<1>(entityItem.second));
 					if (relSubItem->entityIDs.size() > 0)
 					{
 						dbContext.loadNodesOnRelation(relSubItem.get());
 						for(auto innerEntityItem : relSubItem->relations)
 						{
-							if (innerEntityItem.first.first == 1)
+							if ( std::get<0>(innerEntityItem.second) == 1)
 							{
-								bool inner = (innerEntityItem.second == "inner");
-								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(innerEntityItem.first.second);
+								bool inner = std::get<2>(innerEntityItem.second) == "inner";
+								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(std::get<1>(innerEntityItem.second));
 								if (inner)
 								{
 									polyline->inWays.push_back(wayPtr);
@@ -827,27 +827,27 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 									}
 								}
 							}
-							else if (innerEntityItem.first.first == 0)
+							else if (std::get<0>(innerEntityItem.second) == 0)
 							{
-								if (innerEntityItem.second == "admin_centre" || innerEntityItem.second == "admin_center")
+								if (std::get<2>(innerEntityItem.second) == "admin_centre" || std::get<2>(innerEntityItem.second) == "admin_center")
 								{
-									centrID = innerEntityItem.first.second->id;
+									centrID = std::get<1>(innerEntityItem.second)->id;
 								}
-								else if (innerEntityItem.second == "label")
+								else if (std::get<2>(innerEntityItem.second) == "label")
 								{
-									centrID = innerEntityItem.first.second->id;
+									centrID = std::get<1>(innerEntityItem.second)->id;
 								}
 							}
 						}
 					}
 				}
-				else if (entityItem.first.first == 1)
+				else if (std::get<0>(entityItem.second) == 1)
 				{
-					polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(entityItem.first.second));
+					polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(std::get<1>(entityItem.second)));
 				}
 			}
 		}
-		else if (wayItem != nullptr)
+		else if (wayItem)
 		{
 			polyline->outWays.push_back(wayItem);
 		}
@@ -890,7 +890,7 @@ void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 		SaverCityNode(ptrNode.get(), cityManager);
 		objCity.setType(placeType);
 	}
-	else if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
+	else // if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
 	{
 		SaverCityNode(ptrNode.get(), townManager);
 		objCity.setType(placeType);
@@ -1012,4 +1012,168 @@ void OBFAddresStreetDB::storeCity(std::shared_ptr<EntityNode>& cityNode, CityObj
 	{
 		sqlite3_exec(dbContext.dbAddrCtx, "END TRANSACTION", NULL, NULL, &errMsg);
 	}
+}
+
+void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext)
+{
+	// indexing rest of addressable elemetns (building etc)
+	DBAStreet streetDAO(dbContext);
+	std::string interpolation = baseItem->getTag(OSMTags::ADDR_INTERPOLATION);
+	std::shared_ptr<EntityWay> wayItem = std::dynamic_pointer_cast<EntityWay, EntityBase>(baseItem);
+	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
+		if (wayItem && interpolation != "" ){
+			Building::BuildingInterpolation type = Building::BuildingInterpolation::NONE;
+			int interpolationInterval = 0;
+			if(interpolation != "") {
+					std::string interpolType = boost::to_upper_copy(interpolation);
+					if (interpolType == "ALL")
+					{
+						type = Building::BuildingInterpolation::ALL;
+					}
+					else if (interpolType == "EVEN")
+					{
+						type = Building::BuildingInterpolation::EVEN;
+					}
+					else if (interpolType == "ODD")
+					{
+						type = Building::BuildingInterpolation::ODD;
+					}
+					else if (interpolType == "ALPHA")
+					{
+						type = Building::BuildingInterpolation::ALPHA;
+					}
+			}
+			if (type != Building::BuildingInterpolation::NONE || interpolationInterval > 0) {
+				std::vector<std::shared_ptr<EntityNode>> nodesWithHno;
+				for (std::shared_ptr<EntityNode> n : wayItem->nodes) {
+					if (n->getTag(OSMTags::ADDR_HOUSE_NUMBER) != "" && n->getTag(OSMTags::ADDR_STREET) != "") {
+						nodesWithHno.push_back(n);
+					}
+				}
+				if (nodesWithHno.size() > 1) {
+					for (int i = 1; i < nodesWithHno.size(); i++) {
+						std::shared_ptr<EntityNode> first = nodesWithHno.at(i - 1);
+						std::shared_ptr<EntityNode> second = nodesWithHno.at(i);
+						boolean exist = streetDAO.findBuilding(first);
+						if (exist) {
+							streetDAO.removeBuilding(first);
+						}
+						LatLon l = baseItem->getLatLon();
+						boost::unordered_set<__int64> idsOfStreet = getStreetInCity(first->getIsInNames(), first->getTag(OSMTags::ADDR_STREET), "", l, dbContext);
+						if (!(idsOfStreet.size() == 0)) {
+							Building building;
+							MapObject::parseMapObject(&building, first.get());
+							building.setBuilding(first.get());
+							building.interval = interpolationInterval;
+							building.interpType = type;
+							building.setName(first->getTag(OSMTags::ADDR_HOUSE_NUMBER));
+							building.name2 = second->getTag(OSMTags::ADDR_HOUSE_NUMBER);
+							building.location2 = second->getLatLon();
+							streetDAO.writeBuilding(idsOfStreet, building);
+						}
+					}
+				}
+			}
+		} 
+		std::string houseName = baseItem->getTag(OSMTags::ADDR_HOUSE_NAME);
+		std::string houseNumber = baseItem->getTag(OSMTags::ADDR_HOUSE_NUMBER);
+		std::string street = baseItem->getTag(OSMTags::ADDR_STREET);
+		std::string street2 = baseItem->getTag(OSMTags::ADDR_STREET2);
+		if ((houseName != "" || houseNumber != "") && street != "") {
+			if(relItem) {
+				dbContext.loadRelationMembers(relItem.get());
+				dbContext.loadNodesOnRelation(relItem.get());
+				std::vector<std::shared_ptr<EntityBase>> outs = relItem->getMembers("outer");
+				if(outs.size()) {
+					baseItem.swap(*outs.begin());
+				}
+			}
+			// skip relations
+			boolean exist = relItem ||  streetDAO.findBuilding(baseItem);
+			if (!exist) {
+				LatLon l = baseItem->getLatLon();
+				boost::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), street, "", l, dbContext);
+				if (idsOfStreet.size()) {
+					Building building;
+					MapObject::parseMapObject(&building, baseItem.get());
+					building.setBuilding(baseItem.get());
+					std::string hname = houseName;
+					if(hname == "") {
+						hname = houseNumber;
+					}
+					int i = hname.find('-');
+					if (i != hname.npos && interpolation != "") {
+						building.interval = 1;
+						std::string interpolType = boost::to_upper_copy(interpolation);
+						Building::BuildingInterpolation type = Building::BuildingInterpolation::NONE;
+						if (interpolType == "ALL")
+						{
+							type = Building::BuildingInterpolation::ALL;
+						}
+						else if (interpolType == "EVEN")
+						{
+							type = Building::BuildingInterpolation::EVEN;
+						}
+						else if (interpolType == "ODD")
+						{
+							type = Building::BuildingInterpolation::ODD;
+						}
+						else if (interpolType == "ALPHA")
+						{
+							type = Building::BuildingInterpolation::ALPHA;
+						}
+						
+						building.setName(hname.substr(0, i));
+						building.name2 = hname.substr(i + 1);
+					} else {
+						int secondNumber = hname.find('/');
+						if(secondNumber == hname.npos || !(secondNumber < hname.length() - 1)) {
+							building.setName(hname);
+						} else {
+							building.setName(hname.substr(0, secondNumber));
+							Building building2;
+							MapObject::parseMapObject(&building2, baseItem.get());
+							building2.setBuilding(baseItem.get());
+							building2.setName(hname.substr(secondNumber + 1));
+							boost::unordered_set<__int64> ids2OfStreet = getStreetInCity(baseItem->getIsInNames(), street2, "", l, dbContext);
+							ids2OfStreet.erase(idsOfStreet.begin(), idsOfStreet.end());
+							
+							if(ids2OfStreet.size()) {
+								streetDAO.writeBuilding(ids2OfStreet, building2);
+							} else {
+								building.name2 = building2.getName();
+							}
+						}
+					}
+					
+					streetDAO.writeBuilding(idsOfStreet, building);
+				}
+			}
+		} else if (wayItem /* && OSMSettings.wayForCar(baseItem->getTag(OSMTags::HIGHWAY)) */
+				&& baseItem->getTag(OSMTags::HIGHWAY) != "" && baseItem->getTag(OSMTags::NAME) != "") {
+			// suppose that streets with names are ways for car
+			// Ignore all ways that have house numbers and highway type
+			
+			// if we saved address ways we could checked that we registered before
+			boolean exist = streetDAO.findStreetNode(baseItem);
+
+
+
+			// check that street way is not registered already
+			if (!exist) {
+				LatLon l = baseItem->getLatLon();
+				boost::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), baseItem->getTag(OSMTags::NAME), baseItem->getTag(OSMTags::NAME_EN), l, dbContext);
+				if (idsOfStreet.size()) {
+					streetDAO.writeStreetWayNodes(idsOfStreet, wayItem);
+				}
+			}
+		}
+		if (relItem) {
+			if (baseItem->getTag(OSMTags::POSTAL_CODE) != "") {
+				dbContext.loadRelationMembers(relItem.get());
+				dbContext.loadNodesOnRelation(relItem.get());
+				postalCodeRelations.push_back(relItem);
+			}
+		}
+
 }

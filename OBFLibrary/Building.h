@@ -4,8 +4,8 @@ class Building :
 	public MapObject
 {
 public:
-	enum Interpolation { NONE = 0, ALL = -1, EVEN = -2, ODD = -3, ALPHA = -4};
-	Interpolation interpType;
+	enum BuildingInterpolation { NONE = 0, ALL = -1, EVEN = -2, ODD = -3, ALPHA = -4};
+	BuildingInterpolation interpType;
 	Building(void);
 	~Building(void);
 	void setBuilding(EntityBase* obj);
