@@ -87,6 +87,7 @@
 #include "BatchUpdater.h"
 #include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"
+#include "OSMTags.h"
 
 //
 //#ifdef _DEBUG 

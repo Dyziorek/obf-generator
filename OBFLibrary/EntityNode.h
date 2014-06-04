@@ -23,13 +23,13 @@ public:
 	bool operator==(const EntityNode& op1) const { return (id == op1.id && lat == op1.lat && lon == op1.lon);}
 };
 
-struct pairComp 
-{
-	bool operator()(const std::pair<int,std::shared_ptr<EntityBase>>& op1, const std::pair<int,std::shared_ptr<EntityBase>>& op2)
-	{
-		return *op1.second < *op2.second;
-	}
-};
+//struct pairComp 
+//{
+//	bool operator()(const std::pair<int,std::shared_ptr<EntityBase>>& op1, const std::pair<int,std::shared_ptr<EntityBase>>& op2)
+//	{
+//		return *op1.second < *op2.second;
+//	}
+//};
 
 class EntityRelation :
 	public EntityBase
@@ -38,9 +38,9 @@ public:
 	EntityRelation(void);
 	virtual ~EntityRelation(void);
 
-	std::map<__int64, std::pair<int,std::string>> entityIDs;
+	std::list<std::pair<__int64, std::pair<int,std::string>>> entityIDs;
 
-	std::map<std::pair<int,std::shared_ptr<EntityBase>>, std::string, pairComp> relations;
+	boost::unordered_map<__int64, std::tuple<int,std::shared_ptr<EntityBase>, std::string>> relations;
 
 	std::list<std::pair<int, __int64>> getEntityIDforName(std::string name)
 	{
@@ -61,7 +61,7 @@ public:
 		std::list<std::shared_ptr<EntityBase>> relData;
 		for(auto nRel : relations)
 		{
-			relData.push_back(nRel.first.second);
+			relData.push_back(std::get<1>(nRel.second));
 		}
 		return relData;
 	}
@@ -69,13 +69,17 @@ public:
 	std::vector<std::shared_ptr<EntityBase>> getMembers(std::string name)
 	{
 		std::vector<std::shared_ptr<EntityBase>> members;
-			for(auto relationMember : relations)
+
+		for (auto relMemId : entityIDs)
+		{
+			auto relationMember = relations[relMemId.first];
 			{
-				if (relationMember.second == name)
+				if (std::get<2>(relationMember) == name)
 				{
-					members.push_back(relationMember.first.second);
+					members.push_back(std::get<1>(relationMember));
 				}
 			}
+		}
 		return members;
 	}
 

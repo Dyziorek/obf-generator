@@ -178,7 +178,7 @@ void OBFRenderingTypes::parseBasicElement(tinyxml2::XMLElement* elemData, std::s
 		}
 		if (namedRulType.find(constructRuleKey(targetTag, targetTagVal)) != namedRulType.end())
 		{
-			entity->targetTagValue.  =  namedRulType.at(constructRuleKey(targetTag, targetTagVal));
+			entity->targetTagValue  =  &namedRulType.at(constructRuleKey(targetTag, targetTagVal));
 		}
 
 	}
@@ -658,7 +658,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 				throw new std::bad_exception();
 			}
 		}
-		auto inst = std::static_pointer_cast<EntityNode, EntityBase>(e);
+		auto inst = std::dynamic_pointer_cast<EntityNode, EntityBase>(e);
 		bool isNode = inst;
 		return encodeEntityWithType(isNode, 
 				e->tags, zoom, outTypes, outAddTypes, namesToEncode, tempListNotUsed);

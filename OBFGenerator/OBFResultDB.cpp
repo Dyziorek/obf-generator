@@ -29,44 +29,7 @@ OBFResultDB::OBFResultDB(void)
 
 OBFResultDB::~OBFResultDB(void)
 {
-	sqlite3_finalize(mapStmt);
-	sqlite3_finalize(lowStmt);
-	
-	sqlite3_finalize(routeStmt);
-	sqlite3_finalize(baseRouteStmt);
-	
-	sqlite3_finalize(streetStmt);
-	sqlite3_finalize(streetNodeStmt);
-	sqlite3_finalize(buildStmt);
-	sqlite3_finalize(searchStrStmt);
-	sqlite3_finalize(searchStrNoCityStmt);
-	sqlite3_finalize(updateCityStmt);
-	sqlite3_finalize(searchBuildStmt);
-	sqlite3_finalize(removeBuildStmt);
-	sqlite3_finalize(searchStrNodeStmt);
-	sqlite3_finalize(cityStmt);
-	
-	
-	
 
-	// selectors from d
-	sqlite3_finalize(selNodeStmt);
-	sqlite3_finalize(selWayStmt);
-	sqlite3_finalize(selRelStmt);
-	sqlite3_finalize(itNodeStmt);
-	sqlite3_finalize(itWayStmt);
-	sqlite3_finalize(itRelStmt);
-	sqlite3_finalize(itWayBoundStmt);
-
-
-	
-	sqlite3_finalize(poiNodeStmt);
-	
-	sqlite3_close(dbPoiCtx);
-	sqlite3_close(dbRouteCtx);
-	sqlite3_close(dbAddrCtx);
-	sqlite3_close(dbTransCtx);
-	sqlite3_close(dbMapCtx);
 }
 
 void OBFResultDB::close(void)
@@ -79,6 +42,47 @@ void OBFResultDB::close(void)
 	delete storeData;
 	OBFRenderingTypes::rules.clear();
 	OBFRenderingTypes::namedRulType.clear();
+
+
+		int sqlCode;
+	sqlCode = sqlite3_finalize(mapStmt);
+	sqlCode = sqlite3_finalize(lowStmt);
+	
+	sqlCode = sqlite3_finalize(routeStmt);
+	sqlCode = sqlite3_finalize(baseRouteStmt);
+	
+	sqlCode = sqlite3_finalize(streetStmt);
+	sqlCode = sqlite3_finalize(streetNodeStmt);
+	sqlCode = sqlite3_finalize(buildStmt);
+	sqlCode = sqlite3_finalize(searchStrStmt);
+	sqlCode = sqlite3_finalize(searchStrNoCityStmt);
+	sqlCode = sqlite3_finalize(updateCityStmt);
+	sqlCode = sqlite3_finalize(searchBuildStmt);
+	sqlCode = sqlite3_finalize(removeBuildStmt);
+	sqlCode = sqlite3_finalize(searchStrNodeStmt);
+	sqlCode = sqlite3_finalize(cityStmt);
+	
+	
+	
+
+	// selectors from d
+sqlCode = 	sqlite3_finalize(selNodeStmt);
+	sqlCode = sqlite3_finalize(selWayStmt);
+	sqlCode = sqlite3_finalize(selRelStmt);
+	sqlCode = sqlite3_finalize(itNodeStmt);
+	sqlCode = sqlite3_finalize(itWayStmt);
+	sqlCode = sqlite3_finalize(itRelStmt);
+	sqlCode = sqlite3_finalize(itWayBoundStmt);
+
+
+	
+sqlCode = 	sqlite3_finalize(poiNodeStmt);
+	
+	sqlCode = sqlite3_close(dbPoiCtx);
+	sqlCode = sqlite3_close(dbRouteCtx);
+	sqlCode = sqlite3_close(dbAddrCtx);
+	sqlCode = sqlite3_close(dbTransCtx);
+	sqlCode = sqlite3_close(dbMapCtx);
 }
 
 
@@ -265,7 +269,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 			[=](std::shared_ptr<EntityBase> itm) {  
 				if (itm->getTag("place") != std::string(""))
 				{
-					 std::shared_ptr<EntityNode> ptrNode = std::static_pointer_cast<EntityNode, EntityBase>(itm);
+					 std::shared_ptr<EntityNode> ptrNode = std::dynamic_pointer_cast<EntityNode, EntityBase>(itm);
 					 ((OBFAddresStreetDB*)addresIndexer)->iterateOverCity(ptrNode);
 				}
 		});
@@ -277,7 +281,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) {  
 				
-				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
+				std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(itm);
 
 				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(itm, *this);
 				
@@ -311,7 +315,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) { 
-				std::shared_ptr<EntityRelation> relItem = std::static_pointer_cast<EntityRelation, EntityBase>(itm);
+				std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(itm);
 				((OBFAddresStreetDB*)addresIndexer)->indexAddressRelation(relItem, *this);
 		});
 		strbuf.str(L"");
@@ -390,79 +394,9 @@ void OBFResultDB::mainIteration(std::shared_ptr<EntityBase>& relItem)
 	poiIndexer->iterateMainEntity(relItem, *this);
 	transIndexer->iterateMainEntity(relItem, *this);
 	routeIndexer->iterateMainEntity(relItem, *this);
+	addresIndexer->iterateMainEntity(relItem, *this);
 }
 
-
-
-void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
-{
-	if (relItem == nullptr)
-		return;
-
-	for(auto relIDMember : relItem->entityIDs)
-	{
-		int  dbRet = SQLITE_OK;
-		if (relIDMember.second.first == 0)
-		{
-			sqlite3_reset(selNodeStmt);
-			sqlite3_bind_int64(selNodeStmt, 1, relIDMember.first);
-			dbRet = sqlite3_step(selNodeStmt);
-
-			if (dbRet != SQLITE_ROW)
-			{
-				sqlite3_reset(selNodeStmt);
-				if (dbRet == SQLITE_DONE)
-				{
-					// not found exiting
-					continue;
-				}
-			}
-
-			do
-			{
-				std::shared_ptr<EntityBase> node(new EntityNode);
-				node->id = relIDMember.first;
-				EntityNode* nodeData = reinterpret_cast<EntityNode*>(node.operator->());
-				nodeData->lat = sqlite3_column_double(selNodeStmt, 0);
-				nodeData->lon = sqlite3_column_double(selNodeStmt, 1);
-				const unsigned char* columnTextData = sqlite3_column_text(selNodeStmt, 2);
-				if (columnTextData != nullptr)
-				{
-					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selNodeStmt, 2)));
-					nodeData->parseTags(tags);
-				}
-				else
-				{
-					std::wstring error = L"Problem on tags colum data size: ";
-					error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(selNodeStmt, 2));
-					error += L"\r\n";
-					OutputDebugString(error.c_str());
-				}
-				//std::pair<int,std::shared_ptr<EntityBase>> mapPair = std::make_pair(0,node);
-				relItem->relations.insert(std::make_pair(std::make_pair(0,node), relIDMember.second.second));
-				dbRet = sqlite3_step(selNodeStmt);
-			}
-			while (dbRet == SQLITE_ROW);
-		}
-		if (relIDMember.second.first == 1)
-		{
-				std::shared_ptr<EntityWay> way(new EntityWay);
-				way->id = relIDMember.first;
-				loadWays(way.get());
-				relItem->relations.insert(std::make_pair(std::make_pair(1,way), relIDMember.second.second));
-		}
-
-		if (relIDMember.second.first == 2)
-		{
-			std::shared_ptr<EntityRelation> relation(new EntityRelation);
-			relation->id = relIDMember.first;
-			loadRelationMembers(relation.get());
-			relItem->relations.insert(std::make_pair(std::make_pair(2,relation), relIDMember.second.second));
-		}
-
-
-	}
-}
 
 void OBFResultDB::loadWays(EntityWay* wayItem)
 {
@@ -576,12 +510,82 @@ void OBFResultDB::loadRelationMembers(EntityRelation* relItem)
 		std::string role(reinterpret_cast<const char*>(sqlite3_column_text(selRelStmt, 2)));
 		int ord = sqlite3_column_int(selRelStmt, 3);
 		//std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selRelStmt, 4)));
-		relItem->entityIDs.insert(std::make_pair(id,std::make_pair(typeRel,role)));
+		relItem->entityIDs.push_back(std::make_pair(id,std::make_pair(typeRel,role)));
 		dbRet = sqlite3_step(selRelStmt);
 	}
 	while (dbRet == SQLITE_ROW);
 	
 
+}
+
+void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
+{
+	if (relItem == nullptr)
+		return;
+
+	for(auto relIDMember : relItem->entityIDs)
+	{
+		int  dbRet = SQLITE_OK;
+		if (relIDMember.second.first == 0)
+		{
+			sqlite3_reset(selNodeStmt);
+			sqlite3_bind_int64(selNodeStmt, 1, relIDMember.first);
+			dbRet = sqlite3_step(selNodeStmt);
+
+			if (dbRet != SQLITE_ROW)
+			{
+				sqlite3_reset(selNodeStmt);
+				if (dbRet == SQLITE_DONE)
+				{
+					// not found exiting
+					continue;
+				}
+			}
+
+			do
+			{
+				std::shared_ptr<EntityBase> node(new EntityNode);
+				node->id = relIDMember.first;
+				EntityNode* nodeData = reinterpret_cast<EntityNode*>(node.operator->());
+				nodeData->lat = sqlite3_column_double(selNodeStmt, 0);
+				nodeData->lon = sqlite3_column_double(selNodeStmt, 1);
+				const unsigned char* columnTextData = sqlite3_column_text(selNodeStmt, 2);
+				if (columnTextData != nullptr)
+				{
+					std::string tags(reinterpret_cast<const char*>(sqlite3_column_text(selNodeStmt, 2)));
+					nodeData->parseTags(tags);
+				}
+				else
+				{
+					std::wstring error = L"Problem on tags colum data size: ";
+					error += boost::lexical_cast<std::wstring, int>(sqlite3_column_bytes(selNodeStmt, 2));
+					error += L"\r\n";
+					OutputDebugString(error.c_str());
+				}
+				//std::pair<int,std::shared_ptr<EntityBase>> mapPair = std::make_pair(0,node);
+				relItem->relations[relIDMember.first] = std::make_tuple(0,node, relIDMember.second.second);
+				dbRet = sqlite3_step(selNodeStmt);
+			}
+			while (dbRet == SQLITE_ROW);
+		}
+		if (relIDMember.second.first == 1)
+		{
+				std::shared_ptr<EntityWay> way(new EntityWay);
+				way->id = relIDMember.first;
+				loadWays(way.get());
+				relItem->relations[relIDMember.first] = std::make_tuple(1,way, relIDMember.second.second);
+		}
+
+		if (relIDMember.second.first == 2)
+		{
+			std::shared_ptr<EntityRelation> relation(new EntityRelation);
+			relation->id = relIDMember.first;
+			loadRelationMembers(relation.get());
+			relItem->relations[relIDMember.first] = std::make_tuple(2,relation, relIDMember.second.second);
+		}
+
+
+	}
 }
 
 void OBFResultDB::SaverCityNode(EntityBase* nn, TileManager<CityObj>& manager)

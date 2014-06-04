@@ -44,3 +44,4 @@
 #include "EntityNode.h"
 #include "MapObject.h"
 #include "MapUtils.h"
+#include "OSMTags.h"

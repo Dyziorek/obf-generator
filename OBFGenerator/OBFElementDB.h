@@ -322,6 +322,7 @@ public:
 	std::map<std::shared_ptr<EntityNode>, CityObj> cities;
 	CityObj createMissingCity(std::shared_ptr<EntityBase>& cityNode, std::string t);
 	std::set<__int64> visitedBoundaryWays;
+	std::vector<std::shared_ptr<EntityRelation>> postalCodeRelations;
 	boost::unordered_map<CityObj, std::shared_ptr<MultiPoly>, cityhash, cityeqal> cityBoundaries;
 	boost::unordered_map<std::shared_ptr<MultiPoly>, std::list<CityObj>> boundaryToContainingCities;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
@@ -337,8 +338,9 @@ public:
 	std::shared_ptr<MultiPoly> putCityBoundary(std::shared_ptr<MultiPoly> boundary, CityObj cityFound);
 	int getCityBoundaryImportance(std::shared_ptr<MultiPoly> b, CityObj c);
 	void indexAddressRelation(std::shared_ptr<EntityRelation>& i, OBFResultDB& dbContext);
-	std::set<long long> getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
+	boost::unordered_set<long long> getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
 	std::string findCityPart(LatLon location, CityObj city);
 	std::string findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location);
+	void iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 
 };

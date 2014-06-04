@@ -260,7 +260,7 @@ void OBFMapDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 					} else {
 						std::shared_ptr<EntityNode> ns(new EntityNode(latLon.first, latLon.second, notUsedId--));
 						ns->tags = inst;
-						iterateMainEntityPost(std::static_pointer_cast<EntityBase, EntityNode>(ns), dbContext);
+						iterateMainEntityPost(std::dynamic_pointer_cast<EntityBase, EntityNode>(ns), dbContext);
 					}
 				}
 		}

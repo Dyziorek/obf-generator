@@ -423,10 +423,10 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 
 		for(auto entityItem : relItem->relations)
 		{
-			if (entityItem.first.first == 1)
+			if (std::get<0>(entityItem.second) == 1)
 			{
-				bool inner = (entityItem.second == "inner");
-				std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(entityItem.first.second);
+				bool inner = std::get<2>(entityItem.second) == "inner";
+				std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(std::get<1>(entityItem.second));
 				if (inner)
 				{
 					inWays.push_back(wayPtr);

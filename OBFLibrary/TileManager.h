@@ -15,7 +15,7 @@ private:
 #ifdef _DEBUG
 		else
 		{
-			OutputDebugString(L"Can't insert into existing object slot");
+			//OutputDebugString(L"Can't insert into existing object slot");
 		}
 #endif
 	}
