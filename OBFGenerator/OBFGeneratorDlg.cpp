@@ -826,7 +826,7 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 {
 	// TODO: Add your control notification handler code here
 	#ifdef _DEBUG_VLD
-		VLDMarkAllLeaksAsReported();
+		VLDReportLeaks();
 	#endif
 }
 
