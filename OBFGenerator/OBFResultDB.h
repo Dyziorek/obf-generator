@@ -8,6 +8,7 @@ class MapObject;
 #define PHASEINDEXADDRREL	20
 #define PHASEMAINITERATE	30
 #define PHASECOMBINE		40
+#define PHASESAVE			50
 
 #define NODEELEM 1
 #define NODEREL 2

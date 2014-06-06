@@ -55,7 +55,7 @@ public:
 	std::string encodeNames(std::map<MapRulType, std::string> tempNames);
 	int zoomWaySmothness;
 
-
+	void writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& ctx);
 
 
 };

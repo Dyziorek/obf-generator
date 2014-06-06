@@ -16,6 +16,16 @@
 #include "SkGraphics.h"
 #pragma pop_macro("realloc")
 #include "MultiPoly.h"
+#include <google\protobuf\io\coded_stream.h>
+#include <google\protobuf\io\zero_copy_stream_impl_lite.h>
+#include <google\protobuf\io\zero_copy_stream_impl.h>
+#include <google\protobuf\wire_format_lite.h>
+#include <boost\container\slist.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include "..\..\..\..\core\protos\OBF.pb.h"
+#include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/unordered_map.hpp>
@@ -1026,4 +1036,37 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<Mu
 
 
 	}
+}
+
+void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext)
+{
+	writer.writeStartMapIndex(regionName);
+
+
+	writer.writeMapEncodingRules(renderEncoder.getRuleTypes());
+
+	char* errMsg;
+	sqlite3_stmt* pSelector = nullptr;
+	int sqlResult = sqlite3_prepare_v2(dbContext.dbMapCtx, "SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?", sizeof("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?"), &pSelector,&errMsg);
+
+	boost::unordered_map<__int64, BinaryFileReference> treeHeaders;
+
+	for (int i = 0; i < mapZooms.size(); i++)
+	{
+		RTree rtree = mapTree[i];
+		
+		RTree::box rootBounds = rtree.calculateBounds();
+		if (rootBounds.max_corner != 0) {
+			writer.startWriteMapLevelIndex(mapZooms.getLevel(i).getMinZoom(), mapZooms.getLevel(i).getMaxZoom(),
+					rootBounds.getMinX(), rootBounds.getMaxX(), rootBounds.getMinY(), rootBounds.getMaxY());
+			writeBinaryMapTree(root, rootBounds, rtree, writer, treeHeader);
+					
+			writeBinaryMapBlock(root,  rootBounds, rtree, writer, selectData, treeHeader, new LinkedHashMap<String, Integer>(),
+						new LinkedHashMap<MapRulType, String>(), mapZooms.getLevel(i));
+
+			writer.endWriteMapLevelIndex();
+		}
+
+	}
+
 }

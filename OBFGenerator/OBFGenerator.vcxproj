@@ -211,7 +211,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\core\protos\OBF.pb.h" />
+    <ClInclude Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BlockReader.h" />
     <ClInclude Include="DBAStreet.h" />
