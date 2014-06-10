@@ -56,6 +56,7 @@ public:
 	int zoomWaySmothness;
 
 	void writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& ctx);
+	void writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds);
 
 
 };

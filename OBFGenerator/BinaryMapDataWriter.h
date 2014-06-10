@@ -59,8 +59,8 @@ public:
 	virtual bool Next(void** data, int* size);
 	virtual void BackUp(int count);
 	virtual __int64 ByteCount() const;
-	virtual size_t read(uint64_t offset, size_t size, byte* buf) ;
-	virtual size_t write(uint64_t offset, const void* src, size_t size);
+	//virtual size_t read(uint64_t offset, size_t size, byte* buf) ;
+	//virtual size_t write(uint64_t offset, const void* src, size_t size);
 	virtual std::string describe();
 
 	size_t writeInt(int val);
@@ -69,6 +69,36 @@ public:
 	 * Return the path used to open the file
 	 */
 	const boost::filesystem::path& path() const;
+
+	gio::CopyingOutputStreamAdaptor implData;
+
+
+private:
+	class  CopyingFileOutputStream : public gio::CopyingOutputStream {
+   public:
+    CopyingFileOutputStream();
+    ~CopyingFileOutputStream();
+
+    bool Close();
+    void SetCloseOnDelete(bool value) { close_on_delete_ = value; }
+    int GetErrno() { return errno_; }
+	bool AssignHandle(HANDLE _fileH) {file_ = _fileH;}
+    // implements CopyingOutputStream --------------------------------
+    bool Write(const void* buffer, int size);
+
+   private:
+    // The file descriptor.
+    const HANDLE file_;
+    bool close_on_delete_;
+    bool is_closed_;
+
+    // The errno of the I/O error, if one has occurred.  Otherwise, zero.
+    int errno_;
+
+    GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(CopyingFileOutputStream);
+  };
+
+	CopyingFileOutputStream implCopy;
 };
 
 
@@ -151,6 +181,9 @@ private:
 	static int ROUTE_TREE;
 	static int ROUTE_BORDER_BOX;
 
+	static int SHIFT_COORDINATES;
+    static int MASK_TO_READ;
+	static int ROUTE_SHIFT_COORDINATES;
 public:
 	BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(outData)
 	{
@@ -182,9 +215,20 @@ public:
 		return states.front() == lastState;
 	}
 
+	void checkPeek(int* statesArg, int sizeInt)
+	{
+		for(int stateValIdx = 0; stateValIdx < sizeInt; stateValIdx++)
+		{
+			if (statesArg[stateValIdx] == states.front())
+				return;
+		}
+		throw std::bad_exception("Not allowed states");
+	}
+
 	bool writeStartMapIndex(std::string name);
 	void writeMapEncodingRules(boost::ptr_map<std::string, MapRulType>& types);
 	void startWriteMapLevelIndex(int minZoom, int maxZoom, int leftX, int rightX, int topY, int bottomY);
+	std::unique_ptr<BinaryFileReference> startMapTreeElement(int leftX, int rightX, int topY, int bottomY, bool containsObjects, int landCharacteristic);
 
 	void preserveInt32Size();
 

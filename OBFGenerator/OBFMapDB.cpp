@@ -1047,26 +1047,53 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 
 	char* errMsg;
 	sqlite3_stmt* pSelector = nullptr;
-	int sqlResult = sqlite3_prepare_v2(dbContext.dbMapCtx, "SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?", sizeof("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?"), &pSelector,&errMsg);
+	int sqlResult = sqlite3_prepare_v2(dbContext.dbMapCtx, "SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?", sizeof("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?"), &pSelector,(const char**)&errMsg);
 
-	boost::unordered_map<__int64, BinaryFileReference> treeHeaders;
+	boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> treeHeaders;
 
 	for (int i = 0; i < mapZooms.size(); i++)
 	{
 		RTree rtree = mapTree[i];
 		
 		RTree::box rootBounds = rtree.calculateBounds();
-		if (rootBounds.max_corner != 0) {
+		if (rootBounds.max_corner().get<0>() != 0) {
 			writer.startWriteMapLevelIndex(mapZooms.getLevel(i).getMinZoom(), mapZooms.getLevel(i).getMaxZoom(),
-					rootBounds.getMinX(), rootBounds.getMaxX(), rootBounds.getMinY(), rootBounds.getMaxY());
-			writeBinaryMapTree(root, rootBounds, rtree, writer, treeHeader);
+				rootBounds.min_corner().get<0>(), rootBounds.max_corner().get<0>(), rootBounds.min_corner().get<1>(), rootBounds.max_corner().get<1>());
+			writeBinaryMapTree(rtree, rootBounds, writer, treeHeaders);
 					
-			writeBinaryMapBlock(root,  rootBounds, rtree, writer, selectData, treeHeader, new LinkedHashMap<String, Integer>(),
-						new LinkedHashMap<MapRulType, String>(), mapZooms.getLevel(i));
+			//writeBinaryMapBlock(root,  rootBounds, rtree, writer, selectData, treeHeaders, new LinkedHashMap<String, Integer>(),
+			//			new LinkedHashMap<MapRulType, String>(), mapZooms.getLevel(i));
 
-			writer.endWriteMapLevelIndex();
+			//writer.endWriteMapLevelIndex();
 		}
 
 	}
 
 }
+
+void OBFMapDB::writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
+{
+
+		int countLeafs = 0;
+		parent.getTreeNodes( [&]() -> int
+		{
+			return countLeafs++;
+		});
+		/*boolean containsLeaf = false;
+		for (int i = 0; i < parent.getTotalElements(); i++) {
+			if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
+				containsLeaf = true;
+			}
+		}
+		std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), containsLeaf, 0);
+		if (ref) {
+			bounds[parent.getNodeIndex()] = ref;
+		}
+		for (int i = 0; i < parent.getTotalElements(); i++) {
+			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+				rtree.Node chNode = r.getReadNode(e[i].getPtr());
+				writeBinaryMapTree(chNode, e[i].getRect(), r, writer, bounds);
+			}
+		}
+		writer.endWriteMapTreeElement();*/
+	}

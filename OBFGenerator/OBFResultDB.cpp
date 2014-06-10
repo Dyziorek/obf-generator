@@ -17,9 +17,6 @@
 #include "SkGraphics.h"
 #pragma pop_macro("realloc")
 #include "MultiPoly.h"
-#include "OBFMapDB.h"
-#include "OBFElementDB.h"
-#include "OBFRenderingTypes.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
 #include <google\protobuf\io\zero_copy_stream_impl.h>
@@ -30,6 +27,9 @@
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "BinaryMapDataWriter.h"
+#include "OBFMapDB.h"
+#include "OBFElementDB.h"
+#include "OBFRenderingTypes.h"
 
 
 OBFResultDB::OBFResultDB(void) 
@@ -394,7 +394,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	{
 		boost::filesystem::path pather("D:\\OsmData\\binarResult.bin");
 		
-		RandomAccessFile rafek(pather);
+		RandomAccessFile rafek(pather, RandomAccessFile::READWRITE);
 
 		BinaryMapDataWriter writter(&rafek);
 
