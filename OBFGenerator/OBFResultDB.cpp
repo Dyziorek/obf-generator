@@ -17,6 +17,16 @@
 #include "SkGraphics.h"
 #pragma pop_macro("realloc")
 #include "MultiPoly.h"
+#include <google\protobuf\io\coded_stream.h>
+#include <google\protobuf\io\zero_copy_stream_impl_lite.h>
+#include <google\protobuf\io\zero_copy_stream_impl.h>
+#include <google\protobuf\wire_format_lite.h>
+#include <boost\container\slist.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include "..\..\..\..\core\protos\OBF.pb.h"
+#include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
@@ -378,7 +388,17 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASECOMBINE)
 	{
-		//((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
+		((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
+	}
+	if (iterationPhase == PHASESAVE)
+	{
+		boost::filesystem::path pather("D:\\OsmData\\binarResult.bin");
+		
+		RandomAccessFile rafek(pather, RandomAccessFile::READWRITE);
+
+		BinaryMapDataWriter writter(&rafek);
+
+		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, "Monacos", *this);
 	}
 	return 0;
 }

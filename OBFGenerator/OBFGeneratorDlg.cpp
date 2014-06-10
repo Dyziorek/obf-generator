@@ -699,6 +699,8 @@ int COBFGeneratorDlg::PrepareTempDB()
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 
+	results.iterateOverElements(PHASESAVE);
+
 	return 0;
 }
 

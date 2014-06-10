@@ -104,7 +104,7 @@ void DBAStreet::writeBuilding(boost::unordered_set<long long>& idsOfStreet, Buil
 	sqlite3_stmt* bldInsert = workCtx.buildStmt;
 	sqlite3* bldCtx = workCtx.dbAddrCtx;
 	char* errMsg;
-		int SqlCode;
+	int SqlCode;
 	sqlite3_exec(bldCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
 	for (long long id : idsOfStreet)
 	{

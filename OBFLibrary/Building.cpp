@@ -14,9 +14,9 @@ Building::~Building(void)
 
 void Building::setBuilding(EntityBase* obj)
 {
-	postCode = obj->getTag("addr:postCode");
+	postCode = obj->getTag(OSMTags::ADDR_POSTCODE);
 	if (postCode == "")
 	{
-		postCode = obj->getTag("postal_code");
+		postCode = obj->getTag(OSMTags::POSTAL_CODE);
 	}
 }

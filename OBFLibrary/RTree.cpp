@@ -38,6 +38,8 @@ void RTree::getTreeData(std::vector<std::pair<__int64, std::vector<short>>>& vec
 	vecResults.clear();
 	std::for_each(retVec.begin(), retVec.end(),[&vecResults](value result) { vecResults.push_back(std::make_pair(result.get<1>(), result.get<2>()));});
 
+	
+
 }
 
 void RTree::getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>& vecResults, box& bounds, std::tuple<double, double, double, double>& newBounds)
@@ -64,4 +66,19 @@ void RTree::getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>& 
 
 }
 
+void RTree::getTreeNodes(std::function<int(void)> visitData)
+{
+	typedef bgi::detail::rtree::utilities::view<SI> RTV;
+	RTV rtv(spaceTree);
 	
+	bgi::detail::utilities::leaf_node_view<typename RTV::value_type,
+		typename RTV::options_type,
+		typename RTV::translator_type,
+		typename RTV::box_type, 
+		typename RTV::allocators_type>
+		visData(rtv.translator(), visitData);
+
+
+	rtv.apply_visitor(visData);
+
+}
