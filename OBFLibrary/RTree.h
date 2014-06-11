@@ -15,9 +15,10 @@ namespace utilities {
 
 namespace dispatch {
 	
-	template <typename Indexable> inline
-	void view_indexable(Indexable const& i, bool& isLeaf)
+	template <typename Indexable, typename ValueType> inline
+	void view_indexable(Indexable const& i, ValueType& listValues, bool& isLeaf)
 	{
+
 		isLeaf = false;
 	};
 }
@@ -51,7 +52,7 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
             for (typename elements_type::const_iterator it = elements.begin();
                 it != elements.end(); ++it)
             {
-				detail::utilities::dispatch::view_indexable(it->first, isLeaf);
+				detail::utilities::dispatch::view_indexable(it->first, it->second, isLeaf);
                 //detail::utilities::gl_draw_indexable(it->first, level_rel);
 				if (isLeaf)
 				{
