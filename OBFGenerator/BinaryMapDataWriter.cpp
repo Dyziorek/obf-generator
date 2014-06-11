@@ -10,7 +10,7 @@
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "BinaryMapDataWriter.h"
 
-
+typedef unsigned char uint8;
 
 int BinaryMapDataWriter::OSMAND_STRUCTURE_INIT = 1;
 int BinaryMapDataWriter:: MAP_INDEX_INIT = 2;
@@ -50,22 +50,22 @@ namespace fs = boost::filesystem;
 
 
 RandomAccessFile::RandomAccessFile() :
-	_path(""), _size(0)
+	_path(""), _size(0), implData(nullptr)
 {
 	_fd = INVALID_HANDLE_VALUE;
 }
 
 RandomAccessFile::RandomAccessFile(const boost::filesystem::path& path, RandomAccessFile::Mode mode, uint64_t size) :
-	_path(""), _size(0)
+	_path(""), _size(0), implData(&implCopy)
 {
 	_fd = INVALID_HANDLE_VALUE;
 	open(path, mode, size);
 	implCopy.AssignHandle(_fd);
-	implData(&implCopy);
 }
 
 RandomAccessFile::~RandomAccessFile()
 {
+	implData.Flush();
 	close();
 }
 
@@ -78,7 +78,8 @@ RandomAccessFile::CopyingFileOutputStream::CopyingFileOutputStream()
 RandomAccessFile::CopyingFileOutputStream::~CopyingFileOutputStream() {
   if (close_on_delete_) {
     if (!Close()) {
-      GOOGLE_LOG(ERROR) << "close() failed: " << strerror(errno_);
+		char errBuff[100];
+      GOOGLE_LOG(ERROR) << "close() failed: " << strerror_s<100>(errBuff, errno_);
     }
   }
 }
@@ -106,10 +107,11 @@ bool RandomAccessFile::CopyingFileOutputStream::Write(
   const uint8* buffer_base = reinterpret_cast<const uint8*>(buffer);
 
   while (total_written < size) {
-    int bytes;
+    DWORD bytes;
+	BOOL success = FALSE;
     do {
-      bytes = write(file_, buffer_base + total_written, size - total_written);
-    } while (bytes < 0 && errno == EINTR);
+		success = WriteFile(file_, buffer_base + total_written, size - total_written, &bytes, NULL);
+    } while (!success);
 
     if (bytes <= 0) {
       // Write error.
@@ -123,7 +125,7 @@ bool RandomAccessFile::CopyingFileOutputStream::Write(
       //   this never actually happens anyway.
 
       if (bytes < 0) {
-        errno_ = errno;
+        errno_ = GetLastError();
       }
       return false;
     }
@@ -140,9 +142,10 @@ void RandomAccessFile::open(const boost::filesystem::path& path, RandomAccessFil
 	switch (mode) {
 		case READ: m = GENERIC_READ; break;
 		case WRITE: m = GENERIC_WRITE; break;
-		case READWRITE: m = GENERIC_ALL; break;
+		case READWRITE: m = GENERIC_READ|GENERIC_WRITE; break;
 		default: throw std::ios_base::failure("Unknown open-mode");
 	}
+	bool exists = fs::exists(path);
 	_size = fs::exists(path) ? fs::file_size(path) : 0;
 
 	if (_size != size) {
@@ -157,9 +160,23 @@ void RandomAccessFile::open(const boost::filesystem::path& path, RandomAccessFil
 
 	std::wstring pathName = path.c_str();
 
-	
-
-	_fd =  ::CreateFile(pathName.c_str(), m, FILE_SHARE_READ , NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL , NULL);
+	//CreateFileW(
+ //   _In_ LPCWSTR lpFileName,
+ //   _In_ DWORD dwDesiredAccess,
+ //   _In_ DWORD dwShareMode,
+ //   _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+ //   _In_ DWORD dwCreationDisposition,
+ //   _In_ DWORD dwFlagsAndAttributes,
+ //   _In_opt_ HANDLE hTemplateFile
+ //   );
+	if (exists)
+	{
+		_fd =  ::CreateFile(pathName.c_str(), m, 0 , NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL , NULL);
+	}
+	else
+	{
+		_fd =  ::CreateFile(pathName.c_str(), m, 0 , NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL , NULL);
+	}
 	if (_fd == INVALID_HANDLE_VALUE) {
 		DWORD win32Err = ::GetLastError();
 		LPVOID lpMsgBuf;
@@ -236,7 +253,7 @@ __int64 RandomAccessFile::seek(__int64 newPos)
 
 __int64 RandomAccessFile::ByteCount() const
 {
-	return _size;
+	return implData.ByteCount();
 }
 
 uint32_t RandomAccessFile::blocks(size_t blockSize) const
@@ -247,20 +264,14 @@ uint32_t RandomAccessFile::blocks(size_t blockSize) const
 
 void RandomAccessFile::BackUp ( int count) {
 	
-	SetFilePointer(_fd, -count, NULL, FILE_CURRENT);
-	filePointer -= count;
+	implData.BackUp(count);
+	//SetFilePointer(_fd, -count, NULL, FILE_CURRENT);
+	//filePointer -= count;
 }
 
 bool RandomAccessFile::Next(void** src, int* size)
 {
-	DWORD written;
-	filePointer += *size;
-	WriteFile(_fd, src, *size, &written, NULL);
-	if ((size_t)written != *size)
-		throw std::ios_base::failure("Failed to write");
-	filePointer += written;
-	*size = written;
-	return true;
+	return implData.Next(src, size);
 }
 
 size_t RandomAccessFile::writeInt(int val)

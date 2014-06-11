@@ -82,13 +82,13 @@ private:
     bool Close();
     void SetCloseOnDelete(bool value) { close_on_delete_ = value; }
     int GetErrno() { return errno_; }
-	bool AssignHandle(HANDLE _fileH) {file_ = _fileH;}
+	void AssignHandle(HANDLE _fileH) {file_ = _fileH;}
     // implements CopyingOutputStream --------------------------------
     bool Write(const void* buffer, int size);
 
    private:
     // The file descriptor.
-    const HANDLE file_;
+    HANDLE file_;
     bool close_on_delete_;
     bool is_closed_;
 
