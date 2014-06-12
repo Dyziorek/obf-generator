@@ -18,7 +18,6 @@ namespace dispatch {
 	template <typename Indexable, typename ValueType> inline
 	void view_indexable(Indexable const& i, ValueType& listValues, bool& isLeaf)
 	{
-
 		isLeaf = false;
 	};
 }
