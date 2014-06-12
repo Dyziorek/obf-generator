@@ -66,7 +66,7 @@ void RTree::getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>& 
 
 }
 
-void RTree::getTreeNodes(std::function<int(void)> visitData)
+void RTree::getTreeNodes(std::function<void(const box&, bool, bool)> visitData)
 {
 	typedef bgi::detail::rtree::utilities::view<SI> RTV;
 	RTV rtv(spaceTree);
@@ -80,5 +80,8 @@ void RTree::getTreeNodes(std::function<int(void)> visitData)
 
 
 	rtv.apply_visitor(visData);
+
+
+	
 
 }

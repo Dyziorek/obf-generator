@@ -291,7 +291,15 @@ const boost::filesystem::path& RandomAccessFile::path() const
 	return _path;
 }
 
-
+BinaryMapDataWriter::BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(outData)
+{
+		raf = outData;
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndStructure::kVersionFieldNumber, 2, &dataOut);
+		time_t timeDate;
+		time(&timeDate);
+		wfl::WireFormatLite::WriteInt64(obf::OsmAndStructure::kDateCreatedFieldNumber, timeDate, &dataOut);
+		states.push_front(OSMAND_STRUCTURE_INIT);
+}
 
 BinaryMapDataWriter::~BinaryMapDataWriter(void)
 {
@@ -303,6 +311,16 @@ void BinaryMapDataWriter::preserveInt32Size()
 	BinaryFileReference binRef = BinaryFileReference::createSizeReference(local);
 	references.push_front(binRef);
 	wfl::WireFormatLite::WriteFixed32NoTag(0, &dataOut);
+}
+
+int BinaryMapDataWriter::writeInt32Size()
+{
+	__int64 local = getFilePointer();
+	BinaryFileReference ref = references.front();
+	references.pop_front();
+	
+	int length = ref.writeReference(*raf, local);
+	return length;
 }
 
 bool BinaryMapDataWriter::writeStartMapIndex(std::string name)
@@ -415,8 +433,14 @@ std::unique_ptr<BinaryFileReference> BinaryMapDataWriter::startMapTreeElement(in
 		std::unique_ptr<BinaryFileReference> ref;
 		if (containsObjects) {
 			wfl::WireFormatLite::WriteTag(obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber,  wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
-			ref.reset(&BinaryFileReference::createShiftReference(getFilePointer(), fp));
+			ref = std::move(std::unique_ptr<BinaryFileReference>(BinaryFileReference::createShiftReference(getFilePointer(), fp)));
 			wfl::WireFormatLite::WriteFixed32NoTag(0, &dataOut);
 		}
 		return ref;
+	}
+
+void BinaryMapDataWriter::endWriteMapTreeElement(){
+		popState(MAP_TREE);
+		stackBounds.pop_front();
+		writeInt32Size();
 	}

@@ -44,7 +44,10 @@ public:
 
 	__int64 seek(__int64 pointer);
 
-	__int64 getFilePointer() { return filePointer;}
+	__int64 getFilePointer() { 
+		implData.Flush();
+		return ByteCount();
+	}
 	/**
 	 * The number of bytes in the open file
 	 */
@@ -133,8 +136,8 @@ public:
 		return BinaryFileReference(pointerToWrite, pointerToWrite + 4);
 	}
 	
-	static BinaryFileReference createShiftReference(__int64 pointerToWrite, __int64 pointerShiftFrom){
-		return BinaryFileReference(pointerToWrite, pointerShiftFrom);
+	static BinaryFileReference* createShiftReference(__int64 pointerToWrite, __int64 pointerShiftFrom){
+		return new BinaryFileReference(pointerToWrite, pointerShiftFrom);
 	}
 	
 
@@ -185,19 +188,11 @@ private:
     static int MASK_TO_READ;
 	static int ROUTE_SHIFT_COORDINATES;
 public:
-	BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(outData)
-	{
-		raf = outData;
-		wfl::WireFormatLite::WriteUInt32(obf::OsmAndStructure::kVersionFieldNumber, 2, &dataOut);
-		time_t timeDate;
-		time(&timeDate);
-		wfl::WireFormatLite::WriteInt64(obf::OsmAndStructure::kDateCreatedFieldNumber, timeDate, &dataOut);
-		states.push_front(OSMAND_STRUCTURE_INIT);
-	}
+	BinaryMapDataWriter(RandomAccessFile* outData);
 
 	__int64 getFilePointer()
 	{
-		return dataOut.ByteCount();
+		return raf->getFilePointer();
 	}
 
 	bool pushState(int nextState, int prevState)
@@ -205,6 +200,16 @@ public:
 		if (states.front() == prevState)
 		{
 			states.push_front(nextState);
+			return true;
+		}
+		return false;
+	}
+
+	bool popState(int lastState)
+	{
+		if (states.front() == lastState)
+		{
+			states.pop_front();
 			return true;
 		}
 		return false;
@@ -229,8 +234,9 @@ public:
 	void writeMapEncodingRules(boost::ptr_map<std::string, MapRulType>& types);
 	void startWriteMapLevelIndex(int minZoom, int maxZoom, int leftX, int rightX, int topY, int bottomY);
 	std::unique_ptr<BinaryFileReference> startMapTreeElement(int leftX, int rightX, int topY, int bottomY, bool containsObjects, int landCharacteristic);
-
+	void endWriteMapTreeElement();
 	void preserveInt32Size();
+	int writeInt32Size();
 
 	~BinaryMapDataWriter(void);
 
