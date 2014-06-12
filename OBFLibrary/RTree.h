@@ -15,12 +15,18 @@ namespace utilities {
 
 namespace dispatch {
 	
-	template <typename Indexable, typename ValueType> inline
-	void view_indexable(Indexable const& i, ValueType& listValues, bool& isLeaf)
+	template <typename Indexable, typename Valuable, typename Parametrable, typename Boxable, typename Allocable, typename TagName > inline
+	void check_leaf(Indexable const& i, rtree::dynamic_node<typename Valuable, typename Parametrable, typename Boxable, typename Allocable, typename TagName>& listValues, bool& isLeaf)
 	{
-
-		isLeaf = false;
+		typedef typename rtree::dynamic_leaf<Valuable, Parametrable, Boxable, Allocable, TagName> leafNode;
+		leafNode* nodework = dynamic_cast<leafNode*>(&listValues);
+		if (nodework != nullptr)
+		{
+			isLeaf = true;
+		}
 	};
+
+
 }
 template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
 struct leaf_node_view : public rtree::visitor<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag, true>::type
@@ -29,52 +35,30 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
     inline leaf_node_view(Translator const& t,
-					std::function<int (void)> visitData,
-                   size_t level_first = 0,
-                   size_t level_last = (std::numeric_limits<size_t>::max)() )
+					std::function<void(const Box&, bool, bool)> visitData)
         : tr(t)
-        , level_f(level_first)
-        , level_l(level_last)
-        , level(0)
 		, visitorData (visitData)
+		, isLeafNode(false)
     {}
 
-    inline void operator()(internal_node const& n)
+    inline void operator()(internal_node const& parent)
     {
         typedef typename rtree::elements_type<internal_node>::type elements_type;
-        elements_type const& elements = rtree::elements(n);
+        elements_type const& elements = rtree::elements(parent);
 
 
-        if ( level_f <= level )
+        for (typename elements_type::const_iterator it = elements.begin();
+            it != elements.end(); ++it)
         {
-			bool isLeaf = false;
-
-            for (typename elements_type::const_iterator it = elements.begin();
-                it != elements.end(); ++it)
-            {
-				detail::utilities::dispatch::view_indexable(it->first, it->second, isLeaf);
-                //detail::utilities::gl_draw_indexable(it->first, level_rel);
-				if (isLeaf)
-				{
-					visitorData();
-				}
-            }
+			detail::utilities::dispatch::check_leaf(it->first, *it->second, isLeafNode);
         }
-        
-        size_t level_backup = level;
-        ++level;
-
-        if ( level < level_l )
+		visitorData(elements.begin()->first, false, isLeafNode);
+        for (typename elements_type::const_iterator it = elements.begin();
+            it != elements.end(); ++it)
         {
-            for (typename elements_type::const_iterator it = elements.begin();
-                it != elements.end(); ++it)
-            {
 				
-                rtree::apply_visitor(*this, *it->second);
-            }
+            rtree::apply_visitor(*this, *it->second);
         }
-
-        level = level_backup;
     }
 
     inline void operator()(leaf const& n)
@@ -82,18 +66,12 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
         typedef typename rtree::elements_type<leaf>::type elements_type;
         elements_type const& elements = rtree::elements(n);
 
-        if ( level_f <= level )
+        for (typename elements_type::const_iterator it = elements.begin();
+            it != elements.end(); ++it)
         {
-            size_t level_rel = level - level_f;
-
-            //glColor3f(0.25f, 0.25f, 0.25f);
-
-            for (typename elements_type::const_iterator it = elements.begin();
-                it != elements.end(); ++it)
-            {
-				visitorData();
-                //detail::utilities::gl_draw_indexable(tr(*it));
-            }
+			
+			visitorData(tr(*it),true, true);
+            //detail::utilities::gl_draw_indexable(tr(*it));
         }
     }
 
@@ -103,7 +81,8 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
     typename coordinate_type<Box>::type z_mul;
 
     size_t level;
-	std::function<int (void)> visitorData;
+	bool isLeafNode;
+	std::function<void(const Box&, bool, bool)> visitorData;
 };
 
 } } } } } 
@@ -160,7 +139,7 @@ public:
 	void getTreeData(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, std::tuple<double, double, double, double>& bounds);
 	void getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, box& bounds, std::tuple<double, double, double, double>& newbounds);
 	
-	void getTreeNodes(std::function<int(void)> visitData);
+	void getTreeNodes(std::function<void(const box&, bool, bool)> visitData);
 
 };
 

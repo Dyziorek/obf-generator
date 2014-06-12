@@ -1071,29 +1071,47 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 
 }
 
-void OBFMapDB::writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
+void OBFMapDB::callNodeBox(const RTree::box& boxParam, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
+{
+	std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(boxParam.min_corner().get<0>(), boxParam.max_corner().get<0>(), boxParam.min_corner().get<1>(), boxParam.max_corner().get<1>(), isLeaf, 0);
+	if (ref) {
+		const RTree::box* intPtr = &boxParam;
+		__int64 boxVal = (__int64)intPtr;
+		std::unique_ptr<BinaryFileReference>& boxRef = bounds[boxVal];
+		ref.swap(boxRef);
+	}
+}
+
+void OBFMapDB::writeBinaryMapTree(RTree& treeMap, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
 {
 
 		int countLeafs = 0;
-		parent.getTreeNodes( [&]() -> int
+
+
+		treeMap.getTreeNodes( [this,&writer, &bounds](const RTree::box& boxParam, bool fromLeaf, bool isLeaf)
 		{
-			return countLeafs++;
+			if (!fromLeaf)
+			{
+				callNodeBox(boxParam, isLeaf, writer, bounds);
+			}
 		});
-		/*boolean containsLeaf = false;
-		for (int i = 0; i < parent.getTotalElements(); i++) {
-			if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
-				containsLeaf = true;
-			}
-		}
-		std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), containsLeaf, 0);
-		if (ref) {
-			bounds[parent.getNodeIndex()] = ref;
-		}
-		for (int i = 0; i < parent.getTotalElements(); i++) {
-			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
-				rtree.Node chNode = r.getReadNode(e[i].getPtr());
-				writeBinaryMapTree(chNode, e[i].getRect(), r, writer, bounds);
-			}
-		}
-		writer.endWriteMapTreeElement();*/
+
+		writer.endWriteMapTreeElement();
+		//bool containsLeaf = countLeafs;
+		///*for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
+		//		containsLeaf = true;
+		//	}
+		//}*/
+		//std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), containsLeaf, 0);
+		//if (ref) {
+		//	bounds[treeMap.getNodeIndex()] = ref;
+		//}
+		//for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+		//		rtree.Node chNode = r.getReadNode(e[i].getPtr());
+		//		writeBinaryMapTree(chNode, e[i].getRect(), r, writer, bounds);
+		//	}
+		//}
+		
 	}
