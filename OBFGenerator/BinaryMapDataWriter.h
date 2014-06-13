@@ -6,7 +6,7 @@ namespace gio = google::protobuf::io;
 namespace obf = OsmAnd::OBF;
 namespace wfl = google::protobuf::internal;
 
-
+typedef unsigned char uint8;
 
 class RandomAccessFile : boost::noncopyable, public gio::ZeroCopyOutputStream {
 private:
@@ -45,8 +45,7 @@ public:
 	__int64 seek(__int64 pointer);
 
 	__int64 getFilePointer() { 
-		implData.Flush();
-		return ByteCount();
+		return filePointer;
 	}
 	/**
 	 * The number of bytes in the open file
@@ -68,18 +67,22 @@ public:
 
 	size_t writeInt(int val);
 
+	void SetCodedOutStream(gio::CodedOutputStream* streamWork)
+	{  codeWork = streamWork; }
+
 	/**
 	 * Return the path used to open the file
 	 */
 	const boost::filesystem::path& path() const;
 
 	gio::CopyingOutputStreamAdaptor implData;
-
+	gio::CodedOutputStream* codeWork;
+	uint8* _currentBuffer;
 
 private:
 	class  CopyingFileOutputStream : public gio::CopyingOutputStream {
    public:
-    CopyingFileOutputStream();
+	   CopyingFileOutputStream();
     ~CopyingFileOutputStream();
 
     bool Close();
@@ -88,13 +91,13 @@ private:
 	void AssignHandle(HANDLE _fileH) {file_ = _fileH;}
     // implements CopyingOutputStream --------------------------------
     bool Write(const void* buffer, int size);
-
+	void SetParent(RandomAccessFile* extObj) {parentObj = extObj;}
    private:
     // The file descriptor.
     HANDLE file_;
     bool close_on_delete_;
     bool is_closed_;
-
+	RandomAccessFile* parentObj;
     // The errno of the I/O error, if one has occurred.  Otherwise, zero.
     int errno_;
 
@@ -122,15 +125,40 @@ public:
 		return pointerToCalculateShiftFrom;
 	}
 	
+	__int64 getWritePointer()
+	{
+		return pointerToWrite;
+	}
 	int writeReference(RandomAccessFile& raf, __int64 pointerToCalculateShifTo)  {
 		this->pointerToCalculateShiftTo = pointerToCalculateShifTo;
 		__int64 currentPosition = raf.getFilePointer();
-		raf.seek(pointerToWrite);
-		int val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
-		raf.writeInt(val);
-		raf.seek(currentPosition);
+		int val = -1;
+		if (currentPosition < pointerToWrite)
+		{
+			// cannot seek back to file, still in the buffer before write
+			uint8* beginBuffer = raf._currentBuffer;
+			if (raf.ByteCount() > pointerToWrite)
+			{
+				// it should be that if not this is error
+				val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+				memcpy((void*)(beginBuffer + (pointerToWrite-currentPosition)), &val, sizeof(val));
+			}
+			else
+			{
+				return -1;
+			}
+		}
+		else
+		{
+			// it is in the written part
+			raf.seek(pointerToWrite);
+			val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+			raf.writeInt(val);
+			raf.seek(currentPosition);
+		}
 		return val;
 	}
+
 	
 	static BinaryFileReference createSizeReference(__int64 pointerToWrite){
 		return BinaryFileReference(pointerToWrite, pointerToWrite + 4);
@@ -192,7 +220,7 @@ public:
 
 	__int64 getFilePointer()
 	{
-		return raf->getFilePointer();
+		return dataOut.ByteCount();
 	}
 
 	bool pushState(int nextState, int prevState)
@@ -229,7 +257,13 @@ public:
 		}
 		throw std::bad_exception("Not allowed states");
 	}
-
+	static double orthogonalDistance(int x, int y, int x1, int y1, int x2, int y2) {
+		long A = (x - x1);
+		long B = (y - y1);
+		long C = (x2 - x1);
+		long D = (y2 - y1);
+		return abs(A * D - C * B) / sqrt(C * C + D * D);
+	}
 	bool writeStartMapIndex(std::string name);
 	void writeMapEncodingRules(boost::ptr_map<std::string, MapRulType>& types);
 	void startWriteMapLevelIndex(int minZoom, int maxZoom, int leftX, int rightX, int topY, int bottomY);
@@ -237,7 +271,12 @@ public:
 	void endWriteMapTreeElement();
 	void preserveInt32Size();
 	int writeInt32Size();
+	void writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32);
 
+	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
+	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::map<std::string, int> stringTable, obf::MapDataBlock* dataBlock,
+			bool allowCoordinateSimplification);
 	~BinaryMapDataWriter(void);
 
 	boost::container::slist<BinaryFileReference> references;
@@ -246,5 +285,6 @@ public:
 
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
+	std::vector<uint8> mapDataBuf;
 };
 

@@ -1094,7 +1094,7 @@ void OBFMapDB::writeBinaryMapTree(RTree& treeMap, RTree::box& re, BinaryMapDataW
 			{
 				callNodeBox(boxParam, isLeaf, writer, bounds);
 			}
-		});
+		}, nullptr);
 
 		writer.endWriteMapTreeElement();
 		//bool containsLeaf = countLeafs;
@@ -1114,4 +1114,143 @@ void OBFMapDB::writeBinaryMapTree(RTree& treeMap, RTree::box& re, BinaryMapDataW
 		//	}
 		//}
 		
+	}
+
+
+void OBFMapDB::callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,
+						sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level)
+{
+		obf::MapDataBlock* dataBlock = nullptr;
+		const RTree::box* intPtr = &boxParam;
+		__int64 boxVal = (__int64)intPtr;
+		BinaryFileReference* ref;
+		if (bounds.find(boxVal) != bounds.end())
+		{
+			ref = bounds[boxVal].get();
+		}
+		
+		__int64 baseId = 0;
+		//for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
+				//long id = e[i].getPtr();
+				sqlite3_bind_int64(selectData, 1, valData.get<1>());
+				// selectData = mapConnection.prepareStatement("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?");
+				int dbResult = sqlite3_step(selectData); //ResultSet rs = selectData.executeQuery();
+				if (dbResult == SQLITE_ROW) /*rs.next()*/ {
+					__int64 cid = convertGeneratedIdToObfWrite(valData.get<1>());
+					if (dataBlock == nullptr) {
+						baseId = cid;
+						dataBlock = writer.createWriteMapDataBlock(baseId);
+						tempStringTable.clear();
+					}
+					tempNames.clear();
+					std::string name((const char*)(sqlite3_column_text(selectData, 6)));
+					decodeNames(name, tempNames);
+					const void* plData = sqlite3_column_blob(selectData, 4);
+					int bloblSize = sqlite3_column_bytes(selectData, 4);
+					std::vector<int> typeUse(bloblSize / 2);
+					for (int j = 0; j < bloblSize; j += 2) {
+						int ids = parseSmallIntFromBytes(plData, j);
+						typeUse[j / 2] = renderEncoder.getTypeByInternalId(ids).getTargetId();
+					}
+					plData = sqlite3_column_blob(selectData, 5);
+					bloblSize = sqlite3_column_bytes(selectData, 5);
+					std::vector<int> addtypeUse;
+					if (bloblSize != 0) {
+						addtypeUse.resize(bloblSize / 2);
+						for (int j = 0; j < bloblSize; j += 2) {
+							int ids = parseSmallIntFromBytes(plData, j);
+							addtypeUse[j / 2] = renderEncoder.getTypeByInternalId(ids).getTargetId();
+						}
+					}
+					
+
+					
+					obf::MapData mapData = writer.writeMapData(cid - baseId, parentBounds.getMinX(), parentBounds.getMinY(), selectData
+							typeUse, addtypeUse, tempNames, tempStringTable, dataBlock, level.getMaxZoom() > 15);
+					if(mapData != null) {
+						dataBlock->mapData
+					}
+				} else {
+					//logMapDataWarn.error("Something goes wrong with id = " + id); //$NON-NLS-1$
+				}
+		//	}
+		//}
+		if (dataBlock != null) {
+			writer.writeMapDataBlock(dataBlock, tempStringTable, ref);
+		}
+		for (int i = 0; i < parent.getTotalElements(); i++) {
+			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+				long ptr = e[i].getPtr();
+				rtree.Node ns = r.getReadNode(ptr);
+				writeBinaryMapBlock(ns, e[i].getRect(), r, writer, selectData, bounds, tempStringTable, tempNames,level);
+			}
+		}
+}
+
+void OBFMapDB::writeBinaryMapBlock(RTree& treeMap, RTree::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
+			boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level)
+{
+		
+	treeMap.getTreeNodes( nullptr, [this,&writer, &bounds, &selectData, &tempStringTable, &tempNames, &level](const RTree::box& boxParam, const RTree::value& valData, bool fromLeaf, bool isLeaf)
+		{
+			callNodeBoxBlock(boxParam, valData, fromLeaf, isLeaf, writer, bounds, selectData, tempStringTable, tempNames, level);
+		});
+
+		//MapDataBlock.Builder dataBlock = null;
+		//BinaryFileReference ref = bounds.get(parent.getNodeIndex());
+		//long baseId = 0;
+		//for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
+		//		long id = e[i].getPtr();
+		//		selectData.setLong(1, id);
+		//		// selectData = mapConnection.prepareStatement("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?");
+		//		ResultSet rs = selectData.executeQuery();
+		//		if (rs.next()) {
+		//			long cid = convertGeneratedIdToObfWrite(id);
+		//			if (dataBlock == null) {
+		//				baseId = cid;
+		//				dataBlock = writer.createWriteMapDataBlock(baseId);
+		//				tempStringTable.clear();
+
+		//			}
+		//			tempNames.clear();
+		//			decodeNames(rs.getString(6), tempNames);
+		//			byte[] types = rs.getBytes(4);
+		//			int[] typeUse = new int[types.length / 2];
+		//			for (int j = 0; j < types.length; j += 2) {
+		//				int ids = Algorithms.parseSmallIntFromBytes(types, j);
+		//				typeUse[j / 2] = renderingTypes.getTypeByInternalId(ids).getTargetId();
+		//			}
+		//			byte[] addTypes = rs.getBytes(5);
+		//			int[] addtypeUse = null ;
+		//			if (addTypes != null) {
+		//				addtypeUse = new int[addTypes.length / 2];
+		//				for (int j = 0; j < addTypes.length; j += 2) {
+		//					int ids = Algorithms.parseSmallIntFromBytes(addTypes, j);
+		//					addtypeUse[j / 2] = renderingTypes.getTypeByInternalId(ids).getTargetId();
+		//				}
+		//			}
+		//			
+		//			
+		//			MapData mapData = writer.writeMapData(cid - baseId, parentBounds.getMinX(), parentBounds.getMinY(), rs.getBoolean(1), rs.getBytes(2), rs.getBytes(3),
+		//					typeUse, addtypeUse, tempNames, tempStringTable, dataBlock, level.getMaxZoom() > 15);
+		//			if(mapData != null) {
+		//				dataBlock.addDataObjects(mapData);
+		//			}
+		//		} else {
+		//			logMapDataWarn.error("Something goes wrong with id = " + id); //$NON-NLS-1$
+		//		}
+		//	}
+		//}
+		//if (dataBlock != null) {
+		//	writer.writeMapDataBlock(dataBlock, tempStringTable, ref);
+		//}
+		//for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+		//		long ptr = e[i].getPtr();
+		//		rtree.Node ns = r.getReadNode(ptr);
+		//		writeBinaryMapBlock(ns, e[i].getRect(), r, writer, selectData, bounds, tempStringTable, tempNames,level);
+		//	}
+		//}
 	}

@@ -35,9 +35,11 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
     inline leaf_node_view(Translator const& t,
-					std::function<void(const Box&, bool, bool)> visitData)
+					std::function<void(const Box&, bool, bool)> visitNodeData, 
+					std::function<void(const Box&, const Value&, bool, bool)> visitNodeLeafData )
         : tr(t)
-		, visitorData (visitData)
+		, visitorNodeData (visitNodeData)
+		, visitorLeafData (visitNodeLeafData)
 		, isLeafNode(false)
     {}
 
@@ -52,7 +54,11 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
         {
 			detail::utilities::dispatch::check_leaf(it->first, *it->second, isLeafNode);
         }
-		visitorData(elements.begin()->first, false, isLeafNode);
+		if (visitorNodeData != nullptr)
+		{
+			visitorNodeData(elements.begin()->first, false, isLeafNode);
+		}
+		
         for (typename elements_type::const_iterator it = elements.begin();
             it != elements.end(); ++it)
         {
@@ -69,8 +75,14 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
         for (typename elements_type::const_iterator it = elements.begin();
             it != elements.end(); ++it)
         {
-			
-			visitorData(tr(*it),true, true);
+			if (visitorNodeData != nullptr)
+			{
+				visitorNodeData(tr(*it), true, true);
+			}
+			if (visitorLeafData != nullptr)
+			{
+				visitorLeafData(tr(*it), *it ,true, true);
+			}
             //detail::utilities::gl_draw_indexable(tr(*it));
         }
     }
@@ -82,7 +94,8 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
 
     size_t level;
 	bool isLeafNode;
-	std::function<void(const Box&, bool, bool)> visitorData;
+	std::function<void(const Box&, bool, bool)> visitorNodeData;
+	std::function<void(const Box&, const Value&, bool, bool)> visitorLeafData;
 };
 
 } } } } } 
@@ -93,7 +106,7 @@ public:
 	typedef bg::model::point<int, 2, bg::cs::cartesian> point;
     typedef bg::model::box<point> box;
     typedef boost::tuple<box, __int64, std::vector<short>> value;
-	typedef bgi::rtree<value, bgi::rstar<16>> SI;
+	typedef bgi::rtree<value, bgi::rstar<32>> SI;
 
 	std::list<boost::tuple<box, __int64, std::vector<short>>> initStore;
 	
@@ -139,7 +152,7 @@ public:
 	void getTreeData(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, std::tuple<double, double, double, double>& bounds);
 	void getTreeDataBox(std::vector<std::pair<__int64, std::vector<short>>>&vecRet, box& bounds, std::tuple<double, double, double, double>& newbounds);
 	
-	void getTreeNodes(std::function<void(const box&, bool, bool)> visitData);
+	void getTreeNodes(std::function<void(const box&, bool, bool)> visitNodeData, std::function<void(const box&, const value&, bool, bool)> visitData);
 
 };
 
