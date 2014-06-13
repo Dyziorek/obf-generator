@@ -474,6 +474,9 @@ public:
 	MapRulType* getRelationalTagValue(std::string tag, std::string val);
 	MapRulType* getMapRuleType(std::string tag, std::string val);
 	MapRulType* getRuleType(std::string tag, std::string val, bool poi);
+	MapRulType  getTypeByInternalId(int id); {
+		return OBFRenderingTypes::rules[id];
+	}
 	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
 	static std::list<boost::unordered_map<std::string, std::string>> splitTagsIntoDifferentObjects(const boost::unordered_map<std::string, std::string>& tags);
 	boost::ptr_map<std::string, MapRulType>& getRuleTypes()

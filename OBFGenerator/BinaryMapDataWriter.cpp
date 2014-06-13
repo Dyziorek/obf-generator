@@ -9,8 +9,8 @@
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "BinaryMapDataWriter.h"
+#include "ArchiveIO.h"
 
-typedef unsigned char uint8;
 
 int BinaryMapDataWriter::OSMAND_STRUCTURE_INIT = 1;
 int BinaryMapDataWriter:: MAP_INDEX_INIT = 2;
@@ -49,18 +49,23 @@ namespace bsys = boost::system;
 namespace fs = boost::filesystem;
 
 
+
+
 RandomAccessFile::RandomAccessFile() :
-	_path(""), _size(0), implData(nullptr)
+	_path(""), _size(0), implData(nullptr), filePointer(0)
 {
 	_fd = INVALID_HANDLE_VALUE;
+	codeWork = nullptr;
 }
 
 RandomAccessFile::RandomAccessFile(const boost::filesystem::path& path, RandomAccessFile::Mode mode, uint64_t size) :
-	_path(""), _size(0), implData(&implCopy)
+	_path(""), _size(0), implData(&implCopy), filePointer(0)
 {
+	codeWork = nullptr;
 	_fd = INVALID_HANDLE_VALUE;
 	open(path, mode, size);
 	implCopy.AssignHandle(_fd);
+	implCopy.SetParent(this);
 }
 
 RandomAccessFile::~RandomAccessFile()
@@ -72,7 +77,8 @@ RandomAccessFile::~RandomAccessFile()
 RandomAccessFile::CopyingFileOutputStream::CopyingFileOutputStream()
   : close_on_delete_(false),
     is_closed_(false),
-    errno_(0) {
+	errno_(0)
+{
 }
 
 RandomAccessFile::CopyingFileOutputStream::~CopyingFileOutputStream() {
@@ -104,6 +110,8 @@ bool RandomAccessFile::CopyingFileOutputStream::Write(
   GOOGLE_CHECK(!is_closed_);
   int total_written = 0;
 
+  
+
   const uint8* buffer_base = reinterpret_cast<const uint8*>(buffer);
 
   while (total_written < size) {
@@ -131,7 +139,7 @@ bool RandomAccessFile::CopyingFileOutputStream::Write(
     }
     total_written += bytes;
   }
-
+  parentObj->filePointer += total_written;
   return true;
 }
 
@@ -271,7 +279,9 @@ void RandomAccessFile::BackUp ( int count) {
 
 bool RandomAccessFile::Next(void** src, int* size)
 {
-	return implData.Next(src, size);
+	bool result = implData.Next(src, size);
+	_currentBuffer = (uint8*)*src;
+	return result;
 }
 
 size_t RandomAccessFile::writeInt(int val)
@@ -294,6 +304,7 @@ const boost::filesystem::path& RandomAccessFile::path() const
 BinaryMapDataWriter::BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(outData)
 {
 		raf = outData;
+		raf->SetCodedOutStream(&dataOut);
 		wfl::WireFormatLite::WriteUInt32(obf::OsmAndStructure::kVersionFieldNumber, 2, &dataOut);
 		time_t timeDate;
 		time(&timeDate);
@@ -318,9 +329,20 @@ int BinaryMapDataWriter::writeInt32Size()
 	__int64 local = getFilePointer();
 	BinaryFileReference ref = references.front();
 	references.pop_front();
-	
+	// write directly to file with shift et al...
 	int length = ref.writeReference(*raf, local);
 	return length;
+}
+
+void BinaryMapDataWriter::writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32)
+{
+	google::protobuf::uint32 result = wfl::WireFormatLite::ZigZagEncode32(toVarint32);
+	while (result & 0x7F != 0)
+	{
+		mapDataBuf.push_back((result & 0x7F) | 0x80);
+		result >>= 7;
+	}
+	mapDataBuf.push_back(result);
 }
 
 bool BinaryMapDataWriter::writeStartMapIndex(std::string name)
@@ -443,4 +465,146 @@ void BinaryMapDataWriter::endWriteMapTreeElement(){
 		popState(MAP_TREE);
 		stackBounds.pop_front();
 		writeInt32Size();
+	}
+
+
+obf::MapDataBlock* BinaryMapDataWriter::createWriteMapDataBlock(__int64 baseID)
+{
+	obf::MapDataBlock block;
+	obf::MapDataBlock* pBlock = block.New();
+	pBlock->set_baseid(baseID);
+	return pBlock;
+}
+
+int skipSomeNodes(const void* coordinates, int len, int i, int x, int y, boolean multi) {
+		int delta;
+		delta = 1;
+		// keep first/latest point untouched
+		// simplified douglas\peuker
+		// just try to skip some points very close to this point
+		while (i + delta < len - 1) {
+			int nx = parseIntFromBytes(coordinates, (i + delta) * 8);
+			int ny = parseIntFromBytes(coordinates, (i + delta) * 8 + 4);
+			int nnx = parseIntFromBytes(coordinates, (i + delta + 1) * 8);
+			int nny = parseIntFromBytes(coordinates, (i + delta + 1) * 8 + 4);
+			if(nnx == 0 && nny == 0) {
+				break;
+			}
+			double dist = BinaryMapDataWriter::orthogonalDistance(nx, ny, x, y, nnx, nny);
+			if (dist > 31 ) {
+				break;
+			}
+			delta++;
+		}
+		return delta;
+	}
+
+obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::map<std::string, int> stringTable, obf::MapDataBlock* dataBlock,
+			bool allowCoordinateSimplification)
+			{
+		obf::MapData data;
+		// calculate size
+		mapDataBuf.clear();
+		int pcalcx = (pleft >> SHIFT_COORDINATES);
+		int pcalcy = (ptop >> SHIFT_COORDINATES);
+		const void* plData = sqlite3_column_blob(selectData, 2);
+		int bloblSize = sqlite3_column_bytes(selectData, 2);
+		int len = bloblSize / 8;
+		int delta = 1;
+		for (int i = 0; i < len; i+= delta) {
+			int x = parseIntFromBytes(plData, i * 8);
+			int y = parseIntFromBytes(plData, i * 8 + 4);
+			int tx = (x >> SHIFT_COORDINATES) - pcalcx;
+			int ty = (y >> SHIFT_COORDINATES) - pcalcy;
+			writeRawVarint32(mapDataBuf, tx);
+			writeRawVarint32(mapDataBuf, ty);
+			pcalcx = pcalcx + tx ;
+			pcalcy = pcalcy + ty ;
+			delta = 1;
+			if (allowCoordinateSimplification) {
+				delta = skipSomeNodes(plData, len, i, x, y, false);
+			}
+		}
+		//COORDINATES_SIZE += CodedOutputStream.computeRawVarint32Size(mapDataBuf.size())
+		//		+ CodedOutputStream.computeTagSize(MapData.COORDINATES_FIELD_NUMBER) + mapDataBuf.size();
+		int area = sqlite3_column_int(selectData, 1);
+		if (area) {
+			data.set_areacoordinates((void*)&mapDataBuf.front(), mapDataBuf.size()));
+		} else {
+			data.set_coordinates((void*)&mapDataBuf.front(), mapDataBuf.size());
+		}
+		 plData = sqlite3_column_blob(selectData, 3);
+		 bloblSize = sqlite3_column_bytes(selectData, 3);
+		if (bloblSize) {
+			mapDataBuf.clear();
+			pcalcx = (pleft >> SHIFT_COORDINATES);
+			pcalcy = (ptop >> SHIFT_COORDINATES);
+			len = bloblSize / 8;
+			for (int i = 0; i < len; i+= delta) {
+				int x = parseIntFromBytes(plData, i * 8);
+				int y = parseIntFromBytes(plData, i * 8 + 4);
+				if (x == 0 && y == 0) {
+					if (mapDataBuf.size() > 0) {
+						data.add_polygoninnercoordinates((void*)&mapDataBuf.front(), mapDataBuf.size());
+						mapDataBuf.clear();
+					}
+					pcalcx = (pleft >> SHIFT_COORDINATES);
+					pcalcy = (ptop >> SHIFT_COORDINATES);
+				} else {
+					int tx = (x >> SHIFT_COORDINATES) - pcalcx;
+					int ty = (y >> SHIFT_COORDINATES) - pcalcy;
+
+					writeRawVarint32(mapDataBuf, tx);
+					writeRawVarint32(mapDataBuf, ty);
+
+					pcalcx = pcalcx + tx ;
+					pcalcy = pcalcy + ty ;
+					delta = 1;
+					if (allowCoordinateSimplification) {
+						delta = skipSomeNodes(plData, len, i, x, y, true);
+					}
+				}
+			}
+		}
+		
+		mapDataBuf.clear();
+		for (int i = 0; i < typeUse.size() ; i++) {
+			writeRawVarint32(mapDataBuf, typeUse[i]);
+		}
+		data.set_types((void*)&mapDataBuf.front(), mapDataBuf.size());
+		//TYPES_SIZE += CodedOutputStream.computeTagSize(OsmandOdb.MapData.TYPES_FIELD_NUMBER)
+		//		+ CodedOutputStream.computeRawVarint32Size(mapDataBuf.size()) + mapDataBuf.size();
+		if (addtypeUse.size() > 0) {
+			mapDataBuf.clear();
+			for (int i = 0; i < addtypeUse.size() ; i++) {
+				writeRawVarint32(mapDataBuf, addtypeUse[i]);
+			}
+			data.set_additionaltypes((void*)&mapDataBuf.front(), mapDataBuf.size());
+			//TYPES_SIZE += CodedOutputStream.computeTagSize(OsmandOdb.MapData.ADDITIONALTYPES_FIELD_NUMBER);
+		}
+
+		mapDataBuf.clear();
+		if (names.size() > 0) {
+			for (std::pair<MapRulType, std::string> s : names) {
+				writeRawVarint32(mapDataBuf, s.first.getTargetId());
+				int ls = 0;
+				if (stringTable.find(s.second) == stringTable.end())
+				{
+					int ls = stringTable.size();
+					stringTable.insert(std::make_pair(s.second, ls));
+				}
+				else
+				{
+					ls = stringTable[s.second];
+				}
+				writeRawVarint32(mapDataBuf, ls);
+			}
+		}
+		//STRING_TABLE_SIZE += mapDataBuf.size();
+		data.set_stringnames((void*)&mapDataBuf.front(), mapDataBuf.size());
+
+		data.set_id(diffId);
+		//ID_SIZE += CodedOutputStream.computeSInt64Size(OsmandOdb.MapData.ID_FIELD_NUMBER, diffId);
+		return data;
 	}
