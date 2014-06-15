@@ -309,7 +309,7 @@ BinaryMapDataWriter::BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(ou
 		time_t timeDate;
 		time(&timeDate);
 		wfl::WireFormatLite::WriteInt64(obf::OsmAndStructure::kDateCreatedFieldNumber, timeDate, &dataOut);
-		states.push_front(OSMAND_STRUCTURE_INIT);
+		pushState(OSMAND_STRUCTURE_INIT);
 }
 
 BinaryMapDataWriter::~BinaryMapDataWriter(void)
@@ -326,11 +326,10 @@ void BinaryMapDataWriter::preserveInt32Size()
 
 int BinaryMapDataWriter::writeInt32Size()
 {
-	__int64 local = getFilePointer();
 	BinaryFileReference ref = references.front();
 	references.pop_front();
 	// write directly to file with shift et al...
-	int length = ref.writeReference(*raf, local);
+	int length = ref.writeReference(*raf, getFilePointer());
 	return length;
 }
 
@@ -435,7 +434,7 @@ std::unique_ptr<BinaryFileReference> BinaryMapDataWriter::startMapTreeElement(in
 		} else {
 			wfl::WireFormatLite::WriteTag(obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
 		}
-		states.push_front(MAP_TREE);
+		pushState(MAP_TREE);
 		preserveInt32Size();
 		long fp = getFilePointer();
 
@@ -476,7 +475,7 @@ obf::MapDataBlock* BinaryMapDataWriter::createWriteMapDataBlock(__int64 baseID)
 	return pBlock;
 }
 
-int skipSomeNodes(const void* coordinates, int len, int i, int x, int y, boolean multi) {
+int BinaryMapDataWriter::skipSomeNodes(const void* coordinates, int len, int i, int x, int y, boolean multi) {
 		int delta;
 		delta = 1;
 		// keep first/latest point untouched
@@ -500,7 +499,7 @@ int skipSomeNodes(const void* coordinates, int len, int i, int x, int y, boolean
 	}
 
 obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
-			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::map<std::string, int> stringTable, obf::MapDataBlock* dataBlock,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, boost::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
 			bool allowCoordinateSimplification)
 			{
 		obf::MapData data;
@@ -508,8 +507,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		mapDataBuf.clear();
 		int pcalcx = (pleft >> SHIFT_COORDINATES);
 		int pcalcy = (ptop >> SHIFT_COORDINATES);
-		const void* plData = sqlite3_column_blob(selectData, 2);
-		int bloblSize = sqlite3_column_bytes(selectData, 2);
+		const void* plData = sqlite3_column_blob(selectData, 1);
+		int bloblSize = sqlite3_column_bytes(selectData, 1);
 		int len = bloblSize / 8;
 		int delta = 1;
 		for (int i = 0; i < len; i+= delta) {
@@ -528,14 +527,14 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		}
 		//COORDINATES_SIZE += CodedOutputStream.computeRawVarint32Size(mapDataBuf.size())
 		//		+ CodedOutputStream.computeTagSize(MapData.COORDINATES_FIELD_NUMBER) + mapDataBuf.size();
-		int area = sqlite3_column_int(selectData, 1);
+		int area = sqlite3_column_int(selectData, 0);
 		if (area) {
-			data.set_areacoordinates((void*)&mapDataBuf.front(), mapDataBuf.size()));
+			data.set_areacoordinates((void*)&mapDataBuf.front(), mapDataBuf.size());
 		} else {
 			data.set_coordinates((void*)&mapDataBuf.front(), mapDataBuf.size());
 		}
-		 plData = sqlite3_column_blob(selectData, 3);
-		 bloblSize = sqlite3_column_bytes(selectData, 3);
+		 plData = sqlite3_column_blob(selectData, 2);
+		 bloblSize = sqlite3_column_bytes(selectData, 2);
 		if (bloblSize) {
 			mapDataBuf.clear();
 			pcalcx = (pleft >> SHIFT_COORDINATES);
@@ -602,9 +601,53 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			}
 		}
 		//STRING_TABLE_SIZE += mapDataBuf.size();
-		data.set_stringnames((void*)&mapDataBuf.front(), mapDataBuf.size());
+		if (names.size() > 0)
+		{
+			data.set_stringnames((void*)&mapDataBuf.front(), mapDataBuf.size());
+		}
 
 		data.set_id(diffId);
 		//ID_SIZE += CodedOutputStream.computeSInt64Size(OsmandOdb.MapData.ID_FIELD_NUMBER, diffId);
 		return data;
+	}
+
+	void BinaryMapDataWriter::writeMapDataBlock(obf::MapDataBlock* builder, boost::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref)
+	 {
+		 int vacP[] = {MAP_ROOT_LEVEL_INIT};
+		checkPeek(vacP, sizeof(vacP)/sizeof(int));
+		obf::StringTable bs;
+		if (!stringTable.empty()) {
+			for (std::pair<std::string,int> s : stringTable) {
+				bs.add_s(s.first);
+			}
+		
+		
+		obf::StringTable* refSt = builder->mutable_stringtable();
+		refSt->MergeFrom(bs);
+		int size = refSt->ByteSize();
+
+		//STRING_TABLE_SIZE += CodedOutputStream.computeTagSize(OsmandOdb.MapDataBlock.STRINGTABLE_FIELD_NUMBER)
+		//		+ CodedOutputStream.computeRawVarint32Size(size) + size;
+		}
+		wfl::WireFormatLite::WriteTag(obf::OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber,  wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE),&dataOut);
+		
+		//codedOutStream.flush();
+		ref.writeReference(*raf, getFilePointer());
+		//MapDataBlock block = builder.build();
+		//MAP_DATA_SIZE += block.getSerializedSize();
+		builder->SerializeToCodedStream(&dataOut);
+		//codedOutStream.writeMessageNoTag(block);
+	}
+
+	void BinaryMapDataWriter::endWriteMapLevelIndex() {
+		popState(MAP_ROOT_LEVEL_INIT);
+		stackBounds.pop_front();
+		int len = writeInt32Size();
+		//log.info("MAP level SIZE : " + len);
+	}
+
+	void BinaryMapDataWriter::endWriteMapIndex()
+	{
+		popState(MAP_INDEX_INIT);
+		writeInt32Size();
 	}

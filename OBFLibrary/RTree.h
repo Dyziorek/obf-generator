@@ -28,11 +28,15 @@ namespace dispatch {
 
 
 }
+
+//class ::RTree;
+
 template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
 struct leaf_node_view : public rtree::visitor<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag, true>::type
 {
     typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
+	
 
     inline leaf_node_view(Translator const& t,
 					std::function<void(const Box&, bool, bool)> visitNodeData, 
@@ -54,17 +58,22 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
         {
 			detail::utilities::dispatch::check_leaf(it->first, *it->second, isLeafNode);
         }
-		if (visitorNodeData != nullptr)
+		for (typename elements_type::const_iterator it = elements.begin();
+            it != elements.end(); ++it)
 		{
-			visitorNodeData(elements.begin()->first, false, isLeafNode);
+			if (visitorNodeData != nullptr)
+			{
+				visitorNodeData(it->first, true, isLeafNode);
+			}
+			this->parentBox = (Box*)&it->first;
+            rtree::apply_visitor(*this, *it->second);
+			if (visitorNodeData != nullptr)
+			{
+				visitorNodeData(it->first, false, isLeafNode);
+			}
+
 		}
 		
-        for (typename elements_type::const_iterator it = elements.begin();
-            it != elements.end(); ++it)
-        {
-				
-            rtree::apply_visitor(*this, *it->second);
-        }
     }
 
     inline void operator()(leaf const& n)
@@ -72,19 +81,25 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
         typedef typename rtree::elements_type<leaf>::type elements_type;
         elements_type const& elements = rtree::elements(n);
 
+    	if (visitorLeafData != nullptr)
+		{
+			visitorLeafData(*parentBox, *elements.begin() ,true, false);
+		}
+
         for (typename elements_type::const_iterator it = elements.begin();
             it != elements.end(); ++it)
         {
-			if (visitorNodeData != nullptr)
+    		if (visitorLeafData != nullptr)
 			{
-				visitorNodeData(tr(*it), true, true);
-			}
-			if (visitorLeafData != nullptr)
-			{
-				visitorLeafData(tr(*it), *it ,true, true);
+				visitorLeafData(*parentBox, *it ,true, true);
 			}
             //detail::utilities::gl_draw_indexable(tr(*it));
         }
+    	if (visitorLeafData != nullptr)
+		{
+			visitorLeafData(*parentBox, *elements.begin() ,false, false);
+		}
+
     }
 
     Translator const& tr;
@@ -94,6 +109,7 @@ struct leaf_node_view : public rtree::visitor<Value, typename Options::parameter
 
     size_t level;
 	bool isLeafNode;
+	Box* parentBox;
 	std::function<void(const Box&, bool, bool)> visitorNodeData;
 	std::function<void(const Box&, const Value&, bool, bool)> visitorLeafData;
 };
@@ -132,7 +148,7 @@ public:
 		if (spaceTree.size() == 0)
 		{
 			//return box(point(0,0), point(0,0));
-			spaceTree = bgi::rtree<value, bgi::rstar<16>>(initStore.begin(), initStore.end());
+			spaceTree = SI(initStore.begin(), initStore.end());
 			initStore.clear();
 		}
 		bgi::rtree<value, bgi::rstar<16>>::bounds_type boundary;

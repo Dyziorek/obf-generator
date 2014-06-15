@@ -217,6 +217,7 @@ private:
 	static int ROUTE_SHIFT_COORDINATES;
 public:
 	BinaryMapDataWriter(RandomAccessFile* outData);
+	~BinaryMapDataWriter(void);
 
 	__int64 getFilePointer()
 	{
@@ -228,9 +229,45 @@ public:
 		if (states.front() == prevState)
 		{
 			states.push_front(nextState);
-			return true;
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"States on stack:";
+		for (int isState : states)
+		{
+			strm << " " << isState;
 		}
+		strm << std::endl << L"pushing state:" << nextState << std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif	
+		return true;
+		}
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Wrong States to push on stack:";
+		for (int isState : states)
+		{
+			strm << " " << isState;
+		}
+		strm << std::endl << L"pushing state:" << nextState << L" expected last state " << prevState << std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif
 		return false;
+	}
+
+	bool pushState(int nextState)
+	{
+		states.push_front(nextState);
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"States on stack:";
+		for (int isState : states)
+		{
+			strm << " " << isState;
+		}
+		strm << std::endl << L"pushing state:" << nextState << std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif
+		return true;
 	}
 
 	bool popState(int lastState)
@@ -238,8 +275,28 @@ public:
 		if (states.front() == lastState)
 		{
 			states.pop_front();
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"States on stack:";
+		for (int isState : states)
+		{
+			strm << " " << isState;
+		}
+		strm << std::endl << L"popping state:" << lastState << std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif
 			return true;
 		}
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Wrong States on stack:";
+		for (int isState : states)
+		{
+			strm << " " << isState;
+		}
+		strm << std::endl << L"popping state:" << lastState << std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif
 		return false;
 	}
 
@@ -264,6 +321,7 @@ public:
 		long D = (y2 - y1);
 		return abs(A * D - C * B) / sqrt(C * C + D * D);
 	}
+	int skipSomeNodes(const void* coordinates, int len, int i, int x, int y, boolean multi);
 	bool writeStartMapIndex(std::string name);
 	void writeMapEncodingRules(boost::ptr_map<std::string, MapRulType>& types);
 	void startWriteMapLevelIndex(int minZoom, int maxZoom, int leftX, int rightX, int topY, int bottomY);
@@ -275,16 +333,22 @@ public:
 
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
-			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::map<std::string, int> stringTable, obf::MapDataBlock* dataBlock,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, boost::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
 			bool allowCoordinateSimplification);
-	~BinaryMapDataWriter(void);
-
-	boost::container::slist<BinaryFileReference> references;
-	boost::container::slist<int> states;
-	boost::container::slist<Bounds> stackBounds;
+	void writeMapDataBlock(obf::MapDataBlock* builder, boost::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref);
+	void endWriteMapLevelIndex();
+	void endWriteMapIndex();
+	
+	
+	
 
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
 	std::vector<uint8> mapDataBuf;
+
+	private:
+	boost::container::slist<int> states;
+	boost::container::slist<Bounds> stackBounds;
+	boost::container::slist<BinaryFileReference> references;
 };
 

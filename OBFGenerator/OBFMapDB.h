@@ -52,20 +52,7 @@ public:
 		return (id >> (MAP_LEVELS_POWER)) + (id & 1);
 	}
 
-	void decodeNames(std::string name, std::map<MapRulType, std::string>& tempNames) {
-		int i = name.find("~");
-		while (i != name.npos) {
-			int n = name.find("~", i + 2);
-			int ch = (short) name.at(i + 1);
-			MapRulType rt = renderEncoder.getTypeByInternalId(ch);
-			if (n == -1) {
-				tempNames.insert(std::make_pair(rt, name.substr(i + 2)));
-			} else {
-				tempNames.insert(std::make_pair(rt, name.substr(i + 2, n)));
-			}
-			i = n;
-		}
-	}
+	void decodeNames(std::string name, std::map<MapRulType, std::string>& tempNames);
 
 	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, __int64 id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
 	void insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
@@ -75,10 +62,10 @@ public:
 	int zoomWaySmothness;
 
 	void writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& ctx);
-	void writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds);
+	void writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
 	void writeBinaryMapBlock(RTree& treeMap, RTree::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
-			boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
-	void callNodeBox(const RTree::box& re,bool hasContent, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds);
-	void callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
+			boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
+	void callNodeBox(const RTree::box& re, bool begin, bool hasContent, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
+	void callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
 };
 
