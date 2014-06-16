@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <google\protobuf\descriptor.h>
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
 #include <google\protobuf\io\zero_copy_stream_impl.h>
@@ -8,6 +9,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "Amenity.h"
+#include "Street.h"
 #include "BinaryMapDataWriter.h"
 #include "ArchiveIO.h"
 
@@ -643,11 +646,315 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		popState(MAP_ROOT_LEVEL_INIT);
 		stackBounds.pop_front();
 		int len = writeInt32Size();
+		#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Map Level writed size:";
+		strm << " " << len << std::endl;
+		OutputDebugString(strm.str().c_str());
+		#endif
 		//log.info("MAP level SIZE : " + len);
 	}
 
 	void BinaryMapDataWriter::endWriteMapIndex()
 	{
 		popState(MAP_INDEX_INIT);
+		int len = writeInt32Size();
+		#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Whole map writed size:";
+		strm << " " << len << std::endl;
+		OutputDebugString(strm.str().c_str());
+		#endif
+	}
+
+	bool BinaryMapDataWriter::startWriteAddressIndex(std::string name)
+	{
+		if (pushState(ADDRESS_INDEX_INIT, OSMAND_STRUCTURE_INIT))
+		{
+			wfl::WireFormatLite::WriteTag(obf::OsmAndStructure::kAddressIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+			preserveInt32Size();
+
+			wfl::WireFormatLite::WriteString(obf::OsmAndAddressIndex::kNameFieldNumber, name, &dataOut);
+			wfl::WireFormatLite::WriteString(obf::OsmAndAddressIndex::kNameEnFieldNumber, name, &dataOut);
+		}
+		return true;
+	}
+	
+	void  BinaryMapDataWriter::endWriteAddressIndex()
+	{
+		popState(ADDRESS_INDEX_INIT);
+		int len = writeInt32Size();
+	#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Address index writed size:";
+		strm << " " << len << std::endl;
+		OutputDebugString(strm.str().c_str());
+	#endif
+	}
+	
+
+	void BinaryMapDataWriter::startCityBlockIndex(int type)  {
+		pushState(CITY_INDEX_INIT, ADDRESS_INDEX_INIT);
+		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex::kCitiesFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		preserveInt32Size();
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndAddressIndex_CitiesIndex::kTypeFieldNumber, type, &dataOut);
+	}
+
+	void BinaryMapDataWriter::endCityBlockIndex()  {
+		popState(CITY_INDEX_INIT);
+		int length = writeInt32Size();
+	#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"City Block index writed size:";
+		strm << " " << length << std::endl;
+		OutputDebugString(strm.str().c_str());
+	#endif
+	}
+
+	boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> BinaryMapDataWriter::writeIndexedTable(int tag, std::list<std::string> indexedTable)  {
+		wfl::WireFormatLite::WriteTag(tag, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
+		preserveInt32Size();
+		boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res;
+		long init = getFilePointer();
+		for (std::string e : indexedTable) {
+			wfl::WireFormatLite::WriteString(obf::IndexedStringTable::kKeyFieldNumber, e, &dataOut);
+			wfl::WireFormatLite::WriteTag(obf::IndexedStringTable::kValFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
+			BinaryFileReference* ref = BinaryFileReference::createShiftReference(getFilePointer(), init);
+			wfl::WireFormatLite::WriteFixed32NoTag(0, &dataOut);
+			res.insert(std::make_pair(e, std::shared_ptr<BinaryFileReference>(ref)));
+		}
 		writeInt32Size();
+		return res;
+	}
+
+	void BinaryMapDataWriter::writeAddressNameIndex(boost::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex){
+		int peeker[] = {ADDRESS_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex::kNameIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
+		preserveInt32Size();
+		 std::list<std::string> namesIndexKeys;
+		 for (auto pairData : namesIndex)
+		 {
+			 namesIndexKeys.push_back(pairData.first);
+		 }
+		
+		 boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res = writeIndexedTable(obf::OsmAndAddressNameIndexData::kTableFieldNumber, namesIndexKeys);
+		for(auto entry : namesIndex) {
+			std::shared_ptr<BinaryFileReference> ref = res[entry.first];
+			wfl::WireFormatLite::WriteTag(obf::OsmAndAddressNameIndexData::kAtomFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
+			long pointer = getFilePointer();
+			if(ref != nullptr) {
+				ref->writeReference(*raf, getFilePointer());
+			}
+			obf::OsmAndAddressNameIndexData builder;
+			// collapse same name ?
+			for(std::shared_ptr<MapObject> om : entry.second){
+				obf::AddressNameIndexDataAtom atom;
+				
+				// this is optional
+//				atom.setName(o.getName());
+//				if(checkEnNameToWrite(o)){
+//					atom.setNameEn(o.getEnName());
+//				}
+				int type = 1;
+				std::shared_ptr<CityObj> oc = std::dynamic_pointer_cast<CityObj>(om);
+				std::shared_ptr<Street> os = std::dynamic_pointer_cast<Street>(om);
+				if (oc ) {
+					if (oc->getType() == "") {
+						type = 2;
+					} else {
+						std::string ct = oc->getType();
+						if (ct != "city" && ct != "town") {
+							type = 3;
+						}
+					}
+				} else if(os) {
+					type = 4;
+				}
+				atom.set_type(type); 
+				atom.add_shifttocityindex((int) (pointer - oc->getFileOffset()));
+				if(os){
+					atom.add_shifttocityindex((int) (pointer - os->getCity().getFileOffset()));
+				}
+				builder.add_atom()->MergeFrom(atom);
+			}
+			builder.SerializeToCodedStream(&dataOut);
+		}
+
+		int len = writeInt32Size();
+	#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"City Adress Name Block index writed size:";
+		strm << " " << len << std::endl;
+		OutputDebugString(strm.str().c_str());
+	#endif
+	}
+
+	bool BinaryMapDataWriter::checkEnNameToWrite(MapObject& obj) {
+		if (obj.getEnName() == "" ) {
+			return false;
+		}
+		return !(obj.getEnName() == obj.getName());
+	}
+
+	BinaryFileReference* BinaryMapDataWriter::writeCityHeader(MapObject& city, int cityType)
+	{
+		int peeker[] = {CITY_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex_CitiesIndex::kCitiesFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
+		
+		long startMessage = getFilePointer();
+		
+		
+		obf::CityIndex cityInd;
+		if(cityType >= 0) {
+			cityInd.set_city_type(cityType);
+		}
+		if(city.getID() != -1) {
+			cityInd.set_id(city.getID());
+		}
+		
+		cityInd.set_name(city.getName());
+		if(checkEnNameToWrite(city)){
+			cityInd.set_name_en(city.getEnName());
+		}
+		int cx = MapUtils::get31TileNumberX(city.getLatLon().second);
+		int cy = MapUtils::get31TileNumberY(city.getLatLon().first);
+		cityInd.set_x(cx);
+		cityInd.set_y(cy);
+		cityInd.set_shifttocityblockindex(0);
+		cityInd.SerializeToCodedStream(&dataOut);
+		return BinaryFileReference::createShiftReference(getFilePointer() - 4, startMessage);
+		
+	}
+	
+ obf::StreetIndex BinaryMapDataWriter::createStreetAndBuildings(Street street, int cx, int cy, std::string postcodeFilter, 
+			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes){
+		int peeker[] = {CITY_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		 obf::StreetIndex streetBuilder;
+		streetBuilder.set_name(street.getName());
+		if (checkEnNameToWrite(street)) {
+			streetBuilder.set_name_en(street.getEnName());
+		}
+		streetBuilder.set_id(street.getID());
+
+		int sx = MapUtils::get31TileNumberX(street.getLatLon().second);
+		int sy = MapUtils::get31TileNumberY(street.getLatLon().first);
+		streetBuilder.set_x((sx - cx) >> 7);
+		streetBuilder.set_y((sy - cy) >> 7);
+
+		street.sortBuildings();
+		for (Building b : street.getBuildings()) {
+			if (postcodeFilter != "" && !  boost::iequals(postcodeFilter,b.postCode)) {
+				continue;
+			}
+			obf::BuildingIndex  bbuilder;
+			int bx = MapUtils::get31TileNumberX(b.getLatLon().second);
+			int by = MapUtils::get31TileNumberY(b.getLatLon().first);
+			bbuilder.set_x((bx - sx) >> 7);
+			bbuilder.set_x((by - sy) >> 7);
+			
+			std::string number2 = b.getName2();
+			if(number2 != ""){
+				LatLon loc = b.getLatLon2();
+				if(loc.first == -1000) {
+					bbuilder.set_x((bx - sx) >> 7);
+					bbuilder.set_y((by - sy) >> 7);
+				} else {
+					int bcx = MapUtils::get31TileNumberX(loc.second);
+					int bcy = MapUtils::get31TileNumberY(loc.first);
+					bbuilder.set_x2((bcx - sx) >> 7);
+					bbuilder.set_y2((bcy - sy) >> 7);
+				}
+				bbuilder.set_name2(number2);
+				if(b.interpType != Building::BuildingInterpolation::NONE) {
+					bbuilder.set_interpolation(b.getInterpValue());
+				} else if(b.interval > 0) {
+					bbuilder.set_interpolation(b.interval);
+				} else {
+					bbuilder.set_interpolation(1);
+				}
+			}
+			bbuilder.set_id(b.getID());
+			bbuilder.set_name(b.getName());
+			if (checkEnNameToWrite(b)) {
+				bbuilder.set_name_en(b.getEnName());
+			}
+			if (postcodeFilter == "" && b.postCode != "") {
+				bbuilder.set_postcode(b.postCode);
+			}
+			streetBuilder.add_buildings()->MergeFrom(bbuilder);
+		}
+
+		if(!wayNodes.empty()) {
+			boost::unordered_set<Street> checkedStreets ;
+			for (EntityNode intersection : wayNodes[street]) {
+				for (Street streetJ : mapNodeToStreet[intersection.id]) {
+					if (checkedStreets.find(streetJ) != checkedStreets.end() || streetJ.getID() == street.getID()) {
+						continue;
+					}
+					checkedStreets.insert(streetJ);
+					obf::StreetIntersection  builder;
+					int ix = MapUtils::get31TileNumberX(intersection.getLatLon().second);
+					int iy = MapUtils::get31TileNumberY(intersection.getLatLon().first);
+					builder.set_intersectedx((ix - sx) >> 7);
+					builder.set_intersectedy((iy - sy) >> 7);
+					builder.set_name(streetJ.getName());
+					if(checkEnNameToWrite(streetJ)){
+						builder.set_name_en(streetJ.getEnName());
+					}
+					streetBuilder.add_intersections()->MergeFrom(builder);
+				}
+			}
+		}
+
+		return streetBuilder;
+	}
+
+
+	void BinaryMapDataWriter::writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
+			BinaryFileReference ref)  {
+		int peeker[] = {CITY_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		
+		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex_CitiesIndex::kBlocksFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
+		long startMessage = getFilePointer();
+		long startCityBlock = ref.getStartPointer();
+		ref.writeReference(*raf, startMessage);
+		obf::CityBlockIndex cityInd;
+		cityInd.set_shifttocityindex((int) (startMessage - startCityBlock));
+		long currentPointer = startMessage + 4 + wfl::WireFormatLite::WireFormatLite::TagSize(obf::CityBlockIndex::kShiftToCityIndexFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
+		
+		int cx = MapUtils::get31TileNumberX(cityOrPostcode.getLatLon().second);
+		int cy = MapUtils::get31TileNumberY(cityOrPostcode.getLatLon().first);
+		boost::unordered_map<__int64,std::set<Street>> mapNodeToStreet;
+		if (!wayNodes.empty()) {
+			for (std::list<Street>::iterator it = streets.begin() ; it != streets.end(); it++) {
+				for (EntityNode n : wayNodes[*it]) {
+					if (mapNodeToStreet.find(n.id) == mapNodeToStreet.end()) {
+						mapNodeToStreet.insert(std::make_pair(n.id, std::set<Street>()));
+					}
+					mapNodeToStreet[n.id].insert(*it);
+				}
+			}
+		}
+		std::string postcodeFilter = cityOrPostcode.isPostcode() ? cityOrPostcode.getName() : "";
+		for (Street s : streets) {
+			obf::StreetIndex streetInd = createStreetAndBuildings(s, cx, cy, postcodeFilter, mapNodeToStreet, wayNodes);
+			currentPointer += wfl::WireFormatLite::WireFormatLite::TagSize(obf::CityBlockIndex::kStreetsFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
+			if(currentPointer > INT_MAX) {
+				throw new std::bad_exception("File size > 2GB");
+			}
+			s.setFileOffset((int) currentPointer);
+			currentPointer +=  wfl::WireFormatLite::WireFormatLite::MessageSize(streetInd);
+			cityInd.add_streets()->MergeFrom(streetInd);
+			
+		}
+		obf::CityBlockIndex block;
+		int size = wfl::WireFormatLite::WireFormatLite::UInt32Size(wfl::WireFormatLite::WireFormatLite::MessageSize(block));
+		block.SerializeToCodedStream(&dataOut);
+		for (Street s : streets) {
+			s.setFileOffset(s.getFileOffset() + size);
+		}
 	}

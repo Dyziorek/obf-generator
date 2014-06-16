@@ -342,5 +342,5 @@ public:
 	std::string findCityPart(LatLon location, CityObj city);
 	std::string findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
-
+	void writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext);
 };

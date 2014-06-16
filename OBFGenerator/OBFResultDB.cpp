@@ -389,6 +389,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	if (iterationPhase == PHASECOMBINE)
 	{
 		((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
+		this->storeData->commit();
 	}
 	if (iterationPhase == PHASESAVE)
 	{
@@ -398,7 +399,10 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 		BinaryMapDataWriter writter(&rafek);
 
-		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, "Monacos", *this);
+		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, mapName, *this);
+		((OBFAddresStreetDB*)addresIndexer)->writeAddresMapIndex(writter,mapName, *this);
+		//((OBFpoiDB*)poiIndexer)->writePoiMapIndex(writter, mapName, *this);
+		//((OBFrouteDB*)routeIndexer)->writeRouteMapIndex(writter, mapName, *this);
 	}
 	return 0;
 }

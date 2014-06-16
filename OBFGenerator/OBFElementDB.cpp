@@ -6,6 +6,16 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 #include "MultiPoly.h"
+#include <google\protobuf\io\coded_stream.h>
+#include <google\protobuf\io\zero_copy_stream_impl_lite.h>
+#include <google\protobuf\io\zero_copy_stream_impl.h>
+#include <google\protobuf\wire_format_lite.h>
+#include <boost\container\slist.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include "..\..\..\..\core\protos\OBF.pb.h"
+#include "BinaryMapDataWriter.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
 #include "Amenity.h"
@@ -13,6 +23,7 @@
 #include "Street.h"
 #include "DBAStreet.h"
 #include "ArchiveIO.h"
+
 
 OBFpoiDB::OBFpoiDB(void)
 {
@@ -1176,4 +1187,71 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 			}
 		}
 
+}
+
+void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext)
+{
+	writer.startWriteAddressIndex(regionName);
+		//Map<CityType, List<City>> cities = readCities(mapConnection);
+		//PreparedStatement streetstat = mapConnection.prepareStatement(//
+		//		"SELECT A.id, A.name, A.name_en, A.latitude, A.longitude, "+ //$NON-NLS-1$
+		//		"B.id, B.name, B.name_en, B.latitude, B.longitude, B.postcode, A.cityPart, "+ //$NON-NLS-1$
+		//		" B.name2, B.name_en2, B.lat2, B.lon2, B.interval, B.interpolateType, A.cityPart == C.name as MainTown " +
+		//		"FROM street A left JOIN building B ON B.street = A.id JOIN city C ON A.city = C.id " + //$NON-NLS-1$
+		//		"WHERE A.city = ? ORDER BY MainTown DESC, A.name ASC"); //$NON-NLS-1$
+		//PreparedStatement waynodesStat =
+		//	 mapConnection.prepareStatement("SELECT A.id, A.latitude, A.longitude FROM street_node A WHERE A.street = ? "); //$NON-NLS-1$
+
+		//// collect suburbs with is in value
+		//List<City> suburbs = new ArrayList<City>();
+		//List<City> cityTowns = new ArrayList<City>();
+		//List<City> villages = new ArrayList<City>();
+		//for(CityType t : cities.keySet()) {
+		//	if(t == CityType.CITY || t == CityType.TOWN){
+		//		cityTowns.addAll(cities.get(t));
+		//	} else {
+		//		villages.addAll(cities.get(t));
+		//	}
+		//	if(t == CityType.SUBURB){
+		//		for(City c : cities.get(t)){
+		//			if(c.getIsInValue() != null) {
+		//				suburbs.add(c);
+		//			}
+		//		}
+		//	}
+		//}
+
+		//
+		//progress.startTask(Messages.getString("IndexCreator.SERIALIZING_ADRESS"), cityTowns.size() + villages.size() / 100 + 1); //$NON-NLS-1$
+		//
+		//Map<String, List<MapObject>> namesIndex = new TreeMap<String, List<MapObject>>(Collator.getInstance());
+		//Map<String, City> postcodes = new TreeMap<String, City>();
+		//writeCityBlockIndex(writer, CITIES_TYPE,  streetstat, waynodesStat, suburbs, cityTowns, postcodes, namesIndex, progress);
+		//writeCityBlockIndex(writer, VILLAGES_TYPE,  streetstat, waynodesStat, null, villages, postcodes, namesIndex, progress);
+		//
+		//// write postcodes		
+		//List<BinaryFileReference> refs = new ArrayList<BinaryFileReference>();		
+		//writer.startCityBlockIndex(POSTCODES_TYPE);
+		//ArrayList<City> posts = new ArrayList<City>(postcodes.values());
+		//for (City s : posts) {
+		//	refs.add(writer.writeCityHeader(s, -1));
+		//}
+		//for (int i = 0; i < posts.size(); i++) {
+		//	City postCode = posts.get(i);
+		//	BinaryFileReference ref = refs.get(i);
+		//	putNamedMapObject(namesIndex, postCode, ref.getStartPointer());
+		//	writer.writeCityIndex(postCode, new ArrayList<Street>(postCode.getStreets()), null, ref);
+		//}
+		//writer.endCityBlockIndex();
+
+
+		//progress.finishTask();
+
+		//writer.writeAddressNameIndex(namesIndex);
+		//writer.endWriteAddressIndex();
+		//writer.flush();
+		//streetstat.close();
+		//if (waynodesStat != null) {
+		//	waynodesStat.close();
+		//}
 }

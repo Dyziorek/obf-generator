@@ -89,5 +89,7 @@ public:
 	OBFResultDB* routeIndexer;
 	OBFResultDB* addresIndexer;
 	BatchUpdater* storeData;
+
+	std::string mapName;
 };
 

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "MapObject.h"
 #include "Amenity.h"
+#include "Street.h"
+#include "Building.h"
 
 
 
@@ -8,8 +10,6 @@
 MapObject::~MapObject(void)
 {
 }
-
-
 
 
  void MapObject::parseMapObject(MapObject* mo, EntityBase* e) {
@@ -89,4 +89,30 @@ bool CityObj::operator==(const CityObj & x) const
 	CityObj& obj2 = const_cast<CityObj&>(x);
 
 	return obj1.getName() == obj2.getName() && obj1.getID() == obj2.getID();
+}
+
+Street CityObj::registerStreet(Street street)
+{
+	std::string name = street.getName();
+	boost::to_lower(name);
+		if (name != "") {
+			if (streets.find(name) == streets.end()) {
+				streets.insert(std::make_pair(name, street));
+				return street;
+			} else {
+				// try to merge streets
+				Street prev = streets[name];
+				prev.mergeWith(street);
+				return prev;
+			}
+		}
+	return Street();
+}
+
+Street CityObj::unregisterStreet(std::string name)
+{
+	if (streets.find(name) != streets.end())
+	{
+		return streets.erase(streets.find(name))->second;
+	}
 }

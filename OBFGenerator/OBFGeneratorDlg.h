@@ -78,6 +78,7 @@ public:
 	afx_msg LRESULT OnMyMessage(WPARAM wParam, LPARAM lParam);
 	CMFCEditBrowseCtrl m_Browse;
 	CString m_filePath;
+	CString m_fileName;
 	int ParseFile();
 	int PrepareTempDB();
 	CStatic m_progress;

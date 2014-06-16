@@ -26,6 +26,14 @@ public:
 	void setType(std::string Rtype) { type = Rtype;}
 	std::string getType() { return type;}
 
+	int getFileOffset() {
+		return fileOffset;
+	}
+	
+	void setFileOffset(int fileOffset) {
+		this->fileOffset = fileOffset;
+	}
+	
 private:
 	std::string name;
 	std::string enName;
@@ -33,6 +41,7 @@ private:
 	double lat;
 	double lon;
 	std::string type;
+	int fileOffset;
 };
 
 namespace icaseString
@@ -77,6 +86,8 @@ struct iequal_to
 
 }
 
+class Street;
+
 class CityObj :
 	public MapObject
 {
@@ -85,8 +96,14 @@ public:
 	virtual ~CityObj(void);
 	std::size_t operator()(CityObj const& obj) const;
 	bool operator==(const CityObj & x) const;
-	boost::unordered_map<std::string, std::string, icaseString::ihash, icaseString::iequal_to> streets;
+	boost::unordered_map<std::string, Street, icaseString::ihash, icaseString::iequal_to> streets;
+	Street registerStreet(Street street);
+	Street unregisterStreet(std::string);
 	bool isAlwaysVisible;
+	bool isPostcode()
+	{
+		return getType() == "";
+	}
 	double getRadius(){
 		if (getType() == "city")
 			return 10000;

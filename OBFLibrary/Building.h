@@ -6,6 +6,7 @@ class Building :
 public:
 	enum BuildingInterpolation { NONE = 0, ALL = -1, EVEN = -2, ODD = -3, ALPHA = -4};
 	BuildingInterpolation interpType;
+	int getInterpValue();
 	Building(void);
 	~Building(void);
 	void setBuilding(EntityBase* obj);

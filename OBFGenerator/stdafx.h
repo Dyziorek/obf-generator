@@ -84,6 +84,8 @@
 #include "MapObject.h"
 #include "MapUtils.h"
 #include "Amenity.h"
+#include "Street.h"
+#include "Building.h"
 #include "BatchUpdater.h"
 #include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"

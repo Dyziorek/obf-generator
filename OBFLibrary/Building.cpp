@@ -20,3 +20,8 @@ void Building::setBuilding(EntityBase* obj)
 		postCode = obj->getTag(OSMTags::POSTAL_CODE);
 	}
 }
+
+int Building::getInterpValue()
+{
+	return interpType;
+}

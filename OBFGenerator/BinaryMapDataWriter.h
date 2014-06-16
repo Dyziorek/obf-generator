@@ -331,6 +331,7 @@ public:
 	int writeInt32Size();
 	void writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32);
 
+
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
 			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, boost::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
@@ -340,8 +341,19 @@ public:
 	void endWriteMapIndex();
 	
 	
+	bool startWriteAddressIndex(std::string name);
+	void endWriteAddressIndex();
 	
-
+	void startCityBlockIndex(int type);
+	void endCityBlockIndex();
+	void writeAddressNameIndex(boost::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex);
+	bool checkEnNameToWrite(MapObject& obj);
+	boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> writeIndexedTable(int tag, std::list<std::string> indexedTable);
+	BinaryFileReference* writeCityHeader(MapObject& city, int cityType);
+	obf::StreetIndex createStreetAndBuildings(Street street, int cx, int cy, std::string postcodeFilter, 
+			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes);
+	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
+			BinaryFileReference ref);
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
 	std::vector<uint8> mapDataBuf;

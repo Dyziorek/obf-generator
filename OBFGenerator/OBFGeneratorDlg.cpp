@@ -613,6 +613,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton1()
 	if (fileData.m_hFile != CFile::hFileNull)
 	{
 		CString strPath = fileData.GetFilePath();
+		m_fileName = fileData.GetFileName();
 		fileData.Close();
 		m_filePath = strPath;
 		active = true;
@@ -698,7 +699,8 @@ int COBFGeneratorDlg::PrepareTempDB()
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
-
+	USES_CONVERSION;
+	results.mapName = W2A(m_fileName.GetString());
 	results.iterateOverElements(PHASESAVE);
 
 	return 0;
