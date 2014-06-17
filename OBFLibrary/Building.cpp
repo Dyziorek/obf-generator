@@ -5,6 +5,7 @@
 Building::Building(void)
 {
 	interpType = NONE;
+	interval = 0;
 }
 
 

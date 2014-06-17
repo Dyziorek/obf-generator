@@ -268,7 +268,7 @@ void OBFResultDB::imageResult()
 	OBFAddresStreetDB* addresor = (OBFAddresStreetDB*)addresIndexer;
 
 	((OBFMapDB*)mapIndexer)->paintPolys();
-	((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, addresor->cities);
+	//((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, addresor->cities);
 }
 
 int OBFResultDB::iterateOverElements(int iterationPhase)

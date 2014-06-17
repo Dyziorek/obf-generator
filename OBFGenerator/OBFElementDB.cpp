@@ -883,7 +883,7 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 		// only named boundaries are registering
 		if (boundName != "")
 		{
-			boundaries.insert(polyline);
+			//boundaries.insert(polyline);
 		}
 
 		return polyline;
@@ -1147,7 +1147,16 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 							building2.setBuilding(baseItem.get());
 							building2.setName(hname.substr(secondNumber + 1));
 							boost::unordered_set<__int64> ids2OfStreet = getStreetInCity(baseItem->getIsInNames(), street2, "", l, dbContext);
-							ids2OfStreet.erase(idsOfStreet.begin(), idsOfStreet.end());
+							if (ids2OfStreet.size() > 0)
+							{
+								for (__int64 idsParent : idsOfStreet)
+								{
+									if (ids2OfStreet.find(idsParent) != ids2OfStreet.end())
+									{
+										ids2OfStreet.erase(idsParent);
+									}
+								}
+							}
 							
 							if(ids2OfStreet.size()) {
 								streetDAO.writeBuilding(ids2OfStreet, building2);
