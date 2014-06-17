@@ -924,7 +924,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		ref.writeReference(*raf, startMessage);
 		obf::CityBlockIndex cityInd;
 		cityInd.set_shifttocityindex((int) (startMessage - startCityBlock));
-		long currentPointer = startMessage + 4 + wfl::WireFormatLite::WireFormatLite::TagSize(obf::CityBlockIndex::kShiftToCityIndexFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
+		long currentPointer = startMessage + 4 + wfl::WireFormatLite::TagSize(obf::CityBlockIndex::kShiftToCityIndexFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
 		
 		int cx = MapUtils::get31TileNumberX(cityOrPostcode.getLatLon().second);
 		int cy = MapUtils::get31TileNumberY(cityOrPostcode.getLatLon().first);
@@ -942,17 +942,17 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		std::string postcodeFilter = cityOrPostcode.isPostcode() ? cityOrPostcode.getName() : "";
 		for (Street s : streets) {
 			obf::StreetIndex streetInd = createStreetAndBuildings(s, cx, cy, postcodeFilter, mapNodeToStreet, wayNodes);
-			currentPointer += wfl::WireFormatLite::WireFormatLite::TagSize(obf::CityBlockIndex::kStreetsFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
+			currentPointer += wfl::WireFormatLite::TagSize(obf::CityBlockIndex::kStreetsFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
 			if(currentPointer > INT_MAX) {
 				throw new std::bad_exception("File size > 2GB");
 			}
 			s.setFileOffset((int) currentPointer);
-			currentPointer +=  wfl::WireFormatLite::WireFormatLite::MessageSize(streetInd);
+			currentPointer +=  wfl::WireFormatLite::MessageSize(streetInd);
 			cityInd.add_streets()->MergeFrom(streetInd);
 			
 		}
 		obf::CityBlockIndex block;
-		int size = wfl::WireFormatLite::WireFormatLite::UInt32Size(wfl::WireFormatLite::WireFormatLite::MessageSize(block));
+		int size = wfl::WireFormatLite::UInt32Size(wfl::WireFormatLite::MessageSize(block));
 		block.SerializeToCodedStream(&dataOut);
 		for (Street s : streets) {
 			s.setFileOffset(s.getFileOffset() + size);

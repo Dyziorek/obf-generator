@@ -22,7 +22,7 @@ public:
 
 	static void setNameFromOperator(MapObject& mo, EntityBase& e);
 
-	__int64 getID(void) {return id;}
+	__int64 getID(void) const {return id;}
 	void setType(std::string Rtype) { type = Rtype;}
 	std::string getType() { return type;}
 

@@ -39,6 +39,9 @@ public:
 
 	void mergeWith(Street street);
 
+	bool operator<(const Street& op) const {
+		return (getID() < op.getID());
+	}
 };
 
 namespace boost

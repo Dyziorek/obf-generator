@@ -17,5 +17,6 @@ public:
 	std::string getName2() {return name2;}
 	LatLon getLatLon2(){return location2;}
 	int getInterval() { return interval;}
+	bool operator<(Building&  const op) {return true;}
 };
 
