@@ -69,6 +69,15 @@
     <ClInclude Include="OSMTags.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RandomAccessFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryMapDataWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryIndexDataReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -126,6 +135,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ArchiveIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryMapDataWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomAccessFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryIndexDataReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

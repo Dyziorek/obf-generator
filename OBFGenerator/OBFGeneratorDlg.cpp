@@ -126,24 +126,19 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	//dbRes = sqlite3_open("D:\\osmData\\tempLocalRel.db", &dbCtx);
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists node" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table node (id bigint primary key, latitude double, longitude double, tags blob)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	dbRes = sqlite3_exec(dbCtx, "create index IdIndex ON node (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists ways" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table ways (id bigint primary key, wayid bigint, node bigint, ord smallint, tags blob, boundary smallint)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	dbRes = sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	dbRes = sqlite3_exec(dbCtx, "create index IdWSearchIndex ON ways (wayid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists relations" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table relations (id bigint primary key, relid bigint,  member bigint, type smallint, role varchar(1024), ord smallint, tags blob)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	dbRes = sqlite3_exec(dbCtx, "create index IdRIndex ON relations (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	dbRes = sqlite3_exec(dbCtx, "create index IdRelIndex ON relations (relid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 
 	dbRes = sqlite3_prepare_v2(dbCtx, "insert into node values (?1, ?2, ?3, ?4)", strlen("insert into node values (?1, ?2, ?3, ?4)"), &nodeStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbCtx, "insert into ways values (?1, ?2, ?3, ?4, ?5, ?6)", strlen("insert into ways values (?1, ?2, ?3, ?4, ?5, ?6)"), &wayStmt, NULL);
 	dbRes = sqlite3_prepare_v2(dbCtx, "insert into relations values (?1, ?2, ?3, ?4, ?5, ?6, ?7)", strlen("insert into relations values (?1, ?2, ?3, ?4, ?5, ?6, ?7)"), &relStmt, NULL);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
-	dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
+	//dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=WAL", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
-	dbRes = sqlite3_exec(dbCtx, "PRAGMA cache_size=0", NULL, NULL, &errMsg);
+	
 	/*dbRes = sqlite3_exec(dbCtx, "PRAGMA synchronous=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA count_changes=OFF", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbCtx, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errMsg);
@@ -366,7 +361,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 						sqlite3_bind_double(nodeStmt, 3, nlon);
 						sqlite3_bind_blob(nodeStmt, 4, (void*)&ostrm.rdbuf()->str().front(), ostrm.rdbuf()->str().size(), SQLITE_TRANSIENT);
 						SqlCode = sqlite3_step(nodeStmt);
-						SqlCode = sqlite3_clear_bindings(nodeStmt);
+						//SqlCode = sqlite3_clear_bindings(nodeStmt);
 						SqlCode = sqlite3_reset(nodeStmt);
 						NodeElems++;
 						NodeElemTrans++;
@@ -437,7 +432,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 						{
 							//NodeElems = -100;
 						}
-						SqlCode = sqlite3_clear_bindings(nodeStmt);
+						//SqlCode = sqlite3_clear_bindings(nodeStmt);
 						SqlCode = sqlite3_reset(nodeStmt);
 						NodeElems++;
 						NodeElemTrans++;
@@ -508,7 +503,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 							sqlite3_bind_int64( wayStmt, 4, nodeID);
 							sqlite3_bind_int( wayStmt, 6, assocMap.find(std::string("boundary")) != assocMap.end() ? 1:0);
 							sqlite3_step(wayStmt);
-							sqlite3_clear_bindings(wayStmt);
+							//sqlite3_clear_bindings(wayStmt);
 							sqlite3_reset(wayStmt);
 							nodeID++;
 							WayElems++;
@@ -587,7 +582,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 							{
 								//
 							}
-							sqlite3_clear_bindings(relStmt);
+							//sqlite3_clear_bindings(relStmt);
 							sqlite3_reset(relStmt);
 							ord++;
 							RelElemns++;
@@ -644,6 +639,7 @@ int COBFGeneratorDlg::PrepareTempDB()
 	dbRes = sqlite3_exec(dbCtx, "create index IdRIndex ON relations (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create index IdRelIndex ON relations (relid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 
+	dbRes = sqlite3_exec(dbCtx, "analyze", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	
 	CString strMessage;
 	strMessage.Format(L"Iterating over for city");

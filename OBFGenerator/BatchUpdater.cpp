@@ -113,7 +113,7 @@ void BatchUpdater::flush(bool bFlush)
 					}
 				}
 			}
-			SqlCode = sqlite3_clear_bindings(amenityStmt);
+			//SqlCode = sqlite3_clear_bindings(amenityStmt);
 			SqlCode = sqlite3_reset(amenityStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
@@ -150,7 +150,7 @@ void BatchUpdater::flush(bool bFlush)
 					}
 				}
 			}
-			SqlCode = sqlite3_clear_bindings(lowMapStmt);
+			//SqlCode = sqlite3_clear_bindings(lowMapStmt);
 			SqlCode = sqlite3_reset(lowMapStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
@@ -187,7 +187,7 @@ void BatchUpdater::flush(bool bFlush)
 					}
 				}
 			}
-			SqlCode = sqlite3_clear_bindings(binMapStmt);
+			//SqlCode = sqlite3_clear_bindings(binMapStmt);
 			SqlCode = sqlite3_reset(binMapStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
@@ -223,7 +223,7 @@ void BatchUpdater::flush(bool bFlush)
 					}
 				}
 			}
-			SqlCode = sqlite3_clear_bindings(routeStmt);
+			//SqlCode = sqlite3_clear_bindings(routeStmt);
 			SqlCode = sqlite3_reset(routeStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);
@@ -258,7 +258,7 @@ void BatchUpdater::flush(bool bFlush)
 					}
 				}
 			}
-			SqlCode = sqlite3_clear_bindings(routeStmt);
+			//SqlCode = sqlite3_clear_bindings(routeStmt);
 			SqlCode = sqlite3_reset(routeStmt);
 		}
 		sqlite3_exec(dbCtx, "END TRANSACTION", NULL, NULL, &errMsg);

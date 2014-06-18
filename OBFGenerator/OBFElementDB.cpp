@@ -15,6 +15,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "RandomAccessFile.h"
 #include "BinaryMapDataWriter.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
@@ -968,7 +969,7 @@ void OBFAddresStreetDB::storeCities(OBFResultDB& dbContext)
 		{
 			//NodeElems = -100;
 		}
-		SqlCode = sqlite3_clear_bindings(dbContext.cityStmt);
+		//SqlCode = sqlite3_clear_bindings(dbContext.cityStmt);
 		SqlCode = sqlite3_reset(dbContext.cityStmt);
 
 		cityList++;
@@ -1008,7 +1009,7 @@ void OBFAddresStreetDB::storeCity(std::shared_ptr<EntityNode>& cityNode, CityObj
 		{
 			//NodeElems = -100;
 		}
-		SqlCode = sqlite3_clear_bindings(dbContext.cityStmt);
+		//SqlCode = sqlite3_clear_bindings(dbContext.cityStmt);
 		SqlCode = sqlite3_reset(dbContext.cityStmt);
 
 		cityList++;

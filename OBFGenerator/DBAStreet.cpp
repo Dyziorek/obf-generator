@@ -83,7 +83,7 @@ __int64 DBAStreet::insertStreet(std::string name,std::string nameEn,LatLon locat
 		const char* errMsgTxt = sqlite3_errmsg(streetCtx);
 		OutputDebugString(A2W(errMsgTxt));
 	}
-	SqlCode = sqlite3_clear_bindings(addrInsert);
+	//SqlCode = sqlite3_clear_bindings(addrInsert);
 	SqlCode = sqlite3_reset(addrInsert);
 	sqlite3_exec(streetCtx, "END TRANSACTION", NULL, NULL, &errMsg);
 
@@ -141,7 +141,7 @@ void DBAStreet::writeBuilding(boost::unordered_set<long long>& idsOfStreet, Buil
 		}
 		sqlite3_bind_text(bldInsert, 13, interpCode.c_str(), interpCode.size(), SQLITE_TRANSIENT);
 		SqlCode = sqlite3_step(bldInsert);
-		SqlCode = sqlite3_clear_bindings(bldInsert);
+		//SqlCode = sqlite3_clear_bindings(bldInsert);
 		SqlCode = sqlite3_reset(bldInsert);
 	}
 	sqlite3_exec(bldCtx, "END TRANSACTION", NULL, NULL, &errMsg);
@@ -157,7 +157,7 @@ void DBAStreet::removeBuilding(std::shared_ptr<EntityBase> house)
 	sqlite3_exec(bldCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
 	sqlite3_bind_int64(removeStmt, 1, house->id);
 	SqlCode = sqlite3_step(removeStmt);
-	SqlCode = sqlite3_clear_bindings(removeStmt);
+	//SqlCode = sqlite3_clear_bindings(removeStmt);
 	SqlCode = sqlite3_reset(removeStmt);
 	sqlite3_exec(bldCtx, "END TRANSACTION", NULL, NULL, &errMsg);
 }
@@ -176,7 +176,7 @@ bool DBAStreet::findStreetNode(std::shared_ptr<EntityBase> node)
 	{
 		success = true;
 	}
-	SqlCode = sqlite3_clear_bindings(searchStmt);
+	//SqlCode = sqlite3_clear_bindings(searchStmt);
 	SqlCode = sqlite3_reset(searchStmt);
 	sqlite3_exec(bldCtx, "END TRANSACTION", NULL, NULL, &errMsg);
 	return success;
@@ -203,7 +203,7 @@ void DBAStreet::writeStreetWayNodes(boost::unordered_set<long long>& idsOfStreet
 				sqlite3_bind_int64(insertStrNodeStmt, 4, id);
 				sqlite3_bind_int64(insertStrNodeStmt, 5, wayItem->id);
 				SqlCode = sqlite3_step(insertStrNodeStmt);
-				SqlCode = sqlite3_clear_bindings(insertStrNodeStmt);
+				//SqlCode = sqlite3_clear_bindings(insertStrNodeStmt);
 				SqlCode = sqlite3_reset(insertStrNodeStmt);
 			}
 		}

@@ -25,6 +25,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "RandomAccessFile.h"
 #include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"
 #include <boost/archive/binary_oarchive.hpp>
@@ -1107,7 +1108,6 @@ void OBFMapDB::callNodeBox(const RTree::box& boxParam, bool begin, bool isLeaf, 
 	if (begin)
 	{
 		std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(boxParam.min_corner().get<0>(), boxParam.max_corner().get<0>(), boxParam.min_corner().get<1>(), boxParam.max_corner().get<1>(), isLeaf, 0);
-		OutputDebugString(L"Start Map TREE\r\n");
 		if (ref) {
 			const RTree::box* intPtr = &boxParam;
 			__int64 boxVal = (__int64)intPtr;

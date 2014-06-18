@@ -26,6 +26,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "RandomAccessFile.h"
 #include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"
 #include "OBFElementDB.h"
@@ -345,13 +346,25 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASEMAINITERATE)
 	{
+		boost::chrono::steady_clock::time_point timeStep = boost::chrono::steady_clock::now();
 		int numbers = 0;
 		iterateOverElements(NODEELEM, 
-			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
+			[=, &numbers, &timeStep](std::shared_ptr<EntityBase> itm) {  
 				mainIteration(itm);
 				numbers++;
+				boost::chrono::duration<double> timeNow = (boost::chrono::steady_clock::now() - timeStep);
+				if (timeNow.count() > 20)
+				{
+					std::wstringstream strbuf;
+					strbuf << L"20s Counter node elements: ";
+					strbuf << numbers;
+					strbuf << std::endl;
+					std::wstring buffText = strbuf.str();
+					OutputDebugString(buffText.c_str());
+					timeStep = boost::chrono::steady_clock::now();
+				}
 		});
-
+		timeStep = boost::chrono::steady_clock::now();
 		std::wstringstream strbuf;
 		strbuf << L"Counter node elements: ";
 		strbuf << numbers;
@@ -363,7 +376,19 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 			[&](std::shared_ptr<EntityBase> itm) { 
 				mainIteration(itm);
 				numbers++;
+				boost::chrono::duration<double> timeNow = (boost::chrono::steady_clock::now() - timeStep);
+				if (timeNow.count() > 20)
+				{
+					std::wstringstream strbuf;
+					strbuf << L"20s Counter node relations: ";
+					strbuf << numbers;
+					strbuf << std::endl;
+					std::wstring buffText = strbuf.str();
+					OutputDebugString(buffText.c_str());
+					timeStep = boost::chrono::steady_clock::now();
+				}
 		});
+		timeStep = boost::chrono::steady_clock::now();
 		strbuf.str(L"");
 		strbuf.clear();
 		strbuf << L"Counter node relations: ";
@@ -373,9 +398,20 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		OutputDebugString(buffText.c_str());
 		numbers = 0;
 		iterateOverElements(NODEWAY,
-			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
+			[=, &numbers, &timeStep](std::shared_ptr<EntityBase> itm) {  
 			mainIteration(itm);
 			numbers++;
+			boost::chrono::duration<double> timeNow = (boost::chrono::steady_clock::now() - timeStep);
+			if (timeNow.count() > 20)
+			{
+				std::wstringstream strbuf;
+				strbuf << L"20s Counter node ways: ";
+				strbuf << numbers;
+				strbuf << std::endl;
+				std::wstring buffText = strbuf.str();
+				OutputDebugString(buffText.c_str());
+				timeStep = boost::chrono::steady_clock::now();
+			}
 		});
 		strbuf.str(L"");
 		strbuf.clear();
@@ -928,6 +964,7 @@ int OBFResultDB::iterateOverElements(int type, std::function<void (std::shared_p
 		return 0;
 	}
 
+	return -1;
 }
 
 

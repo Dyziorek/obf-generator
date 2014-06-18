@@ -83,6 +83,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\boost_1_55;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -184,9 +185,10 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;BOOST_IOSTREAMS_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\SourceFiles\osmand\core\externals\protobuf\upstream.original\src;D:\SourceFiles\osmand\core\externals\zlib\upstream.patched\zlib-1.2.8</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;..\OBFLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,7 +196,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>D:\SourceFiles\osmand\core\externals\protobuf\upstream.original\vsprojects\Release\libprotobuf.lib;D:\SourceFiles\osmand\core\externals\zlib\upstream.patched\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatRelease\zlibstat.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\boost_1_53_0\stageRel\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\boost_1_55\stage64\lib;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\out\gyp\Release;D:\LocalRepos\OBFGenerator\x64\Release</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <Midl>
@@ -212,7 +214,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.h" />
-    <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BlockReader.h" />
     <ClInclude Include="DBAStreet.h" />
     <ClInclude Include="OBFElementDB.h" />
@@ -229,7 +230,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BinaryMapDataWriter.cpp" />
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

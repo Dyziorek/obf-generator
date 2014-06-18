@@ -48,7 +48,7 @@ template<class T> std::stringstream& writeLongInt(std::stringstream& oa, T data)
 	else if (dataSize < 8)
 	{
 		const char* shortData = (char*)&data;
-		for (int iCol = 0; iCol < dataSize; iCol++)
+		for (size_t iCol = 0; iCol < dataSize; iCol++)
 		{
 			oa.rdbuf()->sputn(&shortData[iCol], 1);
 		}
@@ -57,7 +57,9 @@ template<class T> std::stringstream& writeLongInt(std::stringstream& oa, T data)
 		{
 			oa.rdbuf()->sputn(shortDataZero, 1);
 		}
+		return oa;
 	}
+	return oa;
 }
 
 template<class T> std::stringstream& readSmallInts(std::stringstream& oa, std::vector<T>& data)
