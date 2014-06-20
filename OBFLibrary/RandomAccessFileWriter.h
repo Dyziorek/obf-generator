@@ -5,7 +5,7 @@ namespace wfl = google::protobuf::internal;
 
 typedef unsigned char uint8;
 
-class RandomAccessFile : boost::noncopyable, public gio::ZeroCopyOutputStream {
+class RandomAccessFileWriter : boost::noncopyable, public gio::ZeroCopyOutputStream {
 private:
 	HANDLE _fd;
 	boost::filesystem::path _path;
@@ -18,16 +18,16 @@ public:
 	READWRITE = READ|WRITE,
 	};
 
-	RandomAccessFile();
-	RandomAccessFile(const boost::filesystem::path& path, RandomAccessFile::Mode mode = READ, uint64_t size = 0);
-	~RandomAccessFile();
+	RandomAccessFileWriter();
+	RandomAccessFileWriter(const boost::filesystem::path& path, RandomAccessFileWriter::Mode mode = READ, uint64_t size = 0);
+	~RandomAccessFileWriter();
 
 	/**
 	 * Open the given file. May throw std::ios_base::failure.
 	 *
 	 * non-zero size means open and create file of this size
 	 */
-	void open(const boost::filesystem::path& path, RandomAccessFile::Mode mode = READ, uint64_t size = 0);
+	void open(const boost::filesystem::path& path, RandomAccessFileWriter::Mode mode = READ, uint64_t size = 0);
 
 	/**
 	 * Close the underlying file
@@ -88,13 +88,13 @@ private:
 	void AssignHandle(HANDLE _fileH) {file_ = _fileH;}
     // implements CopyingOutputStream --------------------------------
     bool Write(const void* buffer, int size);
-	void SetParent(RandomAccessFile* extObj) {parentObj = extObj;}
+	void SetParent(RandomAccessFileWriter* extObj) {parentObj = extObj;}
    private:
     // The file descriptor.
     HANDLE file_;
     bool close_on_delete_;
     bool is_closed_;
-	RandomAccessFile* parentObj;
+	RandomAccessFileWriter* parentObj;
     // The errno of the I/O error, if one has occurred.  Otherwise, zero.
     int errno_;
 
@@ -126,7 +126,7 @@ public:
 	{
 		return pointerToWrite;
 	}
-	int writeReference(RandomAccessFile& raf, __int64 pointerToCalculateShifTo)  {
+	int writeReference(RandomAccessFileWriter& raf, __int64 pointerToCalculateShifTo)  {
 		this->pointerToCalculateShiftTo = pointerToCalculateShifTo;
 		__int64 currentPosition = raf.getFilePointer();
 		int val = -1;

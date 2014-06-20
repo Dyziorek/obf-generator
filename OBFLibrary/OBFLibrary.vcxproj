@@ -150,7 +150,8 @@
   <ItemGroup>
     <ClInclude Include="BinaryIndexDataReader.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
-    <ClInclude Include="RandomAccessFile.h" />
+    <ClInclude Include="RandomAccessFileReader.h" />
+    <ClInclude Include="RandomAccessFileWriter.h" />
     <ClInclude Include="Amenity.h" />
     <ClInclude Include="ArchiveIO.h" />
     <ClInclude Include="Building.h" />
@@ -172,7 +173,17 @@
   <ItemGroup>
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
-    <ClCompile Include="RandomAccessFile.cpp" />
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp" />
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp" />
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp" />
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="RandomAccessFileReader.cpp" />
+    <ClCompile Include="RandomAccessFileWriter.cpp" />
     <ClCompile Include="ArchiveIO.cpp" />
     <ClCompile Include="Building.cpp" />
     <ClCompile Include="D:\VisualFiles\tinyxml2-master\tinyxml2.cpp">

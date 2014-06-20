@@ -69,13 +69,16 @@
     <ClInclude Include="OSMTags.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RandomAccessFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="BinaryMapDataWriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BinaryIndexDataReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomAccessFileWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomAccessFileReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -140,10 +143,25 @@
     <ClCompile Include="BinaryMapDataWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RandomAccessFile.cpp">
+    <ClCompile Include="BinaryIndexDataReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BinaryIndexDataReader.cpp">
+    <ClCompile Include="RandomAccessFileWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomAccessFileReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

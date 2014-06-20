@@ -26,7 +26,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
-#include "RandomAccessFile.h"
+#include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"
 #include "OBFElementDB.h"
@@ -431,7 +431,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	{
 		boost::filesystem::path pather("D:\\OsmData\\binarResult.bin");
 		
-		RandomAccessFile rafek(pather, RandomAccessFile::READWRITE);
+		RandomAccessFileWriter rafek(pather, RandomAccessFileWriter::READWRITE);
 
 		BinaryMapDataWriter writter(&rafek);
 
