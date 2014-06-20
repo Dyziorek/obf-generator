@@ -115,15 +115,15 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	FILE* fp = NULL;
 	errno_t err;
 
-	if ((err = fopen_s(&fp, "D:\\osmData\\tempLocalIN.db", "r")) == 0)
+	if ((err = fopen_s(&fp, "C:\\osmData\\tempLocalIN.db", "r")) == 0)
 	{
 		fclose(fp);
-		remove("D:\\osmData\\tempLocalIN.db");
+		remove("C:\\osmData\\tempLocalIN.db");
 	}
 
-	dbRes = sqlite3_open("D:\\osmData\\tempLocalIN.db", &dbCtx);
-	//dbRes = sqlite3_open("D:\\osmData\\tempLocalWay.db", &dbWayCtx);
-	//dbRes = sqlite3_open("D:\\osmData\\tempLocalRel.db", &dbCtx);
+	dbRes = sqlite3_open("C:\\osmData\\tempLocalIN.db", &dbCtx);
+	//dbRes = sqlite3_open("C:\\osmData\\tempLocalWay.db", &dbWayCtx);
+	//dbRes = sqlite3_open("C:\\osmData\\tempLocalRel.db", &dbCtx);
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists node" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table node (id bigint primary key, latitude double, longitude double, tags blob)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists ways" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
@@ -634,16 +634,39 @@ int COBFGeneratorDlg::PrepareTempDB()
 	int dbRes;
 	// first index all after initial insert(s)
 	dbRes = sqlite3_exec(dbCtx, "create index IdIndex ON node (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	CString strMessage = L"Completed indexing nodes \r\n";
+	wchar_t* msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
+	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	strMessage = L"Completed indexing ways 1 pass\r\n";
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
+	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "create index IdWSearchIndex ON ways (wayid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	strMessage = L"Completed indexing ways 2 pass\r\n";
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
+	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "create index IdRIndex ON relations (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
+	strMessage = L"Completed indexing relations 1 pass\r\n";
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
+	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "create index IdRelIndex ON relations (relid)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-
+	strMessage = L"Completed indexing relations 2 pass\r\n";
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	OutputDebugString(msgTxt);
+	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "analyze", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	
-	CString strMessage;
 	strMessage.Format(L"Iterating over for city");
-	wchar_t* msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 
