@@ -98,18 +98,6 @@
     <ClCompile Include="OBFElementDB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>

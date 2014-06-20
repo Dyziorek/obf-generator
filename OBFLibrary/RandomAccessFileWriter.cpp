@@ -8,7 +8,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
-#include "RandomAccessFile.h"
+#include "RandomAccessFileWriter.h"
 #include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
 #include <fcntl.h>
@@ -24,14 +24,14 @@ namespace fs = boost::filesystem;
 
 
 
-RandomAccessFile::RandomAccessFile() :
+RandomAccessFileWriter::RandomAccessFileWriter() :
 	_path(""), _size(0), implData(nullptr), filePointer(0)
 {
 	_fd = INVALID_HANDLE_VALUE;
 	codeWork = nullptr;
 }
 
-RandomAccessFile::RandomAccessFile(const boost::filesystem::path& path, RandomAccessFile::Mode mode, uint64_t size) :
+RandomAccessFileWriter::RandomAccessFileWriter(const boost::filesystem::path& path, RandomAccessFileWriter::Mode mode, uint64_t size) :
 	_path(""), _size(0), implData(&implCopy), filePointer(0)
 {
 	codeWork = nullptr;
@@ -41,20 +41,20 @@ RandomAccessFile::RandomAccessFile(const boost::filesystem::path& path, RandomAc
 	implCopy.SetParent(this);
 }
 
-RandomAccessFile::~RandomAccessFile()
+RandomAccessFileWriter::~RandomAccessFileWriter()
 {
 	implData.Flush();
 	close();
 }
 
-RandomAccessFile::CopyingFileOutputStream::CopyingFileOutputStream()
+RandomAccessFileWriter::CopyingFileOutputStream::CopyingFileOutputStream()
   : close_on_delete_(false),
     is_closed_(false),
 	errno_(0)
 {
 }
 
-RandomAccessFile::CopyingFileOutputStream::~CopyingFileOutputStream() {
+RandomAccessFileWriter::CopyingFileOutputStream::~CopyingFileOutputStream() {
   if (close_on_delete_) {
     if (!Close()) {
 		char errBuff[100];
@@ -63,7 +63,7 @@ RandomAccessFile::CopyingFileOutputStream::~CopyingFileOutputStream() {
   }
 }
 
-bool RandomAccessFile::CopyingFileOutputStream::Close() {
+bool RandomAccessFileWriter::CopyingFileOutputStream::Close() {
   GOOGLE_CHECK(!is_closed_);
 
   is_closed_ = true;
@@ -78,7 +78,7 @@ bool RandomAccessFile::CopyingFileOutputStream::Close() {
   return true;
 }
 
-bool RandomAccessFile::CopyingFileOutputStream::Write(
+bool RandomAccessFileWriter::CopyingFileOutputStream::Write(
     const void* buffer, int size) {
   GOOGLE_CHECK(!is_closed_);
   int total_written = 0;
@@ -117,7 +117,7 @@ bool RandomAccessFile::CopyingFileOutputStream::Write(
 }
 
 
-void RandomAccessFile::open(const boost::filesystem::path& path, RandomAccessFile::Mode mode, uint64_t size)
+void RandomAccessFileWriter::open(const boost::filesystem::path& path, RandomAccessFileWriter::Mode mode, uint64_t size)
 {
 	int m;
 	switch (mode) {
@@ -201,7 +201,7 @@ void RandomAccessFile::open(const boost::filesystem::path& path, RandomAccessFil
 	_size = size;
 }
 
-void RandomAccessFile::close()
+void RandomAccessFileWriter::close()
 {
 	if (is_open()) {
 		::CloseHandle(_fd);
@@ -210,12 +210,12 @@ void RandomAccessFile::close()
 	}
 }
 
-bool RandomAccessFile::is_open() const
+bool RandomAccessFileWriter::is_open() const
 {
 	return _fd != INVALID_HANDLE_VALUE;
 }
 
-__int64 RandomAccessFile::seek(__int64 newPos)
+__int64 RandomAccessFileWriter::seek(__int64 newPos)
 {
 	filePointer = newPos;
 	LARGE_INTEGER newSet;
@@ -232,32 +232,32 @@ __int64 RandomAccessFile::seek(__int64 newPos)
 	return 0;
 }
 
-__int64 RandomAccessFile::ByteCount() const
+__int64 RandomAccessFileWriter::ByteCount() const
 {
 	return implData.ByteCount();
 }
 
-uint32_t RandomAccessFile::blocks(size_t blockSize) const
+uint32_t RandomAccessFileWriter::blocks(size_t blockSize) const
 {
 	// Round up the number of blocks
 	return (ByteCount() + blockSize - 1) / blockSize;
 }
 
-void RandomAccessFile::BackUp ( int count) {
+void RandomAccessFileWriter::BackUp ( int count) {
 	
 	implData.BackUp(count);
 	//SetFilePointer(_fd, -count, NULL, FILE_CURRENT);
 	//filePointer -= count;
 }
 
-bool RandomAccessFile::Next(void** src, int* size)
+bool RandomAccessFileWriter::Next(void** src, int* size)
 {
 	bool result = implData.Next(src, size);
 	_currentBuffer = (uint8*)*src;
 	return result;
 }
 
-size_t RandomAccessFile::writeInt(int val)
+size_t RandomAccessFileWriter::writeInt(int val)
 {
 	DWORD written;
 	WriteFile(_fd, &val, sizeof(val), &written, NULL);
@@ -265,11 +265,11 @@ size_t RandomAccessFile::writeInt(int val)
 	return written;
 }
 
-string RandomAccessFile::describe() {
+string RandomAccessFileWriter::describe() {
 	return _path.string();
 }
 
-const boost::filesystem::path& RandomAccessFile::path() const
+const boost::filesystem::path& RandomAccessFileWriter::path() const
 {
 	return _path;
 }

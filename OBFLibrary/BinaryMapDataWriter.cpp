@@ -11,7 +11,7 @@
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "Amenity.h"
 #include "Street.h"
-#include "RandomAccessFile.h"
+#include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
 #include "ArchiveIO.h"
 
@@ -41,7 +41,7 @@ int BinaryMapDataWriter::MASK_TO_READ = ~((1 << SHIFT_COORDINATES) - 1);
 int BinaryMapDataWriter::ROUTE_SHIFT_COORDINATES = 4;
 
 
-BinaryMapDataWriter::BinaryMapDataWriter(RandomAccessFile* outData) : dataOut(outData)
+BinaryMapDataWriter::BinaryMapDataWriter(RandomAccessFileWriter* outData) : dataOut(outData)
 {
 		raf = outData;
 		raf->SetCodedOutStream(&dataOut);

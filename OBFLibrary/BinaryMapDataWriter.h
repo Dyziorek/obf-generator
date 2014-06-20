@@ -29,7 +29,7 @@ private:
 		int bottom;
 	};
 private:
-	RandomAccessFile* raf;
+	RandomAccessFileWriter* raf;
 
 	static int OSMAND_STRUCTURE_INIT;
 	static int MAP_INDEX_INIT;
@@ -55,7 +55,7 @@ private:
     static int MASK_TO_READ;
 	static int ROUTE_SHIFT_COORDINATES;
 public:
-	BinaryMapDataWriter(RandomAccessFile* outData);
+	BinaryMapDataWriter(RandomAccessFileWriter* outData);
 	~BinaryMapDataWriter(void);
 
 	__int64 getFilePointer()
