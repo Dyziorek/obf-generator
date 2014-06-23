@@ -6,6 +6,7 @@
 
 Street::Street(void)
 {
+	init = false;
 }
 
 
@@ -16,10 +17,12 @@ Street::~Street(void)
 
 	 Street::Street(CityObj city) {
 		this->city = city;
+		init = true;
 	}
 	
 	 void Street::addBuilding(Building building){
 		 buildings.push_back(building);
+		 init = true;
 	}
 	
 	std::list<Street> Street::getIntersectedStreets() {
@@ -28,15 +31,18 @@ Street::~Street(void)
 	
 	 void Street::addIntersectedStreet(Street s){
 		intersectedStreets.push_back(s);
+		init = true;
 	}
 	
 	 void Street::addBuildingCheckById(Building building){
+
 		for(Building b : buildings) {
 			if(b.getID() == building.getID()){
 				return;
 			}
 		}
 		buildings.push_back(building);
+		init = true;
 	}
 	
 	 std::list<Building> Street::getBuildings() {
@@ -54,6 +60,7 @@ Street::~Street(void)
 		} else {
 			((MapObject*)this)->setName(name);
 		}
+		init = true;
 	}
 	
 	std::string Street::getNameWithoutCityPart(bool en) {
@@ -76,6 +83,7 @@ Street::~Street(void)
 
 	void Street::mergeWith(Street street) {
 		buildings.insert(buildings.end(),  street.getBuildings().begin(), street.getBuildings().end());
+		init = true;
 	}
 
 bool Street::operator==(const Street & x) const

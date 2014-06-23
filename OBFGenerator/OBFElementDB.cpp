@@ -912,6 +912,9 @@ void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 	objCity.setId(cityNode->id);
 	MapObject::parseMapObject(&objCity, cityNode.get());
 	//objCity.setLocation(ptrNode->lat, ptrNode->lon);
+	std::string isin = cityNode->getTag("is_in");
+	boost::to_lower(isin);
+	objCity.setIsin(isin);
 
 	if (cityNode->getTag("capital") == "yes")
 	{
@@ -1202,42 +1205,42 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext)
 {
 	writer.startWriteAddressIndex(regionName);
-		//Map<CityType, List<City>> cities = readCities(mapConnection);
-		//PreparedStatement streetstat = mapConnection.prepareStatement(//
-		//		"SELECT A.id, A.name, A.name_en, A.latitude, A.longitude, "+ //$NON-NLS-1$
-		//		"B.id, B.name, B.name_en, B.latitude, B.longitude, B.postcode, A.cityPart, "+ //$NON-NLS-1$
-		//		" B.name2, B.name_en2, B.lat2, B.lon2, B.interval, B.interpolateType, A.cityPart == C.name as MainTown " +
-		//		"FROM street A left JOIN building B ON B.street = A.id JOIN city C ON A.city = C.id " + //$NON-NLS-1$
-		//		"WHERE A.city = ? ORDER BY MainTown DESC, A.name ASC"); //$NON-NLS-1$
-		//PreparedStatement waynodesStat =
-		//	 mapConnection.prepareStatement("SELECT A.id, A.latitude, A.longitude FROM street_node A WHERE A.street = ? "); //$NON-NLS-1$
+		boost::unordered_map<std::string, std::list<CityObj>> cities = readCities(dbContext);
+
+		int sqlStatus = 0;
+		sqlite3_stmt* streetstat = nullptr;
+		sqlStatus = sqlite3_prepare_v2(dbContext.dbAddrCtx, "SELECT A.id, A.name, A.name_en, A.latitude, A.longitude, B.id, B.name, B.name_en, B.latitude, B.longitude, B.postcode, A.cityPart,  B.name2, B.name_en2, B.lat2, B.lon2, B.interval, B.interpolateType, A.cityPart == C.name as MainTown FROM street A left JOIN building B ON B.street = A.id JOIN city C ON A.city = C.id WHERE A.city = ?1 ORDER BY MainTown DESC, A.name ASC", -1, &streetstat,NULL);
+		//sqlStatus = sqlite3_step(streetstat);
+		sqlite3_stmt* wayStreetstat = nullptr;
+		sqlStatus = sqlite3_prepare_v2(dbContext.dbAddrCtx, "SELECT A.id, A.latitude, A.longitude FROM street_node A WHERE A.street = ?1", -1, &wayStreetstat,NULL);
 
 		//// collect suburbs with is in value
-		//List<City> suburbs = new ArrayList<City>();
-		//List<City> cityTowns = new ArrayList<City>();
-		//List<City> villages = new ArrayList<City>();
-		//for(CityType t : cities.keySet()) {
-		//	if(t == CityType.CITY || t == CityType.TOWN){
-		//		cityTowns.addAll(cities.get(t));
-		//	} else {
-		//		villages.addAll(cities.get(t));
-		//	}
-		//	if(t == CityType.SUBURB){
-		//		for(City c : cities.get(t)){
-		//			if(c.getIsInValue() != null) {
-		//				suburbs.add(c);
-		//			}
-		//		}
-		//	}
-		//}
+		std::list<CityObj> suburbs;
+		std::list<CityObj> cityTowns;
+		std::list<CityObj> villages;
+
+		for(auto tPP : cities) {
+			if(tPP.first == "city" || tPP.first == "town"){
+				cityTowns.insert(cityTowns.end(), tPP.second.begin(), tPP.second.end());
+			} else {
+				villages.insert(villages.end(), tPP.second.begin(), tPP.second.end());
+			}
+			if(tPP.first == "suburb"){
+				for(CityObj c : tPP.second){
+					if(c.getIsInValue() != "") {
+						suburbs.push_back(c);
+					}
+				}
+			}
+		}
 
 		//
 		//progress.startTask(Messages.getString("IndexCreator.SERIALIZING_ADRESS"), cityTowns.size() + villages.size() / 100 + 1); //$NON-NLS-1$
 		//
-		//Map<String, List<MapObject>> namesIndex = new TreeMap<String, List<MapObject>>(Collator.getInstance());
-		//Map<String, City> postcodes = new TreeMap<String, City>();
-		//writeCityBlockIndex(writer, CITIES_TYPE,  streetstat, waynodesStat, suburbs, cityTowns, postcodes, namesIndex, progress);
-		//writeCityBlockIndex(writer, VILLAGES_TYPE,  streetstat, waynodesStat, null, villages, postcodes, namesIndex, progress);
+		std::map<std::string, std::list<MapObject>> namesIndex;
+		std::map<std::string, CityObj> postcodes;
+		writeCityBlockIndex(writer, "cities",  streetstat, wayStreetstat, suburbs, cityTowns, postcodes, namesIndex);
+		writeCityBlockIndex(writer, "villages",  streetstat, wayStreetstat, std::list<CityObj>(), villages, postcodes, namesIndex);
 		//
 		//// write postcodes		
 		//List<BinaryFileReference> refs = new ArrayList<BinaryFileReference>();		
@@ -1266,3 +1269,345 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 		//}
 	writer.endWriteAddressIndex();
 }
+
+
+boost::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCities(OBFResultDB& dbContext){
+		boost::unordered_map<std::string, std::list<CityObj>> cities;
+		{
+			cities.insert(std::make_pair("city", std::list<CityObj>()));
+			cities.insert(std::make_pair("town", std::list<CityObj>()));
+			cities.insert(std::make_pair("village", std::list<CityObj>()));
+			cities.insert(std::make_pair("hamlet", std::list<CityObj>()));
+			cities.insert(std::make_pair("suburb", std::list<CityObj>()));
+			cities.insert(std::make_pair("district", std::list<CityObj>()));
+		}
+		int sqlStatus = 0;
+		sqlite3_stmt* readCity = nullptr;
+		sqlStatus = sqlite3_prepare_v2(dbContext.dbAddrCtx, "select id, latitude, longitude , name , name_en , city_type from city", -1, &readCity,NULL);
+		sqlStatus = sqlite3_step(readCity);
+		while(sqlStatus == SQLITE_ROW){
+			std::string cityType((const char*)sqlite3_column_text(readCity, 5));
+			boost::to_lower(cityType);
+			CityObj city;
+			city.setType(cityType);
+			city.setName((const char*)sqlite3_column_text(readCity,3));
+			city.setEnName((const char*)sqlite3_column_text(readCity,4));
+			city.setLocation(sqlite3_column_double(readCity, 1),sqlite3_column_double(readCity, 2));
+			city.setId(sqlite3_column_int64(readCity, 0));
+			cities[cityType].push_back(city);
+			
+			if (cityBoundaries.find(city) != cityBoundaries.end())
+			{
+				auto cityB = cityBoundaries[city];
+				if (cityB) {
+					city.setName(city.getName() + " " + boost::lexical_cast<std::string>(cityB->level) + ":" + cityB->polyName);
+				}
+			}
+			sqlStatus = sqlite3_step(readCity);
+		}
+		sqlite3_finalize(readCity);
+		
+		for(auto tPair : cities) {
+			tPair.second.sort([](const CityObj& op1,const CityObj& op2) 
+			{
+				CityObj& work1 = const_cast<CityObj&>(op1);
+				CityObj& work2 = const_cast<CityObj&>(op2);
+				return boost::lexicographical_compare(work1.getName(), work2.getName());
+			});
+		}
+		return cities;
+	}
+
+void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObject>>& namesIndex, MapObject o, __int64 fileOffset)
+{
+	std::string name = o.getName();
+	
+	int prev = -1;
+	for (int i = 0; i <= name.length(); i++) 
+	{
+		if (i == name.length() || !isalpha(name[i]) && !isdigit(name[i]) && name[i] != '\'') {
+			if (prev != -1) {
+				std::string substr = name.substr(prev, i);
+				if (substr.length() > 4) {
+					substr = substr.substr(0, 4);
+				}
+				std::string val = boost::to_lower_copy(substr);
+				if(namesIndex.find(val) == namesIndex.end()){
+					namesIndex.insert(std::make_pair(val, std::list<MapObject>()));
+				}
+				namesIndex[val].push_back(o);
+				prev = -1;
+			}
+		} else {
+			if(prev == -1){
+				prev = i;
+			}
+		}
+	}
+
+	if (fileOffset > INT_MAX) {
+		throw std::bad_exception("File offset > 2 GB.");
+	}
+	o.setFileOffset((int) fileOffset);
+}
+
+std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat)
+{
+	std::vector<EntityNode> resVec;
+	sqlite3_bind_int64( waynodesStat, 1, streetId);
+	int sqlCode = SQLITE_OK;
+	sqlCode = sqlite3_step(waynodesStat);
+	while (sqlCode == SQLITE_ROW) {
+		EntityNode streetNode(sqlite3_column_double(waynodesStat, 1), sqlite3_column_double(waynodesStat, 2), sqlite3_column_int64(waynodesStat, 0));
+		resVec.push_back(streetNode);
+		sqlCode = sqlite3_step(waynodesStat);
+	}
+	return resVec;
+}
+
+void OBFAddresStreetDB::readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuildingsStat, CityObj city,
+			sqlite3_stmt* waynodesStat, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes, boost::unordered_map<__int64, Street>& visitedStreets,
+			boost::unordered_map<std::string, std::vector<Street>>& uniqueNames)  {
+			sqlite3_bind_int64( streetBuildingsStat, 1, city.getID());
+			int sqlCode = SQLITE_OK;
+			sqlCode = sqlite3_step(streetBuildingsStat);
+		while (sqlCode == SQLITE_ROW) {
+			long streetId = sqlite3_column_int64(streetBuildingsStat, 0);
+			if (visitedStreets.find(streetId) == visitedStreets.end()) {
+				std::string streetName = (const char*)sqlite3_column_text(streetBuildingsStat, 1);
+				std::string streetEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 2);
+				double lat = sqlite3_column_double(streetBuildingsStat, 3);
+				double lon = sqlite3_column_double(streetBuildingsStat, 4);
+				// load the street nodes
+				std::vector<EntityNode> thisWayNodes = loadStreetNodes(streetId, waynodesStat);
+				if (uniqueNames.find(streetName) == uniqueNames.end()) {
+					uniqueNames.insert(std::make_pair(streetName, std::vector<Street>()));
+				}
+				Street street(city);
+				uniqueNames[streetName].push_back(street);
+				street.setLocation(lat, lon);
+				street.setId(streetId);
+				// If there are more streets with same name in different districts.
+				// Add district name to all other names. If sorting is right, the first street was the one in the city
+				const char* district = (const char*)sqlite3_column_text(streetBuildingsStat, 11);
+				std::string cityPart = district == nullptr || (city.getName() == district) ? "" : " (" + std::string(district) + ")";
+				street.setName(streetName + cityPart);
+				street.setEnName(streetEnName + cityPart);
+				streetNodes.insert(std::make_pair(street, std::list<EntityNode>(thisWayNodes.begin(), thisWayNodes.end())));
+
+				visitedStreets.insert(std::make_pair(streetId, street)); // mark the street as visited
+			}
+			if (sqlite3_column_text(streetBuildingsStat, 5) != nullptr) {
+				Street s = visitedStreets[streetId];
+				Building b;
+				b.setId(sqlite3_column_int64(streetBuildingsStat, 5));
+				const char* bldName = (const char*)sqlite3_column_text(streetBuildingsStat, 6);
+				if (bldName != nullptr)
+				{
+					b.setName(bldName);
+				}
+				const char* bldEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 7);
+				if (bldEnName != nullptr)
+				{
+					b.setEnName(bldEnName);
+				}
+				b.setLocation(sqlite3_column_double(streetBuildingsStat, 8), sqlite3_column_double(streetBuildingsStat, 9));
+				const char* postCode = (const char*)sqlite3_column_text(streetBuildingsStat, 10);
+				if (postCode != nullptr)
+				{
+					b.postCode = std::string(postCode);
+				}
+				const char* name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 12);
+				if (name2 != nullptr)
+				{
+					b.name2 = std::string(name2);
+				}
+				// no en name2 for now
+				name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 13);
+				if (name2 != nullptr)
+				{
+					b.name2 = std::string(name2);
+				}
+				double lat2 = sqlite3_column_double(streetBuildingsStat,14);
+				double lon2 = sqlite3_column_double(streetBuildingsStat,15);
+				if (lat2 != 0 || lon2 != 0) {
+					b.location2 = LatLon(lat2, lon2);
+				}
+				b.interval = sqlite3_column_int(streetBuildingsStat, 16);
+				const char* itype = (const char*)sqlite3_column_text(streetBuildingsStat, 17);
+				if (itype != nullptr)
+				{
+					std::string type(itype);
+					if (type != "") {
+						b.setInterpType(type);
+					}
+				}
+				s.addBuildingCheckById(b);
+			}
+			sqlCode = sqlite3_step(streetBuildingsStat);
+		}
+
+		
+	}
+
+double OBFAddresStreetDB::getDistance(Street s, Street c, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes) {
+		std::list<EntityNode> thisWayNodes = streetNodes[s];
+		std::list<EntityNode> oppositeStreetNodes = streetNodes[c];
+		if(thisWayNodes.size() == 0) {
+			thisWayNodes.push_back(EntityNode(s.getLatLon().first, s.getLatLon().second, -1));
+		}
+		if(oppositeStreetNodes.size() == 0) {
+			oppositeStreetNodes.push_back(EntityNode(c.getLatLon().first, c.getLatLon().second, -1));
+		}
+		double md = DBL_MAX;
+		for(EntityNode n : thisWayNodes) {
+			for(EntityNode d : oppositeStreetNodes) {
+				if(n.getLatLon().first != -1000 && d.getLatLon().first != -1000) {
+					md = min(md, OsmMapUtils::getDistance(n, d));
+				}
+			}
+		}
+		return md;
+	}
+
+std::list<Street> OBFAddresStreetDB::readStreetsBuildings(sqlite3_stmt* streetBuildingsStat, CityObj city, sqlite3_stmt*  waynodesStat,
+			boost::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs) {
+		boost::unordered_map<__int64, Street> visitedStreets;
+		boost::unordered_map<std::string, std::vector<Street>> uniqueNames;
+
+		// read streets for city
+		readStreetsAndBuildingsForCity(streetBuildingsStat, city, waynodesStat, streetNodes, visitedStreets, uniqueNames);
+		// read streets for suburbs of the city
+		if (!citySuburbs.empty()) {
+			for (CityObj suburb : citySuburbs) {
+				readStreetsAndBuildingsForCity(streetBuildingsStat, suburb, waynodesStat, streetNodes, visitedStreets, uniqueNames);
+			}
+		}
+
+		for(auto streetNameVal : uniqueNames) {
+			std::vector<Street> streets = streetNameVal.second;
+			if(streets.size() > 1) {
+				for(int i = 0; i < streets.size() - 1 ; ) {
+					Street s = streets[i];
+					boolean merged = false;
+					for (int j = i + 1; j < streets.size(); ) {
+						Street candidate = streets[j];
+						if(getDistance(s, candidate, streetNodes) <= 900) { 
+							merged = true;
+							//logMapDataWarn.info("City : " + s.getCity() + 
+							//	" combine 2 district streets '" + s.getName() + "' with '" + candidate.getName() + "'");
+							s.mergeWith(candidate);
+							if(candidate.getName() == s.getName()) {
+								candidate.getCity().unregisterStreet(candidate.getName());
+							}
+							boost::unordered_map<Street, std::list<EntityNode>>::iterator itOld = streetNodes.find(candidate);
+							std::list<EntityNode> old = itOld->second;
+							streetNodes[s].insert(streetNodes[s].end(), old.begin(), old.end());
+							streets.erase(streets.begin()+j);
+							//streets.remove(j);
+						} else {
+							j++;
+						}
+					}
+					if(!merged) {
+						i++;
+					}
+				}
+			
+			}
+		}
+
+		std::list<Street> stList;
+		std::for_each(streetNodes.begin(), streetNodes.end(), [&stList] (std::pair<Street, std::list<EntityNode>> itElems)
+		{
+			stList.push_back(itElems.first);
+		});
+		return stList;
+		//return new ArrayList<Street>(streetNodes.keySet());
+	}
+	
+
+
+
+	
+
+
+void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::string citytype, sqlite3_stmt* streetstat, sqlite3_stmt* waynodesStat,
+			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<MapObject>>& namesIndex)			
+			 {
+		std::vector<BinaryFileReference*> refs;
+		// 1. write cities
+		if (citytype == "cities")
+		{
+			writer.startCityBlockIndex(1);
+		}
+		else if (citytype == "villages")
+		{
+			writer.startCityBlockIndex(3);
+		}
+		for (CityObj c : cities) {
+			refs.push_back(writer.writeCityHeader(c, c.getRadius()));
+		}
+		for (int i = 0; i < cities.size(); i++) {
+			std::list<CityObj>::iterator cit = cities.begin();
+			std::advance(cities.begin(), i);
+			CityObj city = *cit;
+			BinaryFileReference* ref = refs[i];
+			putNamedMapObject(namesIndex, city, ref->getStartPointer());
+			boost::unordered_map<Street, std::list<EntityNode>> streetNodes;
+			std::vector<CityObj> listSuburbs;
+			if (!suburbs.empty()) {
+				for (CityObj suburb : suburbs) {
+					if ( boost::contains( suburb.getIsInValue(), boost::to_lower_copy(city.getName()))) {
+						listSuburbs.push_back(suburb);
+					}
+				}
+			}
+			auto duration = boost::chrono::system_clock::now().time_since_epoch();
+			__int64 millis = boost::chrono::duration_cast<boost::chrono::milliseconds>(duration).count();
+
+			std::list<Street> streets = readStreetsBuildings(streetstat, city, waynodesStat, streetNodes, listSuburbs);
+			auto duration2 =  boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+			__int64 millisf = duration2 - millis;
+			writer.writeCityIndex(city, streets, streetNodes, ref);
+			int bCount = 0;
+			// register postcodes and name index
+			for (Street s : streets) {
+				putNamedMapObject(namesIndex, s, s.getFileOffset());
+				
+				for (Building b : s.getBuildings()) {
+					bCount++;
+					if (city.isPostcode() && b.postCode == "") {
+						b.postCode == city.getPostcode();
+					}
+					if (b.postCode != "") {
+						if (postcodes.find(b.postCode) != postcodes.end()) {
+							CityObj p = CityObj::createPostcode(b.postCode);
+							p.setLocation(b.getLatLon().first, b.getLatLon().second);
+							postcodes.insert(std::make_pair(b.postCode, p));
+						}
+						CityObj post = postcodes[b.postCode];
+						Street newS = post.streets[s.getName()];
+						if(newS.init == false) {
+							newS = Street(post);
+							newS.setName(s.getName());
+							newS.setEnName(s.getEnName());
+							newS.setLocation(s.getLatLon().first, s.getLatLon().second);
+							//newS.getWayNodes().addAll(s.getWayNodes());
+							newS.setId(s.getID());
+							post.registerStreet(newS);
+						}
+						newS.addBuildingCheckById(b);
+					}
+				}
+			}
+			if (millisf > 500) {
+				std::wstringstream wstrm;
+				std::wstring wname;
+				wname.assign(city.getName().begin(), city.getName().end());
+				wstrm << L"!" << wname <<  L" ! " << millisf << " ms " << streets.size() << L" streets " << bCount << L" Buildings" << std::endl;
+				OutputDebugString(wstrm.str().c_str());
+			}
+		}
+		writer.endCityBlockIndex();
+	}

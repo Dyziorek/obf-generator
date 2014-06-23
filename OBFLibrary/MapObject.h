@@ -6,8 +6,8 @@ class MapObject
 public:
 	MapObject(void) {name = ""; type = ""; lat = -1000; lon = -1000;}
 	virtual ~MapObject(void);
-	const std::string getName(){return name;}
-	const std::string getEnName(){return enName;}
+	std::string getName(){return name;} const
+	std::string getEnName(){return enName;} const
 	void setName(std::string tags) { name = tags;}
 	void setEnName(std::string tags) { enName= tags;}
 
@@ -91,6 +91,10 @@ class Street;
 class CityObj :
 	public MapObject
 {
+private:
+	std::string isin;
+	std::string postcode;
+	static long POSTCODE_INTERNAL_ID;
 public:
 	CityObj(void);
 	virtual ~CityObj(void);
@@ -119,6 +123,25 @@ public:
 			return 400;
 		return 400;
 	}
+
+	std::string getIsInValue()
+	{
+		return isin;
+	}
+	void setIsin(std::string outisin)
+	{
+		isin=  outisin;
+	}
+	std::string getPostcode()
+	{
+		return postcode;
+	}
+	void setPostcode(std::string post)
+	{
+		postcode =  post;
+	}
+
+	static  CityObj createPostcode(std::string post);
 };
 
 

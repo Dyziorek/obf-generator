@@ -14,7 +14,7 @@ protected:
 public:
 	Street(void);
 	~Street(void);
-
+	bool init;
 	bool operator==(const Street & x) const;
 
 	 Street(CityObj city);

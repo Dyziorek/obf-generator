@@ -205,7 +205,6 @@ void RandomAccessFileWriter::open(const boost::filesystem::path& path, RandomAcc
 
 void RandomAccessFileWriter::close()
 {
-	implData.Flush();
 	if (is_open()) {
 		::CloseHandle(_fd);
 		_fd = INVALID_HANDLE_VALUE;

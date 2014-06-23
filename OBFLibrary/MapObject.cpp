@@ -4,7 +4,7 @@
 #include "Street.h"
 #include "Building.h"
 
-
+long CityObj::POSTCODE_INTERNAL_ID = -1000;
 
 
 MapObject::~MapObject(void)
@@ -64,6 +64,7 @@ MapObject::~MapObject(void)
  CityObj::CityObj(void)
  {
 	 isAlwaysVisible = false;
+	 isin = "";
  }
  
 CityObj::~CityObj(void)
@@ -116,3 +117,14 @@ Street CityObj::unregisterStreet(std::string name)
 		return streets.erase(streets.find(name))->second;
 	}
 }
+
+ CityObj CityObj::createPostcode(std::string post)
+ {
+	 CityObj object;
+
+	 object.setType("");
+	 object.postcode = post;
+	 object.setId(CityObj::POSTCODE_INTERNAL_ID--);
+
+	 return object;
+ }

@@ -26,3 +26,29 @@ int Building::getInterpValue()
 {
 	return interpType;
 }
+
+void Building::setInterpType(std::string typeVal)
+{
+	boost::to_upper(typeVal);
+
+	interpType = BuildingInterpolation::NONE;
+
+	if (typeVal == "NONE")
+	{
+		interpType = BuildingInterpolation::NONE;
+	}
+	else if (typeVal == "ALL")
+	{
+		interpType = BuildingInterpolation::ALL;
+	}
+	else if (typeVal == "EVEN")
+	{
+		interpType = BuildingInterpolation::EVEN;
+	}else if (typeVal == "ODD")
+	{
+		interpType = BuildingInterpolation::ODD;
+	}else if( typeVal == "ALPHA")
+	{
+		interpType = BuildingInterpolation::ALPHA;
+	}
+}
