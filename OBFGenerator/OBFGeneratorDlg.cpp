@@ -12,6 +12,21 @@
 #define new DEBUG_NEW
 #endif
 
+#include <google\protobuf\io\coded_stream.h>
+#include <google\protobuf\io\zero_copy_stream_impl_lite.h>
+#include <google\protobuf\io\zero_copy_stream_impl.h>
+#include <google\protobuf\wire_format_lite.h>
+#include <boost\container\slist.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include "..\..\..\..\core\protos\OBF.pb.h"
+#include "RandomAccessFileReader.h"
+#include "BinaryIndexDataReader.h"
+
+#include <locale>
+#include <codecvt>
+
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
@@ -52,6 +67,7 @@ END_MESSAGE_MAP()
 COBFGeneratorDlg::COBFGeneratorDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(COBFGeneratorDlg::IDD, pParent)
 	, m_filePath(_T(""))
+	, m_fileReadPath(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -62,6 +78,8 @@ void COBFGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_MFCEDITBROWSE1, m_Browse);
 	DDX_Text(pDX, IDC_MFCEDITBROWSE1, m_filePath);
 	DDX_Control(pDX, IDC_PROGRESS, m_progress);
+	DDX_Text(pDX, IDC_MFCEDITBROWSE2, m_fileReadPath);
+	DDX_Control(pDX, IDC_MFCEDITBROWSE2, m_BrowseRead);
 }
 
 BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
@@ -73,6 +91,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_WM_CLOSE()
 	ON_WM_CREATE()
 	ON_BN_CLICKED(IDC_BUTTON1, &COBFGeneratorDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_MFCBUTTON2, &COBFGeneratorDlg::OnBnClickedMfcbutton2)
 END_MESSAGE_MAP()
 
 
@@ -110,7 +129,7 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	char* errMsg;
 	m_Browse.EnableFileBrowseButton(L"pbf", L"PBF Files|*.pbf|All Files|*.*||");
-	
+	m_BrowseRead.EnableFileBrowseButton(L"bin", L"BIN Files|*.bin|All Files|*.*||");
 	int dbRes = SQLITE_OK;
 	FILE* fp = NULL;
 	errno_t err;
@@ -879,4 +898,27 @@ void COBFGeneratorDlg::OnOK()
 	results.close();
 	
 	CDialogEx::OnOK();
+}
+
+
+void COBFGeneratorDlg::OnBnClickedMfcbutton2()
+{
+	UpdateData();
+	CFile fileData(m_fileReadPath, CFile::OpenFlags::typeBinary|CFile::modeRead);
+
+
+	if (fileData.m_hFile != CFile::hFileNull)
+	{
+		CString strPath = fileData.GetFilePath();
+		m_fileName = fileData.GetFileName();
+		fileData.Close();
+		m_fileReadPath = strPath;
+		std::wstring wstrPath = strPath.GetBuffer();
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
+		std::string cvt = coder.to_bytes(wstrPath);
+		
+		boost::filesystem::path pather(cvt);
+		RandomAccessFileReader rad(pather);
+		BinaryIndexDataReader reader(&rad);
+	}
 }

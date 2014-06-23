@@ -43,8 +43,10 @@ RandomAccessFileWriter::RandomAccessFileWriter(const boost::filesystem::path& pa
 
 RandomAccessFileWriter::~RandomAccessFileWriter()
 {
-	implData.Flush();
-	close();
+	if (is_open()) {
+		implData.Flush();
+		close();
+	}
 }
 
 RandomAccessFileWriter::CopyingFileOutputStream::CopyingFileOutputStream()
@@ -203,6 +205,7 @@ void RandomAccessFileWriter::open(const boost::filesystem::path& path, RandomAcc
 
 void RandomAccessFileWriter::close()
 {
+	implData.Flush();
 	if (is_open()) {
 		::CloseHandle(_fd);
 		_fd = INVALID_HANDLE_VALUE;

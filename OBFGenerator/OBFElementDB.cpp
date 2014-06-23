@@ -1264,4 +1264,5 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 		//if (waynodesStat != null) {
 		//	waynodesStat.close();
 		//}
+	writer.endWriteAddressIndex();
 }

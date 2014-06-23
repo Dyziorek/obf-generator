@@ -193,6 +193,8 @@ public:
 			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes);
 	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
 			BinaryFileReference ref);
+	void close();
+
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
 	std::vector<uint8> mapDataBuf;

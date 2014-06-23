@@ -89,4 +89,7 @@ public:
 	afx_msg void OnBnClickedButton1();
 	virtual void OnCancel();
 	virtual void OnOK();
+	afx_msg void OnBnClickedMfcbutton2();
+	CString m_fileReadPath;
+	CMFCEditBrowseCtrl m_BrowseRead;
 };

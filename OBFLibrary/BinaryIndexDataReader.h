@@ -17,7 +17,8 @@ public:
 
 private:
 	RandomAccessFileReader* rad;
-	google::protobuf::io::CodedInputStream strmData;
-	void skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag );
+	gio::CodedInputStream strmData;
+	void skipUnknownField( gio::CodedInputStream* cis, int tag );
+	google::protobuf::uint32 readBigEndianInt(gio::CodedInputStream* cis );
 };
 
