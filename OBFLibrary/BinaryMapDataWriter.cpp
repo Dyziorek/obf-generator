@@ -651,14 +651,14 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 
 
 	void BinaryMapDataWriter::writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
-			BinaryFileReference ref)  {
+			BinaryFileReference *ref)  {
 		int peeker[] = {CITY_INDEX_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
 		
 		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex_CitiesIndex::kBlocksFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
 		long startMessage = getFilePointer();
-		long startCityBlock = ref.getStartPointer();
-		ref.writeReference(*raf, startMessage);
+		long startCityBlock = ref->getStartPointer();
+		ref->writeReference(*raf, startMessage);
 		obf::CityBlockIndex cityInd;
 		cityInd.set_shifttocityindex((int) (startMessage - startCityBlock));
 		long currentPointer = startMessage + 4 + wfl::WireFormatLite::TagSize(obf::CityBlockIndex::kShiftToCityIndexFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);

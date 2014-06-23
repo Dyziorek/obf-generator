@@ -153,7 +153,8 @@ void RandomAccessFileReader::close()
 bool RandomAccessFileReader::unmap()
 {
 	UnmapViewOfFile(_currentBuffer);
-
+	CloseHandle(_hmapfd);
+	return true;
 }
 
 
