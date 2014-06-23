@@ -169,7 +169,7 @@ public:
 	void preserveInt32Size();
 	int writeInt32Size();
 	void writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32);
-
+	void close();
 
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,

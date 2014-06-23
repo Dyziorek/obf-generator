@@ -54,12 +54,12 @@ BinaryIndexDataReader::~BinaryIndexDataReader(void)
 
 void BinaryIndexDataReader::skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag )
 {
-    auto wireType = gpb::internal::WireFormatLite::GetTagWireType(tag);
-    if(wireType == gpb::internal::WireFormatLite::WIRETYPE_FIXED32_LENGTH_DELIMITED)
+    auto wireType = internal::WireFormatLite::GetTagWireType(tag);
+    if(wireType == internal::WireFormatLite::WIRETYPE_FIXED32_LENGTH_DELIMITED)
     {
-        auto length = readBigEndianInt(cis);
-        cis->Skip(length);
+       // auto length = readBigEndianInt(cis);
+       // cis->Skip(length);
     }
     else
-        gpb::internal::WireFormatLite::SkipField(cis, tag);
+        internal::WireFormatLite::SkipField(cis, tag);
 }

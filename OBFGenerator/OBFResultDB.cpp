@@ -437,6 +437,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, mapName, *this);
 		((OBFAddresStreetDB*)addresIndexer)->writeAddresMapIndex(writter,mapName, *this);
+		writter.close();
 		//((OBFpoiDB*)poiIndexer)->writePoiMapIndex(writter, mapName, *this);
 		//((OBFrouteDB*)routeIndexer)->writeRouteMapIndex(writter, mapName, *this);
 	}

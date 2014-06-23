@@ -11,7 +11,12 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/iostreams/stream.hpp>
 #include "RandomAccessFileReader.h"
-
+#include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
+#include <fcntl.h>
+#include <ios>
+#include <sstream>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -30,7 +35,7 @@ RandomAccessFileReader::~RandomAccessFileReader(void)
 {
 }
 
-RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode = READ, uint64_t size = 0) :
+RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode/* = READ*/, uint64_t size/* = 0*/) :
 	_path(""), _size(0), filePointer(0)
 {
 	codeWork = nullptr;

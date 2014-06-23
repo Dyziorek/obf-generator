@@ -695,3 +695,14 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			s.setFileOffset(s.getFileOffset() + size);
 		}
 	}
+
+
+	void BinaryMapDataWriter::close()
+	{
+		int peeker[] = {OSMAND_STRUCTURE_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndStructure::kVersionConfirmFieldNumber, 2, &dataOut);
+
+		int buffercount = dataOut.ByteCount();
+		int streamCount = raf->ByteCount();
+	}
