@@ -96,10 +96,12 @@ template<class T> std::stringstream& readInts(std::stringstream& oa, std::vector
 	return oa;
 }
 
-extern int parseSmallIntFromBytes(const void* plData, int position);
+int parseSmallIntFromBytes(const void* plData, int position);
 
 
 
-extern int parseIntFromBytes(const void* byteData, int position);
+int parseIntFromBytes(const void* byteData, int position);
 
-inline void reverse_bytes(char size, char *address);
+
+inline void
+reverse_bytes(char size, char *address);

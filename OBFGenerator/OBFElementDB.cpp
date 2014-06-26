@@ -260,7 +260,7 @@ void OBFrouteDB::iterateMainEntity(std::shared_ptr<EntityBase>& it, OBFResultDB&
 }
 
 
-void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree, bool base)  {
+void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTreeValued& rTree, bool base)  {
 		boolean init = false;
 		int minX = INT_MAX;
 		int maxX = 0;
@@ -312,7 +312,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 
 
 			dbContext.addBatchRoute(id, btypes, bpointTypes, bpointIds, bcoordinates, encodeNames(names), base);
-			rTree.insertBox(minX, minY, maxX, maxY, id, std::list<long>());
+			rTree.insertBox(minX, minY, maxX, maxY, std::make_pair(id, std::vector<short>()));
 
 		}
 	}

@@ -30,6 +30,8 @@ public:
 class OBFrouteDB :
 	public OBFResultDB
 {
+public:
+	typedef RTree<std::pair<__int64, std::vector<short>>> RTreeValued;
 private:
 	static long SHIFT_INSERT_AT;
 	static long SHIFT_ORIGINAL;
@@ -261,15 +263,15 @@ public:
 	std::vector<int> outTypes;
 	std::map<MapRouteType, std::string> names;
 	std::map<__int64, std::vector<int>> pointTypes;
-	RTree routeTree;
-	RTree baserouteTree;
+	RTreeValued routeTree;
+	RTreeValued baserouteTree;
 	OBFrouteDB(void);
 	virtual ~OBFrouteDB(void);
 	void indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& item, OBFResultDB& dbContext);
 	void processLowLevelWays(OBFResultDB& dbContext);
-	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTree rTree,  bool base);
+	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTreeValued& rTree,  bool base);
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
 	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
 	void putIntersection(long long  point, long long wayNodeId);

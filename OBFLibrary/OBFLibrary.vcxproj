@@ -150,6 +150,8 @@
   <ItemGroup>
     <ClInclude Include="BinaryIndexDataReader.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
+    <ClInclude Include="BinaryMapDataReader.h" />
+    <ClInclude Include="MapObjectData.h" />
     <ClInclude Include="RandomAccessFileReader.h" />
     <ClInclude Include="RandomAccessFileWriter.h" />
     <ClInclude Include="Amenity.h" />
@@ -173,15 +175,24 @@
   <ItemGroup>
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp" />
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp" />
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp" />
+    <ClCompile Include="BinaryMapDataReader.cpp" />
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="MapObjectData.cpp" />
     <ClCompile Include="RandomAccessFileReader.cpp" />
     <ClCompile Include="RandomAccessFileWriter.cpp" />
     <ClCompile Include="ArchiveIO.cpp" />
@@ -201,7 +212,6 @@
     <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFRenderingTypes.cpp" />
     <ClCompile Include="OSMTags.cpp" />
-    <ClCompile Include="RTree.cpp" />
     <ClCompile Include="Street.cpp" />
     <ClCompile Include="TileManager.cpp" />
     <ClCompile Include="dllmain.cpp">
