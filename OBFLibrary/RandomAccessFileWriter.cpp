@@ -262,6 +262,7 @@ bool RandomAccessFileWriter::Next(void** src, int* size)
 size_t RandomAccessFileWriter::writeInt(int val)
 {
 	DWORD written;
+
 	WriteFile(_fd, &val, sizeof(val), &written, NULL);
 	filePointer += written;
 	return written;

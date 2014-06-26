@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ArchiveIO.h"
+
 namespace gio = google::protobuf::io;
 namespace wfl = google::protobuf::internal;
 
@@ -138,6 +140,10 @@ public:
 			{
 				// it should be that if not this is error
 				val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+				#ifndef BOOST_BIG_ENDIAN
+					reverse_bytes(sizeof(val),(char*)&val);
+				#endif
+
 				memcpy((void*)(beginBuffer + (pointerToWrite-currentPosition)), &val, sizeof(val));
 			}
 			else
@@ -150,6 +156,9 @@ public:
 			// it is in the written part
 			raf.seek(pointerToWrite);
 			val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+			#ifndef BOOST_BIG_ENDIAN
+				reverse_bytes(sizeof(val),(char*)&val);
+			#endif
 			raf.writeInt(val);
 			raf.seek(currentPosition);
 		}

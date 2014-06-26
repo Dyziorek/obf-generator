@@ -101,3 +101,5 @@ extern int parseSmallIntFromBytes(const void* plData, int position);
 
 
 extern int parseIntFromBytes(const void* byteData, int position);
+
+inline void reverse_bytes(char size, char *address);

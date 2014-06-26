@@ -19,16 +19,7 @@
 using namespace google::protobuf;
 using namespace obf;
 
-inline void
-reverse_bytes(char size, char *address){
-    char * first = address;
-    char * last = first + size - 1;
-    for(;first < last;++first, --last){
-        char x = *last;
-        *last = *first;
-        *first = x;
-    }
-}
+
 
 BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :strmData(outData)
 {
