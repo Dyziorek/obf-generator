@@ -13,11 +13,18 @@ public:
 	BinaryIndexDataReader(RandomAccessFileReader* outData);
 	virtual ~BinaryIndexDataReader(void);
 
+	static int readBigEndianInt( google::protobuf::io::CodedInputStream* cis);
+	
+	static void readStringTable( gio::CodedInputStream* cis, std::list<std::string>& stringTableOut );
+	static bool readString( gio::CodedInputStream* cis, std::string& output );
+	static void skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag );
 
-
+	const BinaryMapDataReader& GetReader() const {return reader;}
 private:
 	RandomAccessFileReader* rad;
 	google::protobuf::io::CodedInputStream strmData;
-	void skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag );
+	
+	void ReadMapData(google::protobuf::io::CodedInputStream* cis);
+	BinaryMapDataReader reader;
 };
 

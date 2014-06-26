@@ -12,6 +12,18 @@
 #define new DEBUG_NEW
 #endif
 
+#include <unordered_map>
+
+
+#include <boost/random/linear_congruential.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/uniform_real.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/generator_iterator.hpp>
+#include <boost/random/random_device.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
+
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
@@ -52,6 +64,7 @@ END_MESSAGE_MAP()
 COBFGeneratorDlg::COBFGeneratorDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(COBFGeneratorDlg::IDD, pParent)
 	, m_filePath(_T(""))
+	, m_BinFile(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -62,6 +75,8 @@ void COBFGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_MFCEDITBROWSE1, m_Browse);
 	DDX_Text(pDX, IDC_MFCEDITBROWSE1, m_filePath);
 	DDX_Control(pDX, IDC_PROGRESS, m_progress);
+	DDX_Text(pDX, IDC_MFCEDITBROWSE2, m_BinFile);
+	DDX_Control(pDX, IDC_MFCEDITBROWSE2, m_ReadBrowser);
 }
 
 BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
@@ -73,6 +88,8 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_WM_CLOSE()
 	ON_WM_CREATE()
 	ON_BN_CLICKED(IDC_BUTTON1, &COBFGeneratorDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_MFCBUTTON2, &COBFGeneratorDlg::OnBnClickedMfcbutton2)
+	ON_EN_CHANGE(IDC_MFCEDITBROWSE2, &COBFGeneratorDlg::OnEnChangeMfceditbrowse2)
 END_MESSAGE_MAP()
 
 
@@ -110,7 +127,8 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	char* errMsg;
 	m_Browse.EnableFileBrowseButton(L"pbf", L"PBF Files|*.pbf|All Files|*.*||");
-	
+	m_ReadBrowser.EnableFileBrowseButton(L"bin", L"BIN Files|*.bin|All Files|*.*||");
+
 	int dbRes = SQLITE_OK;
 	FILE* fp = NULL;
 	errno_t err;
@@ -838,6 +856,65 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 	#ifdef _DEBUG_VLD
 		VLDReportLeaks();
 	#endif
+
+
+	//std::string chars(
+ //       "abcdefghijklmnopqrstuvwxyz"
+ //       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+ //       "1234567890!@#$%^&*-_");
+
+	//typedef boost::uniform_int<> distribution_type;
+	//boost::minstd_rand generator;
+	//boost::random::random_device rng;
+	//typedef boost::variate_generator<boost::minstd_rand&, distribution_type> gen_type;
+	//boost::random::uniform_int_distribution<> index_dist(0, chars.size() - 1);
+	//gen_type die_gen(generator, distribution_type(0, INT_MAX));
+
+	//// If you want to use an STL iterator interface, use iterator_adaptors.hpp.
+	//boost::generator_iterator<gen_type> die(&die_gen);
+
+	//std::vector<std::string> container;
+
+	//container.reserve(1000000);
+	//std::string buff;
+	//for(int i = 0; i < 1000000; i++)
+	//{
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	buff+=(chars[index_dist(rng)]);
+	//	container.push_back(buff);
+	//	buff.clear();
+	//}
+
+	//std::unordered_map<std::string,std::string> localHash;
+	//boost::unordered_map<std::string,std::string> boostHash;
+
+	//auto duration = boost::chrono::high_resolution_clock::now().time_since_epoch();
+	//__int64 millis = boost::chrono::duration_cast<boost::chrono::milliseconds>(duration).count();
+
+	//for(auto value : container)
+	//{
+	//	localHash[value] = value;
+	//}
+	//auto duration2 =  boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::high_resolution_clock::now().time_since_epoch()).count();
+ //  __int64 millisf = duration2 - millis;
+	//for(auto value : container)
+	//{
+	//	boostHash[value] = value;
+	//}
+
+	//BOOST_ASSERT_MSG( boostHash[localHash.begin()->second] == localHash.begin()->second, "Hash not equivalent");
+	//auto duration3 =  boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::high_resolution_clock::now().time_since_epoch()).count();
+	//__int64 millisbst = duration3 - duration2;
+
+	//std::wstringstream wstrm;
+	//wstrm << L"Std passed: " << boost::lexical_cast<std::wstring, __int64>(millisf) << L" msecs, boost passed: " << boost::lexical_cast<std::wstring, __int64>(millisbst)<< std::endl;
+	//OutputDebugString(wstrm.str().c_str());
 }
 
 
@@ -856,4 +933,50 @@ void COBFGeneratorDlg::OnOK()
 	results.close();
 	
 	CDialogEx::OnOK();
+}
+
+#include "..\..\..\..\core\protos\OBF.pb.h"
+#include "MapObjectData.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+#include "RandomAccessFileReader.h"
+#include "BinaryMapDataReader.h"
+#include "MapObjectData.h"
+#include "BinaryIndexDataReader.h"
+#include "ArchiveIO.h"
+
+void COBFGeneratorDlg::OnBnClickedMfcbutton2()
+{
+	UpdateData();
+	CFile fileData(m_BinFile, CFile::OpenFlags::typeBinary|CFile::modeRead);
+
+	if (fileData.m_hFile != CFile::hFileNull)
+	{
+		CString strPath = fileData.GetFilePath();
+		m_fileName = fileData.GetFileName();
+		fileData.Close();
+		m_BinFile = strPath;
+		
+		
+		boost::filesystem::path pather(m_BinFile.GetBuffer());
+		
+		RandomAccessFileReader rafek(pather, RandomAccessFileReader::READ);
+
+		BinaryIndexDataReader readerek(&rafek);
+
+		const BinaryMapDataReader& object = readerek.GetReader();
+		
+	}
+}
+
+
+void COBFGeneratorDlg::OnEnChangeMfceditbrowse2()
+{
+	// TODO:  If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Add your control notification handler code here
 }

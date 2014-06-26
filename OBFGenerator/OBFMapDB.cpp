@@ -53,7 +53,7 @@ OBFMapDB::OBFMapDB(void)
 	mapTree.reserve(MAP_LEVELS_MAX);
 	for (int i =0; i < mapZooms.size(); i++)
 	{
-		mapTree.push_back(RTree());
+		mapTree.push_back(RTreeValued());
 	}
 }
 
@@ -414,7 +414,7 @@ void OBFMapDB::insertLowLevelMapBinaryObject(int level, int zoom, std::list<long
 
 	}
 
-bool  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
+bool  OBFMapDB::insertBinaryMapRenderObjectIndex(RTreeValued& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext)
 			{
 		bool init = false;
@@ -490,7 +490,9 @@ bool  OBFMapDB::insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::
 			if (init)
 			{
 				dbContext.addBatch(id, area, bCoordData, bInCoordData, bTypesData, bAddtTypesData, encodeNames(names));
-				mapTree.insertBox(minX, minY, maxX, maxY, id, types);
+				std::vector<short> shorted;
+				std::for_each(types.begin(), types.end(), [&shorted](long typeVal) {shorted.push_back((short)typeVal); });
+				mapTree.insertBox(minX, minY, maxX, maxY, std::make_pair(id, shorted));
 			}
 		/*
 		if (init) {
@@ -1086,9 +1088,9 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 
 	for (int i = 0; i < mapZooms.size(); i++)
 	{
-		RTree rtree = mapTree[i];
+		RTreeValued rtree = mapTree[i];
 		boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>> treeHeaders;
-		RTree::box rootBounds = rtree.calculateBounds();
+		RTreeValued::box rootBounds = rtree.calculateBounds();
 		if (rootBounds.max_corner().get<0>() != 0) {
 			writer.startWriteMapLevelIndex(mapZooms.getLevel(i).getMinZoom(), mapZooms.getLevel(i).getMaxZoom(),
 				rootBounds.min_corner().get<0>(), rootBounds.max_corner().get<0>(), rootBounds.min_corner().get<1>(), rootBounds.max_corner().get<1>());
@@ -1103,13 +1105,13 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	writer.endWriteMapIndex();
 }
 
-void OBFMapDB::callNodeBox(const RTree::box& boxParam, bool begin, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)
+void OBFMapDB::callNodeBox(const RTreeValued::box& boxParam, bool begin, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)
 {
 	if (begin)
 	{
 		std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(boxParam.min_corner().get<0>(), boxParam.max_corner().get<0>(), boxParam.min_corner().get<1>(), boxParam.max_corner().get<1>(), isLeaf, 0);
 		if (ref) {
-			const RTree::box* intPtr = &boxParam;
+			const RTreeValued::box* intPtr = &boxParam;
 			__int64 boxVal = (__int64)intPtr;
 			if (bounds.find(boxVal) == bounds.end())
 			{
@@ -1142,13 +1144,13 @@ void OBFMapDB::callNodeBox(const RTree::box& boxParam, bool begin, bool isLeaf, 
 	}
 }
 
-void OBFMapDB::writeBinaryMapTree(RTree& treeMap, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)
+void OBFMapDB::writeBinaryMapTree(RTreeValued& treeMap, RTreeValued::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)
 {
 
 		int countLeafs = 0;
 		std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), false, 0);
 
-		treeMap.getTreeNodes( [this,&writer, &bounds](const RTree::box& boxParam, bool begin, bool isLeaf)
+		treeMap.getTreeNodes( [this,&writer, &bounds](const RTreeValued::box& boxParam, bool begin, bool isLeaf)
 		{
 			callNodeBox(boxParam, begin, begin, writer, bounds);
 		}, nullptr);
@@ -1175,11 +1177,11 @@ void OBFMapDB::writeBinaryMapTree(RTree& treeMap, RTree::box& re, BinaryMapDataW
 	}
 
 
-void OBFMapDB::callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& valData, bool startBlock, bool inside, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds,
+void OBFMapDB::callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValued::value& valData, bool startBlock, bool inside, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds,
 						sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level)
 {
 		obf::MapDataBlock* dataBlock = nullptr;
-		const RTree::box* intPtr = &boxParam;
+		const RTreeValued::box* intPtr = &boxParam;
 		BinaryFileReference* ref;
 		__int64 boxVal = (__int64)intPtr;
 		if (!inside)
@@ -1225,7 +1227,7 @@ void OBFMapDB::callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& v
 		//for (int i = 0; i < parent.getTotalElements(); i++) {
 		//	if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
 				//long id = e[i].getPtr();
-		__int64 callID = valData.get<1>();
+		__int64 callID = valData.second.first;
 				sqlite3_bind_int64(selectData, 1, callID);
 				// selectData = mapConnection.prepareStatement("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?");
 				int dbResult = sqlite3_step(selectData); //ResultSet rs = selectData.executeQuery();
@@ -1294,11 +1296,11 @@ void OBFMapDB::callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& v
 		}*/
 }
 
-void OBFMapDB::writeBinaryMapBlock(RTree& treeMap, RTree::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
+void OBFMapDB::writeBinaryMapBlock(RTreeValued& treeMap, RTreeValued::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
 			boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level)
 {
 		
-	treeMap.getTreeNodes( nullptr, [this,&writer, &bounds, &selectData, &tempStringTable, &tempNames, &level](const RTree::box& boxParam, const RTree::value& valData, bool startBlock, bool inside)
+	treeMap.getTreeNodes( nullptr, [this,&writer, &bounds, &selectData, &tempStringTable, &tempNames, &level](const RTreeValued::box& boxParam, const RTreeValued::value& valData, bool startBlock, bool inside)
 		{
 			callNodeBoxBlock(boxParam, valData, startBlock, inside, writer, bounds, selectData, tempStringTable, tempNames, level);
 		});

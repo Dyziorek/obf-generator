@@ -3,8 +3,12 @@
 #include "OBFRenderingTypes.h"
 #include "RTree.h"
 
+
+
 class OBFMapDB : public OBFResultDB
 {
+	typedef RTree<std::pair<__int64, std::vector<short>>> RTreeValued;
+
 protected:
 	std::list<long> typeUse;
 	std::list<long> addtypeUse;
@@ -55,17 +59,17 @@ public:
 	void decodeNames(std::string name, std::map<MapRulType, std::string>& tempNames);
 
 	void insertLowLevelMapBinaryObject(int level, int zoom, std::list<long> types, std::list<long> addTypes, __int64 id, std::vector<std::shared_ptr<EntityNode>> in, std::string name, OBFResultDB& dbContext);
-	bool insertBinaryMapRenderObjectIndex(RTree& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
+	bool insertBinaryMapRenderObjectIndex(RTreeValued& mapTree, std::list<std::shared_ptr<EntityNode>>& nodes, std::vector<std::vector<std::shared_ptr<EntityNode>>>& innerWays,
 			std::map<MapRulType, std::string>& names, __int64 id, bool area, std::list<long>& types, std::list<long>& addTypes, bool commit, OBFResultDB& dbContext);
-	std::vector<RTree> mapTree;
+	std::vector<RTreeValued> mapTree;
 	std::string encodeNames(std::map<MapRulType, std::string> tempNames);
 	int zoomWaySmothness;
 
 	void writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& ctx);
-	void writeBinaryMapTree(RTree& parent, RTree::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
-	void writeBinaryMapBlock(RTree& treeMap, RTree::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
+	void writeBinaryMapTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
+	void writeBinaryMapBlock(RTreeValued& treeMap, RTreeValued::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
 			boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
-	void callNodeBox(const RTree::box& re, bool begin, bool hasContent, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
-	void callNodeBoxBlock(const RTree::box& boxParam,const RTree::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
+	void callNodeBox(const RTreeValued::box& re, bool begin, bool hasContent, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
+	void callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValued::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
 };
 

@@ -15,6 +15,7 @@
 #include <ios>
 #include <sstream>
 #include <sys/stat.h>
+#include "ArchiveIO.h"
 
 using namespace std;
 
@@ -261,6 +262,9 @@ bool RandomAccessFileWriter::Next(void** src, int* size)
 size_t RandomAccessFileWriter::writeInt(int val)
 {
 	DWORD written;
+	#ifndef BOOST_BIG_ENDIAN
+		reverse_bytes(sizeof(val), (char*)&val);
+	#endif
 	WriteFile(_fd, &val, sizeof(val), &written, NULL);
 	filePointer += written;
 	return written;

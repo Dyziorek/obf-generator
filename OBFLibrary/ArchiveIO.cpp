@@ -30,3 +30,14 @@ int parseIntFromBytes(const void* byteData, int position)
 	val |= (0xff & valData);
 	return val;
 }
+
+inline void
+reverse_bytes(char size, char *address){
+    char * first = address;
+    char * last = first + size - 1;
+    for(;first < last;++first, --last){
+        char x = *last;
+        *last = *first;
+        *first = x;
+    }
+}
