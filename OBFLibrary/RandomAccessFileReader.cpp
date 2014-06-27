@@ -162,24 +162,25 @@ uint8* RandomAccessFileReader::map(__int64 position, __int64* newSize)
 			*newSize = mappedSize - iViewDelta;
 			return initialOffset + iViewDelta;
 		}
-	}else
-	{
-		DWORD win32Err = ::GetLastError();
-		LPVOID lpMsgBuf;
-		FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        win32Err,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL );
-			::CloseHandle(_fd);
-			ostringstream buf;
-			buf << "Failed with reason " << (const char*)lpMsgBuf << std::endl;
-			LocalFree(lpMsgBuf);
-			throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), buf.str());
+		else
+		{
+			DWORD win32Err = ::GetLastError();
+			LPVOID lpMsgBuf;
+			FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			win32Err,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR) &lpMsgBuf,
+			0, NULL );
+				::CloseHandle(_fd);
+				ostringstream buf;
+				buf << "Failed with reason " << (const char*)lpMsgBuf << std::endl;
+				LocalFree(lpMsgBuf);
+				throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), buf.str());
+		}
 	}
 	else
 	{
