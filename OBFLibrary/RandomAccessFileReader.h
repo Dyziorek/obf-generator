@@ -66,6 +66,7 @@ private:
 	int pageSize;
 	gio::CodedInputStream* codeWork;
 	uint8* _currentBuffer;
+	uint8* _currentMapBuffer;
 	GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(RandomAccessFileReader);
 };
 

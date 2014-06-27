@@ -35,11 +35,13 @@ RandomAccessFileReader::~RandomAccessFileReader(void)
 {
 }
 
-RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode/* = READ*/, uint64_t size/* = 0*/) :
+RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode/* = READ*/, uint64_t size /*= 0*/) :
 	_path(""), _size(0), filePointer(0)
 {
 	codeWork = nullptr;
 	_currentBuffer = nullptr;
+	_currentMapBuffer = nullptr;
+
 	_fd = INVALID_HANDLE_VALUE;
 	pageSize = 0;
 	open(path, mode, size);
@@ -101,31 +103,8 @@ int m;
         0, NULL );
 		LocalFree(lpMsgBuf);
 		throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), "Failed opening "+path.string());
-	} else if ((_size == 0)) {
-		DWORD fp = 0;
-		BOOL bRes = TRUE;
-		fp = SetFilePointer(_fd, (LONG)size, NULL, FILE_BEGIN);
-		bRes = SetEndOfFile(_fd);
-		if (fp == INVALID_SET_FILE_POINTER || !bRes)
-		{
-			DWORD win32Err = ::GetLastError();
-		LPVOID lpMsgBuf;
-		FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        win32Err,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL );
-		LocalFree(lpMsgBuf);
-			::CloseHandle(_fd);
-			ostringstream buf;
-			buf << "Failed truncating " << path.string() << " to " << size;
-			throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), buf.str());
-		}
 	}
+	
 	_path = path;
 	_size = size;
 
@@ -152,9 +131,14 @@ void RandomAccessFileReader::close()
 
 bool RandomAccessFileReader::unmap()
 {
-	UnmapViewOfFile(_currentBuffer);
-	CloseHandle(_hmapfd);
-	return true;
+	bool bRet = UnmapViewOfFile(_currentMapBuffer);
+	if (bRet)
+	{
+		_currentMapBuffer = nullptr;
+		return CloseHandle(_hmapfd);
+	}
+
+	return false;
 }
 
 
@@ -164,20 +148,41 @@ uint8* RandomAccessFileReader::map(__int64 position, __int64* newSize)
     if(filePointer + mappedSize >= _size)
         mappedSize = _size - filePointer;
     
-	int positionOffset = (mappedSize / pageSize) * pageSize;
+	int positionOffset = (position / pageSize) * pageSize;
 	int iViewDelta = position - positionOffset;
-	uint8* baseAddres;
+
 	_hmapfd = CreateFileMapping(_fd, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (_hmapfd != nullptr)
 	{
-		void* data = MapViewOfFileEx(_hmapfd, FILE_MAP_READ, 0, positionOffset, mappedSize, &baseAddres);
+		void* data = MapViewOfFile(_hmapfd, FILE_MAP_READ, 0, positionOffset, mappedSize);
 		if (data != nullptr)
 		{
 			uint8* initialOffset = static_cast<uint8*>(data);
-			return initialOffset + iViewDelta;
+			_currentMapBuffer = static_cast<uint8*>(data);
 			*newSize = mappedSize - iViewDelta;
+			return initialOffset + iViewDelta;
 		}
-	}else
+		else
+		{
+			DWORD win32Err = ::GetLastError();
+			LPVOID lpMsgBuf;
+			FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			win32Err,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR) &lpMsgBuf,
+			0, NULL );
+				::CloseHandle(_fd);
+				ostringstream buf;
+				buf << "Failed with reason " << (const char*)lpMsgBuf << std::endl;
+				LocalFree(lpMsgBuf);
+				throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), buf.str());
+		}
+	}
+	else
 	{
 		DWORD win32Err = ::GetLastError();
 		LPVOID lpMsgBuf;
@@ -190,11 +195,7 @@ uint8* RandomAccessFileReader::map(__int64 position, __int64* newSize)
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR) &lpMsgBuf,
         0, NULL );
-			::CloseHandle(_fd);
-			ostringstream buf;
-			buf << "Failed with reason " << (const char*)lpMsgBuf << std::endl;
-			LocalFree(lpMsgBuf);
-			throw bsys::system_error(bsys::errc::make_error_code(static_cast<bsys::errc::errc_t>(errno)), buf.str());
+		LocalFree(lpMsgBuf);
 	}
 }
 
@@ -214,7 +215,7 @@ void RandomAccessFileReader::BackUp ( int count) {
 
 bool RandomAccessFileReader::Next(const void** src, int* size)
 {
-	if (_currentBuffer != nullptr)
+	if (_currentMapBuffer != nullptr)
 	{
 		unmap();
 	}

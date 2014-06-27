@@ -243,7 +243,7 @@ void MultiPoly::build()
     }
 	char buff[10];
 	_ultoa_s(numberCalls++, buff,10);
-	std::string pathImage = "D:\\osmData\\resultImage" + std::string(buff) + std::string(".png");
+	std::string pathImage = "C:\\osmData\\resultImage" + std::string(buff) + std::string(".png");
     SkFILEWStream stream(pathImage.c_str());
     stream.write(data->data(), data->size());
 
@@ -460,7 +460,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		char buff[10];
 		_ultoa_s(numberCalls++, buff,10);
-		std::string pathImage = "D:\\osmData\\resultImageSingle" + std::string(buff) + std::string(".png");
+		std::string pathImage = "C:\\osmData\\resultImageSingle" + std::string(buff) + std::string(".png");
 		SkFILEWStream stream(pathImage.c_str());
 
 		stream.write(data->data(), data->size());

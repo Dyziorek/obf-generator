@@ -1261,12 +1261,13 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 		//progress.finishTask();
 
 		//writer.writeAddressNameIndex(namesIndex);
-		writer.endWriteAddressIndex();
+		//writer.endWriteAddressIndex();
 		//writer.flush();
 		//streetstat.close();
 		//if (waynodesStat != null) {
 		//	waynodesStat.close();
 		//}
+	writer.endWriteAddressIndex();
 }
 
 

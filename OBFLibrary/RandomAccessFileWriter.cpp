@@ -44,9 +44,10 @@ RandomAccessFileWriter::RandomAccessFileWriter(const boost::filesystem::path& pa
 
 RandomAccessFileWriter::~RandomAccessFileWriter()
 {
-	int byteCounter = implData.ByteCount();
-	implData.Flush();
-	close();
+	if (is_open()) {
+		implData.Flush();
+		close();
+	}
 }
 
 RandomAccessFileWriter::CopyingFileOutputStream::CopyingFileOutputStream()

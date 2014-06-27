@@ -169,7 +169,7 @@ public:
 	void preserveInt32Size();
 	int writeInt32Size();
 	void writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32);
-	void close();
+
 
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
@@ -193,6 +193,8 @@ public:
 			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes);
 	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
 			BinaryFileReference* ref);
+	void close();
+
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
 	std::vector<uint8> mapDataBuf;

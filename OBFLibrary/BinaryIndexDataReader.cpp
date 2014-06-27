@@ -10,22 +10,26 @@
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "Amenity.h"
+#include "ArchiveIO.h"
 #include "Street.h"
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
 #include "BinaryIndexDataReader.h"
-#include "ArchiveIO.h"
+#include <boost/detail/endian.hpp>
 
 
 
 using namespace google::protobuf;
 using namespace obf;
 
+
+
 BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :strmData(outData)
 {
+
 	rad = outData;
-	 
+	 bool loadedCorrectly = false;
 	uint32 versionID;
 	uint32 confirmVersionID;
 	uint64 dateTime;
@@ -35,6 +39,21 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 		tagCode = strmData.ReadTag();
 		switch (wfl::WireFormatLite::GetTagFieldNumber(tagCode))
 		{
+		case 0:
+			// End of file mark
+			if (loadedCorrectly)
+			{
+				std::wstringstream strm;
+			strm << L"Whole map read OK:\r\n";
+			OutputDebugString(strm.str().c_str());
+			}
+			else
+			{
+				std::wstringstream strm;
+				strm << L"Whole map read WRONG:\r\n";
+				OutputDebugString(strm.str().c_str());
+			}
+			return;
 		case OsmAndStructure::kVersionFieldNumber:
 			strmData.ReadVarint32(&versionID);
 			break;
@@ -43,6 +62,11 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 			break;
 		case OsmAndStructure::kVersionConfirmFieldNumber:
 			strmData.ReadVarint32(&confirmVersionID);
+			if (confirmVersionID == versionID)
+				loadedCorrectly = true;
+			break;
+		case OsmAndStructure::kMapIndexFieldNumber:
+			ReadMapData(&strmData);
 			break;
 		case OsmAndStructure::kMapIndexFieldNumber:
 			ReadMapData(&strmData);
@@ -50,8 +74,6 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 		default:
 			skipUnknownField(&strmData, tagCode);
 			break;
-		case 0:
-			return;
 		}
 	}
 }
@@ -62,27 +84,26 @@ BinaryIndexDataReader::~BinaryIndexDataReader(void)
 }
 
 
-void BinaryIndexDataReader::skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag )
+void BinaryIndexDataReader::skipUnknownField( gio::CodedInputStream* cis, int tag )
 {
-    auto wireType = internal::WireFormatLite::GetTagWireType(tag);
-    if(wireType == internal::WireFormatLite::WIRETYPE_FIXED32_LENGTH_DELIMITED)
+    auto wireType = wfl::WireFormatLite::GetTagWireType(tag);
+    if(wireType == wfl::WireFormatLite::WIRETYPE_FIXED32_LENGTH_DELIMITED)
     {
         auto length = readBigEndianInt(cis);
         cis->Skip(length);
     }
     else
-        internal::WireFormatLite::SkipField(cis, tag);
+        wfl::WireFormatLite::SkipField(cis, tag);
 }
 
-
-int BinaryIndexDataReader::readBigEndianInt( google::protobuf::io::CodedInputStream* cis)
+uint32 BinaryIndexDataReader::readBigEndianInt(gio::CodedInputStream* cis )
 {
-	google::protobuf::uint32 be;
+    uint32 be;
     cis->ReadRaw(&be, sizeof(be));
-	#ifndef BOOST_BIG_ENDIAN
-		reverse_bytes(sizeof(be), (char*)&be);
-	#endif
-    return be;
+ #ifndef BOOST_BIG_ENDIAN
+	reverse_bytes(sizeof(be),(char*)&be);
+ #endif
+	return be;
 }
 
 void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* cis)
@@ -129,3 +150,17 @@ void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::li
         }
     }
 }
+
+
+void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* cis)
+{
+	int limitValue = readBigEndianInt(cis);
+	int offset = cis->CurrentPosition();
+	int oldLimit = cis->PushLimit(limitValue);
+	reader.ReadMapDataSection(cis);
+
+	cis->PopLimit(oldLimit);
+	
+
+}
+
