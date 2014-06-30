@@ -68,9 +68,6 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 		case OsmAndStructure::kMapIndexFieldNumber:
 			ReadMapData(&strmData);
 			break;
-		case OsmAndStructure::kMapIndexFieldNumber:
-			ReadMapData(&strmData);
-			break;
 		default:
 			skipUnknownField(&strmData, tagCode);
 			break;
@@ -149,18 +146,5 @@ void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::li
             break;
         }
     }
-}
-
-
-void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* cis)
-{
-	int limitValue = readBigEndianInt(cis);
-	int offset = cis->CurrentPosition();
-	int oldLimit = cis->PushLimit(limitValue);
-	reader.ReadMapDataSection(cis);
-
-	cis->PopLimit(oldLimit);
-	
-
 }
 

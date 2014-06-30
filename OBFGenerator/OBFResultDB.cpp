@@ -142,33 +142,33 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 		storeData = new BatchUpdater(*this);
 	}
 
-	if ((err = fopen_s(&fp, "C:\\osmData\\tempLocalMap.db", "r")) == 0)
+	if ((err = fopen_s(&fp, "D:\\osmData\\tempLocalMap.db", "r")) == 0)
 	{
 		fclose(fp);
-		remove("C:\\osmData\\tempLocalMap.db");
+		remove("D:\\osmData\\tempLocalMap.db");
 	}
 	fp = NULL;
-	if ((err = fopen_s(&fp,"C:\\osmData\\tempLocalRoute.db", "r"))== 0)
+	if ((err = fopen_s(&fp,"D:\\osmData\\tempLocalRoute.db", "r"))== 0)
 	{
 		fclose(fp);
-		remove("C:\\osmData\\tempLocalRoute.db");
+		remove("D:\\osmData\\tempLocalRoute.db");
 	}
 	fp = NULL;
-	if ((err = fopen_s(&fp,"C:\\osmData\\tempLocalAddr.db", "r"))== 0)
+	if ((err = fopen_s(&fp,"D:\\osmData\\tempLocalAddr.db", "r"))== 0)
 	{
 		fclose(fp);
-		remove("C:\\osmData\\tempLocalAddr.db");
+		remove("D:\\osmData\\tempLocalAddr.db");
 	}
 	fp = NULL;
-	if ((err = fopen_s(&fp,"C:\\osmData\\tempLocalPoi.db", "r"))== 0)
+	if ((err = fopen_s(&fp,"D:\\osmData\\tempLocalPoi.db", "r"))== 0)
 	{
 		fclose(fp);
-		remove("C:\\osmData\\tempLocalPoi.db");
+		remove("D:\\osmData\\tempLocalPoi.db");
 	}
-	dbRes = sqlite3_open("C:\\osmData\\tempLocalMap.db", &dbMapCtx);
-	dbRes = sqlite3_open("C:\\osmData\\tempLocalRoute.db", &dbRouteCtx);
-	dbRes = sqlite3_open("C:\\osmData\\tempLocalAddr.db", &dbAddrCtx);
-	dbRes = sqlite3_open("C:\\osmData\\tempLocalPoi.db", &dbPoiCtx);
+	dbRes = sqlite3_open("D:\\osmData\\tempLocalMap.db", &dbMapCtx);
+	dbRes = sqlite3_open("D:\\osmData\\tempLocalRoute.db", &dbRouteCtx);
+	dbRes = sqlite3_open("D:\\osmData\\tempLocalAddr.db", &dbAddrCtx);
+	dbRes = sqlite3_open("D:\\osmData\\tempLocalPoi.db", &dbPoiCtx);
 	
 
 
@@ -246,7 +246,7 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA temp_store=MEMORY", NULL, NULL, &errMsg);
 	dbRes = sqlite3_exec(dbPoiCtx, "PRAGMA cache_size=100000", NULL, NULL, &errMsg);
 	// reopen node way rel dbx and attach them into single connection
-	//dbRes = sqlite3_open("C:\\osmData\\tempLocalNode.db", &dbCtx);
+	//dbRes = sqlite3_open("D:\\osmData\\tempLocalNode.db", &dbCtx);
 	//sqlite_exec(
 	// selectors
 
@@ -429,7 +429,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASESAVE)
 	{
-		boost::filesystem::path pather("C:\\osmData\\binarResult.bin");
+		boost::filesystem::path pather("D:\\osmData\\binarResult.bin");
 		
 		RandomAccessFileWriter rafek(pather, RandomAccessFileWriter::READWRITE);
 

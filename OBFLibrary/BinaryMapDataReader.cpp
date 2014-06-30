@@ -56,7 +56,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 			auto length = BinaryIndexDataReader::readBigEndianInt(cis);
             auto offset = cis->CurrentPosition();
             auto oldLimit = cis->PushLimit(length);
-			std::shared_ptr<BinaryMapSection> section;
+			std::shared_ptr<BinaryMapSection> section(new BinaryMapSection());
             readMapLevelHeader(cis, section, offset);
 			sections.push_back(std::make_tuple(section->rootBox, section->zoomLevels, section));
             cis->PopLimit(oldLimit);

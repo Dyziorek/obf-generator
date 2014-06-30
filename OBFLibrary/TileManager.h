@@ -126,8 +126,8 @@ public:
 	}
 		
 	 std::vector<TObject> getClosestObjects(double latitude, double longitude, int startDepth, int depth){
-		int tileX = (int) MapUtils::getTileNumberX(zoom, longitude);
-		int tileY = (int) MapUtils::getTileNumberY(zoom, latitude);
+		int tileX = (int) MapUtils::getTileNumberX((float)zoom, longitude);
+		int tileY = (int) MapUtils::getTileNumberY((float)zoom, latitude);
 		std::vector<TObject> result;
 		
 		if(startDepth <= 0){

@@ -116,27 +116,28 @@ void BinaryMapDataWriter::writeMapEncodingRules(boost::ptr_map<std::string, MapR
 		{
 			return op1->freq < op2->freq;
 		});
-
+		obf::OsmAndMapIndex_MapEncodingRule builderMap;
 		for (int i = 0; i < out.size(); i++) {
 
-			obf::OsmAndMapIndex_MapEncodingRule builder;
+			
+			obf::OsmAndMapIndex_MapEncodingRule* builder = builderMap.New();
 			
 			MapRulType* rule = out[i];
 			rule->setTargetId(i + 1);
 
-			builder.set_tag(rule->getTag());
+			builder->set_tag(rule->getTag());
 			if (rule->getValue() != "") {
-				builder.set_value(rule->getValue());
+				builder->set_value(rule->getValue());
 			}
-			builder.set_minzoom(rule->getMinzoom());
+			builder->set_minzoom(rule->getMinzoom());
 			if (rule->isAdditional()) {
-				builder.set_type(1);
+				builder->set_type(1);
 			} else if(rule->isText()) {
-				builder.set_type(2);
+				builder->set_type(2);
 			}
-			
-			wfl::WireFormatLite::WriteMessage(obf::OsmAndMapIndex::kRulesFieldNumber, builder, &dataOut);
-
+			builder->ByteSize();
+			wfl::WireFormatLite::WriteMessage(obf::OsmAndMapIndex::kRulesFieldNumber, *builder, &dataOut);
+			delete builder;
 			//dataStream.writeMessage(OsmandOdb.OsmAndMapIndex.RULES_FIELD_NUMBER, rulet);
 		}
 	}

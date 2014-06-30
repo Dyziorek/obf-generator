@@ -1,8 +1,9 @@
 #pragma once
 
 #include "RTree.h"
-
+#include "MapObjectData.h"
 namespace gp = google::protobuf;
+namespace gio = google::protobuf::io;
 
 typedef RTree<std::pair<__int64, std::vector<std::shared_ptr<MapObjectData>>>> treeMap;
 

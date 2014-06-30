@@ -21,6 +21,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "BinaryMapDataReader.h"
 #include "RandomAccessFileReader.h"
 #include "BinaryIndexDataReader.h"
 

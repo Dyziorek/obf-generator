@@ -231,7 +231,7 @@ void OBFMapDB::paintPolys()
 		}
 		char buff[10];
 		_ultoa_s(numberCalls++, buff,10);
-		std::string pathImage = "C:\\osmData\\resultImageSingle" + std::string(buff) + std::string(".png");
+		std::string pathImage = "D:\\osmData\\resultImageSingle" + std::string(buff) + std::string(".png");
 		SkFILEWStream stream(pathImage.c_str());
 
 		stream.write(data->data(), data->size());
@@ -1062,7 +1062,7 @@ void OBFMapDB::paintTreeData(OBFResultDB& dbContext, std::set<std::shared_ptr<Mu
 		std::string buffText("");
 		buffText+= "_";
 		buffText+= boost::lexical_cast<std::string>(indexMapTree);
-		std::string pathImage = "C:\\osmData\\resultPolyImage" + buffText + std::string(".png");
+		std::string pathImage = "D:\\osmData\\resultPolyImage" + buffText + std::string(".png");
 		SkFILEWStream stream(pathImage.c_str());
 		stream.write(data->data(), data->size());
 

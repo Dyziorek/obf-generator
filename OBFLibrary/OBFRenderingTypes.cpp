@@ -80,8 +80,8 @@ void OBFRenderingTypes::loadXmlData()
 {
 	registerRuleType(nameRule);
 	registerRuleType(nameEnRule);
-	pt::ptree treeData;
-	pt::read_xml("C:\\osmData\\rendering_types.xml",treeData);
+	/*pt::ptree treeData;
+	pt::read_xml("D:\\osmData\\rendering_types.xml",treeData);
 
 	pt::ptree::iterator elemIt = treeData.begin();
 	for (elemIt; elemIt != treeData.end(); elemIt++)
@@ -94,9 +94,9 @@ void OBFRenderingTypes::loadXmlData()
 			auto secondInElem = elemIn->second;
 		}
 	}
-
+*/
 	tinyxml2::XMLDocument xDoc;
-	xDoc.LoadFile("C:\\osmData\\rendering_types.xml");
+	xDoc.LoadFile("D:\\osmData\\rendering_types.xml");
 	std::string poiParentCategory, poiParentPrefix;
 	for ( const tinyxml2::XMLNode* node=xDoc.FirstChildElement(); node; node=node->NextSibling() )
 	{
