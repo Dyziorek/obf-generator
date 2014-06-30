@@ -3,6 +3,7 @@
 #include <boost\algorithm\string.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <set>
 // http://wiki.openstreetmap.org/wiki/Amenity
 // POI tags : amenity, leisure, shop, sport, tourism, historic; accessories (internet-access), natural ?
 class AmenityType {
@@ -193,7 +194,7 @@ public:
 		TagValuePattern tagValuePattern;
 		bool additional;
 		bool additionalText;
-		std::set<TagValuePattern> applyToTagValue;
+		std::set<TagValuePattern, std::less<TagValuePattern>, std::allocator<TagValuePattern>> applyToTagValue;
 		
 		std::string poiPrefix;
 		AmenityType poiCategory;

@@ -53,7 +53,7 @@ template<class T> std::stringstream& writeLongInt(std::stringstream& oa, T data)
 			oa.rdbuf()->sputn(&shortData[iCol], 1);
 		}
 		const char* shortDataZero = '\0';
-		for (int iCol = 7; iCol >= dataSize; iCol--)
+		for (size_t iCol = 7; iCol >= dataSize; iCol--)
 		{
 			oa.rdbuf()->sputn(shortDataZero, 1);
 		}

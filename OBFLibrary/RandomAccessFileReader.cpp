@@ -83,7 +83,7 @@ int m;
  //   );
 	if (exists)
 	{
-		_fd =  ::CreateFile(pathName.c_str(), m, 0 , NULL, OPEN_EXISTING , FILE_ATTRIBUTE_NORMAL , NULL);
+		_fd =  ::CreateFile(pathName.c_str(), m, 0 , NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL , NULL);
 	}
 	else
 	{

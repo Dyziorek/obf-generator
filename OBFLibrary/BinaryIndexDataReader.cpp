@@ -18,6 +18,8 @@
 #include "BinaryIndexDataReader.h"
 #include <boost/detail/endian.hpp>
 
+
+
 using namespace google::protobuf;
 using namespace obf;
 
@@ -145,3 +147,4 @@ void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::li
         }
     }
 }
+

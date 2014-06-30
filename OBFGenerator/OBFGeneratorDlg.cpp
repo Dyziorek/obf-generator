@@ -21,6 +21,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "BinaryMapDataReader.h"
 #include "RandomAccessFileReader.h"
 #include "BinaryIndexDataReader.h"
 
@@ -134,15 +135,15 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	FILE* fp = NULL;
 	errno_t err;
 
-	if ((err = fopen_s(&fp, "C:\\osmData\\tempLocalIN.db", "r")) == 0)
+	if ((err = fopen_s(&fp, "D:\\osmData\\tempLocalIN.db", "r")) == 0)
 	{
 		fclose(fp);
-		remove("C:\\osmData\\tempLocalIN.db");
+		remove("D:\\osmData\\tempLocalIN.db");
 	}
 
-	dbRes = sqlite3_open("C:\\osmData\\tempLocalIN.db", &dbCtx);
-	//dbRes = sqlite3_open("C:\\osmData\\tempLocalWay.db", &dbWayCtx);
-	//dbRes = sqlite3_open("C:\\osmData\\tempLocalRel.db", &dbCtx);
+	dbRes = sqlite3_open("D:\\osmData\\tempLocalIN.db", &dbCtx);
+	//dbRes = sqlite3_open("D:\\osmData\\tempLocalWay.db", &dbWayCtx);
+	//dbRes = sqlite3_open("D:\\osmData\\tempLocalRel.db", &dbCtx);
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists node" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "create table node (id bigint primary key, latitude double, longitude double, tags blob)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	dbRes = sqlite3_exec(dbCtx, "drop table if exists ways" , &COBFGeneratorDlg::shell_callback,this,&errMsg); 
