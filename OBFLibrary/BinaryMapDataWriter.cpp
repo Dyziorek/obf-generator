@@ -11,6 +11,12 @@
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "Amenity.h"
 #include "Street.h"
+#include "targetver.h"
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
+
 #include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
 #include "ArchiveIO.h"

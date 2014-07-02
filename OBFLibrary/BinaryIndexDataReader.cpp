@@ -12,6 +12,13 @@
 #include "Amenity.h"
 #include "ArchiveIO.h"
 #include "Street.h"
+
+#include "targetver.h"
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
+
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"

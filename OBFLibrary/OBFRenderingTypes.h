@@ -497,13 +497,13 @@ public:
 		return routeTags;
 	}
 	
-	static BYTE RESTRICTION_NO_RIGHT_TURN;
-	static BYTE RESTRICTION_NO_LEFT_TURN;
-	static BYTE RESTRICTION_NO_U_TURN;
-	static BYTE RESTRICTION_NO_STRAIGHT_ON;
-	static BYTE RESTRICTION_ONLY_RIGHT_TURN;
-	static BYTE RESTRICTION_ONLY_LEFT_TURN;
-	static BYTE RESTRICTION_ONLY_STRAIGHT_ON;
+	static unsigned char RESTRICTION_NO_RIGHT_TURN;
+	static unsigned char RESTRICTION_NO_LEFT_TURN;
+	static unsigned char RESTRICTION_NO_U_TURN;
+	static unsigned char RESTRICTION_NO_STRAIGHT_ON;
+	static unsigned char RESTRICTION_ONLY_RIGHT_TURN;
+	static unsigned char RESTRICTION_ONLY_LEFT_TURN;
+	static unsigned char RESTRICTION_ONLY_STRAIGHT_ON;
 
 	static std::list<boost::unordered_map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const boost::unordered_map<std::string, std::string>& tags);
 	static bool splitIsNeeded(const boost::unordered_map<std::string, std::string>& tags) {

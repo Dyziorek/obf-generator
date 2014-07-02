@@ -179,9 +179,9 @@ public:
 
 	
 
-	 static BOOL isClockwiseWay(std::shared_ptr<EntityWay> w);
+	 static bool isClockwiseWay(std::shared_ptr<EntityWay> w);
 
-	 static BOOL isClockwiseWay(std::vector<std::shared_ptr<EntityWay>> ways);
+	 static bool isClockwiseWay(std::vector<std::shared_ptr<EntityWay>> ways);
 
 	// try to intersect from left to right
 	 static double ray_intersect_lon(std::shared_ptr<EntityNode> EntityNode1, std::shared_ptr<EntityNode> EntityNode2, double latitude, double longitude);

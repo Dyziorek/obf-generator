@@ -16,13 +16,13 @@ char OBFRenderingTypes::TAG_DELIMETER = '/';
 
 std::map<std::string, AmenityType> AmenityType::amenityTypes;
 
-BYTE OBFRenderingTypes::RESTRICTION_NO_RIGHT_TURN = 1;
-BYTE OBFRenderingTypes::RESTRICTION_NO_LEFT_TURN = 2;
-BYTE OBFRenderingTypes::RESTRICTION_NO_U_TURN = 3;
-BYTE OBFRenderingTypes::RESTRICTION_NO_STRAIGHT_ON = 4;
-BYTE OBFRenderingTypes::RESTRICTION_ONLY_RIGHT_TURN = 5;
-BYTE OBFRenderingTypes::RESTRICTION_ONLY_LEFT_TURN = 6;
-BYTE OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
+unsigned char OBFRenderingTypes::RESTRICTION_NO_RIGHT_TURN = 1;
+unsigned char OBFRenderingTypes::RESTRICTION_NO_LEFT_TURN = 2;
+unsigned char OBFRenderingTypes::RESTRICTION_NO_U_TURN = 3;
+unsigned char OBFRenderingTypes::RESTRICTION_NO_STRAIGHT_ON = 4;
+unsigned char OBFRenderingTypes::RESTRICTION_ONLY_RIGHT_TURN = 5;
+unsigned char OBFRenderingTypes::RESTRICTION_ONLY_LEFT_TURN = 6;
+unsigned char OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
 
 std::map<AmenityType, boost::unordered_map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
 std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
