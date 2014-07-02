@@ -38,12 +38,12 @@ private:
     uint32_t bridge_encodingRuleId;
     uint32_t layerLowest_encodingRuleId;
 
-    boost::unordered_set<uint32_t> positiveLayers_encodingRuleIds;
-    boost::unordered_set<uint32_t> zeroLayers_encodingRuleIds;
-    boost::unordered_set<uint32_t> negativeLayers_encodingRuleIds;
+    std::unordered_set<uint32_t> positiveLayers_encodingRuleIds;
+    std::unordered_set<uint32_t> zeroLayers_encodingRuleIds;
+    std::unordered_set<uint32_t> negativeLayers_encodingRuleIds;
 
-	boost::unordered_map<uint32_t, MapDecodingRule> mapRules;
-	boost::unordered_map<std::string, boost::unordered_map<std::string, uint32_t>> mapRuleIdNames;
+	std::unordered_map<uint32_t, MapDecodingRule> mapRules;
+	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>> mapRuleIdNames;
 };
 
 class BinaryMapDataReader
@@ -58,12 +58,12 @@ public:
 	void ReadMapDataSection(gio::CodedInputStream* cis);
 	void readMapLevelHeader(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection> section, int offset);
 
-	void readMapEncodingRules(gio::CodedInputStream* cis);
+	void readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId);
 
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;
-	
+	std::unique_ptr<BinaryMapRules> mapRules;
 	GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(BinaryMapDataReader);
 };
 

@@ -34,7 +34,7 @@ using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
 
 
-BinaryMapDataReader::BinaryMapDataReader(void)
+BinaryMapDataReader::BinaryMapDataReader(void) : mapRules(new BinaryMapRules)
 {
 }
 
@@ -46,6 +46,7 @@ BinaryMapDataReader::~BinaryMapDataReader(void)
 
 void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 {
+	uint32_t defaultId = 1;
 	while(true)
 	{
 		int tag = cis->ReadTag();
@@ -69,7 +70,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 			}
 			break;
 		case OsmAndMapIndex::kRulesFieldNumber:
-			readMapEncodingRules(cis);
+			readMapEncodingRules(cis, defaultId++);
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -135,31 +136,41 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
     }
  }
 
- void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis)
+ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId)
  {
-	 uint32_t rlength = BinaryIndexDataReader::readBigEndianInt(cis);
+	 uint32_t rlength = 0;
+	 cis->ReadVarint32(&rlength);
 
 	 uint32_t  oldLimit = cis->PushLimit(rlength);
 
+	 uint32_t ruleID = defRuleId;
+	 uint32_t ruleType = 0;
+	 std::string name;
+	 std::string value;
+
+	 bool visited = false;
 
 	for(;;)
     {
 		  const auto tag = cis->ReadTag();
-
-		  switch(tag)
+		  const auto tagID = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		  switch(tagID)
 		  {
 			case 0:
+				mapRules->createRule(ruleType, ruleID, name, value);
 				cis->PopLimit(oldLimit);
 			  return;
 			case obf::OsmAndMapIndex_MapEncodingRule::kIdFieldNumber:
+				cis->ReadVarint32(&ruleID);
 				 break;
 			case obf::OsmAndMapIndex_MapEncodingRule::kTagFieldNumber:
+				wfl::WireFormatLite::ReadString(cis, &name);
 				break;
 			case obf::OsmAndMapIndex_MapEncodingRule::kTypeFieldNumber:
+				cis->ReadVarint32(&ruleType);
 				break;
 			case obf::OsmAndMapIndex_MapEncodingRule::kValueFieldNumber:
-				break;
-			case obf::OsmAndMapIndex_MapEncodingRule::kMinZoomFieldNumber:
+				wfl::WireFormatLite::ReadString(cis, &value);
 				break;
 			default:
 				BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -189,6 +200,10 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 
 #pragma pop_macro("max")
 
+BinaryMapRules::~BinaryMapRules()
+{
+}
+
 void BinaryMapRules::createMissingRules()
 {
 	
@@ -196,10 +211,10 @@ void BinaryMapRules::createMissingRules()
 
 void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name, std::string value)
 {
-	boost::unordered_map<std::string, boost::unordered_map<std::string, uint32_t>>::iterator itMapRule = mapRuleIdNames.find(name);
+	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>::iterator itMapRule = mapRuleIdNames.find(name);
 	if (itMapRule == mapRuleIdNames.end())
 	{
-		itMapRule = mapRuleIdNames.insert(std::make_pair(name, boost::unordered_map<std::string, uint32_t>())).first;
+		itMapRule = mapRuleIdNames.insert(std::make_pair(name, std::unordered_map<std::string, uint32_t>())).first;
 	}
 	(*itMapRule).second.insert(std::make_pair(value, id));
 	//mapRuleIdNames.insert(itMapRule, std::make_pair(name, id));

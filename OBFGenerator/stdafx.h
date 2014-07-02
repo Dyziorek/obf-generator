@@ -71,6 +71,8 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 #include "zlib.h"
+#include <unordered_map>
+#include <unordered_set>
 
 #include <boost/thread/thread.hpp>
 #include <boost/lockfree/queue.hpp>
