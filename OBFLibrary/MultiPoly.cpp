@@ -206,7 +206,7 @@ void MultiPoly::build()
 	}
 	else if (maxX - offsetX < w && maxY - offsetY < h)
 	{
-		scale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
+		scale = std::min<SkScalar>(w / (maxX - offsetX)   , h / (maxY - offsetY));
 	}
 
 
@@ -394,10 +394,10 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		minLon = 180;
 		for (std::shared_ptr<Ring> r : outRing) {
 			for (std::shared_ptr<EntityNode> n : r->nodes) {
-				maxLat = (float) max(maxLat, n->lat);
-				minLat = (float) min(minLat, n->lat);
-				maxLon = (float) max(maxLon, n->lon);
-				minLon = (float) min(minLon, n->lon);
+				maxLat = std::max<float>(maxLat, n->lat);
+				minLat = std::min<float>(minLat, n->lat);
+				maxLon = std::max<float>(maxLon, n->lon);
+				minLon = std::min<float>(minLon, n->lon);
 			}
 		}
 		// keep sorted
@@ -567,7 +567,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 	}
 	else if (maxX - offsetX < w && maxY - offsetY < h)
 	{
-		scale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
+		scale = std::min<double>(w / (maxX - offsetX)   , h / (maxY - offsetY));
 	}
 
 
@@ -673,7 +673,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		else if (maxX - offsetX < w && maxY - offsetY < h)
 		{
-			locscale = min(w / (maxX - offsetX)   , h / (maxY - offsetY));
+			locscale = std::min<double>(w / (maxX - offsetX)   , h / (maxY - offsetY));
 		}
 		if (bVisited)
 		{

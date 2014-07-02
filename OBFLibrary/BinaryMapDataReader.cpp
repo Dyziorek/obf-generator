@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "stdafx.h"
 #include <google\protobuf\descriptor.h>
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
@@ -18,12 +17,18 @@
 #include <sstream>
 #include <sys/stat.h>
 #include "RTree.h"
+#include "targetver.h"
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
+
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
 #include "BinaryIndexDataReader.h"
 #include "ArchiveIO.h"
-
+#include <limits>
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
@@ -64,7 +69,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 			}
 			break;
 		case OsmAndMapIndex::kRulesFieldNumber:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			readMapEncodingRules(cis);
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -130,3 +135,118 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
     }
  }
 
+ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis)
+ {
+	 uint32_t rlength = BinaryIndexDataReader::readBigEndianInt(cis);
+
+	 uint32_t  oldLimit = cis->PushLimit(rlength);
+
+
+	for(;;)
+    {
+		  const auto tag = cis->ReadTag();
+
+		  switch(tag)
+		  {
+			case 0:
+				cis->PopLimit(oldLimit);
+			  return;
+			case obf::OsmAndMapIndex_MapEncodingRule::kIdFieldNumber:
+				 break;
+			case obf::OsmAndMapIndex_MapEncodingRule::kTagFieldNumber:
+				break;
+			case obf::OsmAndMapIndex_MapEncodingRule::kTypeFieldNumber:
+				break;
+			case obf::OsmAndMapIndex_MapEncodingRule::kValueFieldNumber:
+				break;
+			case obf::OsmAndMapIndex_MapEncodingRule::kMinZoomFieldNumber:
+				break;
+			default:
+				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				break;
+		  }
+	}
+ }
+
+#pragma push_macro("max")
+#undef max
+
+ BinaryMapRules::BinaryMapRules() :  name_encodingRuleId(0), 
+	ref_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastline_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalLand_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastlineBroken_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastlineLine_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    highway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    oneway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    onewayReverse_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    tunnel_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    bridge_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    layerLowest_encodingRuleId(std::numeric_limits<uint32_t>::max())
+ {
+
+ }
+
+#pragma pop_macro("max")
+
+void BinaryMapRules::createMissingRules()
+{
+	
+}
+
+void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name, std::string value)
+{
+	boost::unordered_map<std::string, boost::unordered_map<std::string, uint32_t>>::iterator itMapRule = mapRuleIdNames.find(name);
+	if (itMapRule == mapRuleIdNames.end())
+	{
+		itMapRule = mapRuleIdNames.insert(std::make_pair(name, boost::unordered_map<std::string, uint32_t>())).first;
+	}
+	(*itMapRule).second.insert(std::make_pair(value, id));
+	//mapRuleIdNames.insert(itMapRule, std::make_pair(name, id));
+	if (mapRules.find(id) == mapRules.end())
+	{
+		MapDecodingRule ruleData;
+		ruleData.type = ruleType;
+		ruleData.tag = name;
+		ruleData.value = value;
+		mapRules.insert(std::make_pair(id, ruleData));
+	}
+	if(name == "name")
+        name_encodingRuleId = id;
+    else if(name == "ref")
+        ref_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline")
+        naturalCoastline_encodingRuleId = id;
+    else if(name == "natural" && value == "land")
+        naturalLand_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline_broken")
+        naturalCoastlineBroken_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline_line")
+        naturalCoastlineLine_encodingRuleId = id;
+    else if(name == "oneway" && value == "yes")
+        oneway_encodingRuleId = id;
+    else if(name == "oneway" && value == "-1")
+        onewayReverse_encodingRuleId = id;
+    else if(name == "tunnel" && value == "yes")
+    {
+        tunnel_encodingRuleId = id;
+        negativeLayers_encodingRuleIds.insert(id);
+    }
+    else if(name == "bridge"  && value == "yes")
+    {
+        bridge_encodingRuleId = id;
+        positiveLayers_encodingRuleIds.insert(id);
+    }
+    else if(name == "layer")
+    {
+        if(!value.empty() && value != "0")
+        {
+            if(value[0] == '-')
+                negativeLayers_encodingRuleIds.insert(id);
+            else if(value[0] == '0')
+                zeroLayers_encodingRuleIds.insert(id);
+            else
+                positiveLayers_encodingRuleIds.insert(id);
+        }
+    }
+}

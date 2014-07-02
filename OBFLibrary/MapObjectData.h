@@ -6,3 +6,11 @@ public:
 	~MapObjectData(void);
 };
 
+
+struct MapDecodingRule
+{
+    uint32_t type;
+
+    std::string tag;
+    std::string value;
+};

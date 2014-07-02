@@ -326,7 +326,7 @@ MapUtils::~MapUtils(void)
 	 */
 	  long  MapUtils::interleaveBits(long x, long y){
 		long c = 0;
-		for(BYTE b = 31; b>=0; b--){
+		for(unsigned char b = 31; b>=0; b--){
 			c = (c << 1) | ((x >> b) & 1);
 			c = (c << 1) | ((y >> b) & 1);
 		}
@@ -690,13 +690,13 @@ MapUtils::~MapUtils(void)
 		return sqrt(C * C + D * D);
 	}
 
-	 BOOL OsmMapUtils::isClockwiseWay(std::shared_ptr<EntityWay> w) {
+	 bool OsmMapUtils::isClockwiseWay(std::shared_ptr<EntityWay> w) {
 		 std::vector<std::shared_ptr<EntityWay>> ways;
 		 ways.push_back(w);
 		return isClockwiseWay(ways);
 	}
 
-	 BOOL OsmMapUtils::isClockwiseWay(std::vector<std::shared_ptr<EntityWay>> ways) {
+	 bool OsmMapUtils::isClockwiseWay(std::vector<std::shared_ptr<EntityWay>> ways) {
 		if (ways.empty()) {
 			return true;
 		}
@@ -770,7 +770,7 @@ MapUtils::~MapUtils(void)
 		if (latitude < a->lat || latitude > b->lat) {
 			return -360;
 		} else {
-			if (longitude < min(a->lon, b->lon)) {
+			if (longitude < std::min<double>(a->lon, b->lon)) {
 				return -360;
 			} else {
 				if (a->lon == b->lon && longitude == a->lon) {
@@ -796,7 +796,7 @@ MapUtils::~MapUtils(void)
      */
      double OsmMapUtils::polygonAreaPixels(std::list<std::shared_ptr<EntityNode>> EntityNodes, int zoom) {
         double area = 0.;
-        double mult = 1 / MapUtils::getPowZoom(max(31 - (zoom + 8), 0));
+        double mult = 1 / MapUtils::getPowZoom(std::max<double>(31 - (zoom + 8), 0));
 		std::vector<std::shared_ptr<EntityNode>> nodesVec(EntityNodes.begin(), EntityNodes.end());
         int j = nodesVec.size() - 1;
         for (int i = 0; i < nodesVec.size(); i++) {
@@ -909,10 +909,10 @@ bool OsmMapUtils::checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> no
 				c++;
 				int x = (int) (MapUtils::getTileNumberX(zoom, nodes[i]->lon) * 256.0);
 				int y = (int) (MapUtils::getTileNumberY(zoom, nodes[i]->lat) * 256.0);
-				minX = min(minX, x);
-				maxX = max(maxX, x);
-				minY = min(minY, y);
-				maxY = max(maxY, y);
+				minX = std::min<int>(minX, x);
+				maxX = std::max<int>(maxX, x);
+				minY = std::min<int>(minY, y);
+				maxY = std::max<int>(maxY, y);
 			}
 		}
 		if (c < 2) {
@@ -924,7 +924,7 @@ bool OsmMapUtils::checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> no
 
  std::list<std::shared_ptr<EntityNode>> OsmMapUtils::simplifyCycleWay(std::vector<std::shared_ptr<EntityNode>>& ns, int zoom, int zoomWaySmothness) 
  {
-		if (checkForSmallAreas(ns, zoom + min(zoomWaySmothness / 2, 3), 2, 4)) {
+		if (checkForSmallAreas(ns, zoom + std::min<int>(zoomWaySmothness / 2, 3), 2, 4)) {
 			return std::list<std::shared_ptr<EntityNode>>();
 		}
 		std::vector<std::shared_ptr<EntityNode>> res;
