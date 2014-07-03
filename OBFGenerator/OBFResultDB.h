@@ -57,8 +57,8 @@ public:
 
 	sqlite3* dbTransCtx;
 	void storeCities();
-	boost::unordered_map<__int64, CityObj> cityLocator;
-	boost::unordered_map<__int64, CityObj> villageLocator;
+	std::unordered_map<__int64, CityObj> cityLocator;
+	std::unordered_map<__int64, CityObj> villageLocator;
 	int PrepareDB(sqlite3* dbCtxSrc);
 	static int shell_callback(void *pArg, int nArg, char **azArg, char **azCol);
 	int iterateOverElements(int type, std::function<void (std::shared_ptr<EntityBase>)>saver);

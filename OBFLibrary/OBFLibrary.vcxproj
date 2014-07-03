@@ -68,7 +68,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\boost_1_55;D:\VisualFiles\tinyxml2-master;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmand\core\externals\zlib\zlib-1.2.8;$(IncludePath)</IncludePath>
+    <IncludePath>C:\boost_1_55;D:\VisualFiles\tinyxml2-master;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmand\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmand\core\externals\skia\upstream.original\third_party\iconv\config\windows;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>

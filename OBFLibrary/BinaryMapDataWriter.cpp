@@ -13,6 +13,8 @@
 #include "Street.h"
 #include "targetver.h"
 
+#include "iconv.h"
+
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
@@ -21,6 +23,50 @@
 #include "BinaryMapDataWriter.h"
 #include "ArchiveIO.h"
 
+struct iconverter
+{
+	iconverter(const char* from, const char* to) 
+	{
+		_i = iconv_open(from, to);
+	}
+	~iconverter()
+	{
+		if (_i != (iconv_t)-1)
+		{
+			iconv_close(_i);
+		}
+	}
+	std::string convert(const std::string& utf8str)
+	{
+		if (_i == (iconv_t)-1)
+		{
+			return utf8str;
+		}
+		std::string ret;
+		ret.resize(utf8str.size());
+		size_t retStr = ret.size();
+		size_t inpSize = utf8str.size();
+		const char* inputStr = &utf8str[0];
+		char* outStr = &ret[0];
+		size_t proc = iconv(_i, (const char **)&inputStr, &inpSize, &outStr, &retStr);
+		if (proc == (size_t)-1 && errno == E2BIG)
+		{
+			const size_t delta = outStr - &ret[0];
+			retStr += ret.size();
+			ret.resize(ret.size() * 2);
+			outStr = &ret[delta];
+			proc = iconv(_i, (const char **)&inputStr, &inpSize, &outStr, &retStr);
+			if (proc == (size_t)-1) {
+				return utf8str;
+			}
+
+		}
+		ret.resize(ret.size()-retStr);
+		return ret;
+	}
+	
+	iconv_t _i;
+};
 
 int BinaryMapDataWriter::OSMAND_STRUCTURE_INIT = 1;
 int BinaryMapDataWriter:: MAP_INDEX_INIT = 2;
@@ -247,7 +293,7 @@ int BinaryMapDataWriter::skipSomeNodes(const void* coordinates, int len, int i, 
 	}
 
 obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
-			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, boost::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
 			bool allowCoordinateSimplification)
 			{
 		obf::MapData data;
@@ -359,7 +405,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		return data;
 	}
 
-	void BinaryMapDataWriter::writeMapDataBlock(obf::MapDataBlock* builder, boost::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref)
+	void BinaryMapDataWriter::writeMapDataBlock(obf::MapDataBlock* builder, std::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref)
 	 {
 		 int vacP[] = {MAP_ROOT_LEVEL_INIT};
 		checkPeek(vacP, sizeof(vacP)/sizeof(int));
@@ -456,10 +502,10 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	#endif
 	}
 
-	boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> BinaryMapDataWriter::writeIndexedTable(int tag, std::list<std::string> indexedTable)  {
+	std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> BinaryMapDataWriter::writeIndexedTable(int tag, std::list<std::string> indexedTable)  {
 		wfl::WireFormatLite::WriteTag(tag, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
 		preserveInt32Size();
-		boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res;
+		std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res;
 		long init = getFilePointer();
 		for (std::string e : indexedTable) {
 			wfl::WireFormatLite::WriteString(obf::IndexedStringTable::kKeyFieldNumber, e, &dataOut);
@@ -472,7 +518,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		return res;
 	}
 
-	void BinaryMapDataWriter::writeAddressNameIndex(boost::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex){
+	void BinaryMapDataWriter::writeAddressNameIndex(std::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex){
 		int peeker[] = {ADDRESS_INDEX_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
 		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex::kNameIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
@@ -483,7 +529,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			 namesIndexKeys.push_back(pairData.first);
 		 }
 		
-		 boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res = writeIndexedTable(obf::OsmAndAddressNameIndexData::kTableFieldNumber, namesIndexKeys);
+		 std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> res = writeIndexedTable(obf::OsmAndAddressNameIndexData::kTableFieldNumber, namesIndexKeys);
 		for(auto entry : namesIndex) {
 			std::shared_ptr<BinaryFileReference> ref = res[entry.first];
 			wfl::WireFormatLite::WriteTag(obf::OsmAndAddressNameIndexData::kAtomFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
@@ -561,7 +607,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		
 		cityInd.set_name(city.getName());
 		if(checkEnNameToWrite(city)){
-			cityInd.set_name_en(city.getEnName());
+			iconverter ic("UTF-8", "ASCII");
+			cityInd.set_name_en(ic.convert(city.getEnName()));
 		}
 		int cx = MapUtils::get31TileNumberX(city.getLatLon().second);
 		int cy = MapUtils::get31TileNumberY(city.getLatLon().first);
@@ -574,13 +621,14 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	}
 	
  obf::StreetIndex BinaryMapDataWriter::createStreetAndBuildings(Street street, int cx, int cy, std::string postcodeFilter, 
-			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes){
+			std::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, std::unordered_map<Street, std::list<EntityNode>>& wayNodes){
 		int peeker[] = {CITY_INDEX_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
 		 obf::StreetIndex streetBuilder;
 		streetBuilder.set_name(street.getName());
 		if (checkEnNameToWrite(street)) {
-			streetBuilder.set_name_en(street.getEnName());
+			iconverter ic("UTF-8", "ASCII");
+			streetBuilder.set_name_en(ic.convert(street.getEnName()));
 		}
 		streetBuilder.set_id(street.getID());
 
@@ -624,7 +672,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			bbuilder.set_id(b.getID());
 			bbuilder.set_name(b.getName());
 			if (checkEnNameToWrite(b)) {
-				bbuilder.set_name_en(b.getEnName());
+				iconverter ic("UTF-8", "ASCII");
+				bbuilder.set_name_en(ic.convert(b.getEnName()));
 			}
 			if (postcodeFilter == "" && b.postCode != "") {
 				bbuilder.set_postcode(b.postCode);
@@ -633,7 +682,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		}
 
 		if(!wayNodes.empty()) {
-			boost::unordered_set<Street> checkedStreets ;
+			std::unordered_set<Street> checkedStreets ;
 			for (EntityNode intersection : wayNodes[street]) {
 				for (Street streetJ : mapNodeToStreet[intersection.id]) {
 					if (checkedStreets.find(streetJ) != checkedStreets.end() || streetJ.getID() == street.getID()) {
@@ -647,7 +696,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 					builder.set_intersectedy((iy - sy) >> 7);
 					builder.set_name(streetJ.getName());
 					if(checkEnNameToWrite(streetJ)){
-						builder.set_name_en(streetJ.getEnName());
+						iconverter ic("UTF-8", "ASCII");
+						builder.set_name_en(ic.convert(streetJ.getEnName()));
 					}
 					streetBuilder.add_intersections()->MergeFrom(builder);
 				}
@@ -658,7 +708,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	}
 
 
-	void BinaryMapDataWriter::writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
+	void BinaryMapDataWriter::writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, std::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
 			BinaryFileReference *ref)  {
 		int peeker[] = {CITY_INDEX_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
@@ -673,7 +723,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		
 		int cx = MapUtils::get31TileNumberX(cityOrPostcode.getLatLon().second);
 		int cy = MapUtils::get31TileNumberY(cityOrPostcode.getLatLon().first);
-		boost::unordered_map<__int64,std::set<Street>> mapNodeToStreet;
+		std::unordered_map<__int64,std::set<Street>> mapNodeToStreet;
 		if (!wayNodes.empty()) {
 			for (std::list<Street>::iterator it = streets.begin() ; it != streets.end(); it++) {
 				for (EntityNode n : wayNodes[*it]) {
@@ -692,6 +742,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 				throw new std::bad_exception("File size > 2GB");
 			}
 			s.setFileOffset((int) currentPointer);
+			streetInd.ByteSize();
 			currentPointer +=  wfl::WireFormatLite::MessageSize(streetInd);
 			cityInd.add_streets()->MergeFrom(streetInd);
 			

@@ -40,7 +40,7 @@ public:
 
 	std::list<std::pair<__int64, std::pair<int,std::string>>> entityIDs;
 
-	boost::unordered_map<__int64, std::tuple<int,std::shared_ptr<EntityBase>, std::string>> relations;
+	std::unordered_map<__int64, std::tuple<int,std::shared_ptr<EntityBase>, std::string>> relations;
 
 	std::list<std::pair<int, __int64>> getEntityIDforName(std::string name)
 	{

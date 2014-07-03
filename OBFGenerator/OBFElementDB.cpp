@@ -48,7 +48,7 @@ void OBFpoiDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB
 			{
 			if (propagatedTags.find(entryRel.first) == propagatedTags.end())
 			{
-				propagatedTags.insert(std::make_pair(entryRel.first, boost::unordered_map<std::string, std::string>()));
+				propagatedTags.insert(std::make_pair(entryRel.first, std::unordered_map<std::string, std::string>()));
 			}
 			propagatedTags.find(entryRel.first)->second.insert(std::make_pair(strId.first, strId.second));
 			}
@@ -61,13 +61,13 @@ void OBFpoiDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResul
 {
 	tempAmenityList.clear();
 	std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(baseItem);
-	boost::unordered_map<std::string, std::string> tags;
+	std::unordered_map<std::string, std::string> tags;
 	if (propagatedTags.find(baseItem->id) != propagatedTags.end())
 	{
 		tags = propagatedTags.at(baseItem->id);
 	}
 	if (!tags.empty()) {
-		boost::unordered_map<std::string, std::string>::iterator iterator = tags.begin();
+		std::unordered_map<std::string, std::string>::iterator iterator = tags.begin();
 		while (iterator != tags.end()) {
 			auto ts = *iterator;
 			if (baseItem->getTag(ts.first) == "") {
@@ -135,7 +135,7 @@ void OBFrouteDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResult
 {
 	indexHighwayRestrictions(entry, dbContext);
 
-	boost::unordered_map<std::string, std::string> propagated = routingTypes.getRouteRelationPropogatedTags(*entry.get());
+	std::unordered_map<std::string, std::string> propagated = routingTypes.getRouteRelationPropogatedTags(*entry.get());
 	if (propagated.size() >0)
 	{
 		if (entry->entityIDs.size() == 0)
@@ -148,7 +148,7 @@ void OBFrouteDB::indexRelations(std::shared_ptr<EntityRelation> entry, OBFResult
 		{
 			if (propagatedTags.find(entryRel.first) == propagatedTags.end())
 			{
-				propagatedTags.insert(std::make_pair(entryRel.first, boost::unordered_map<std::string, std::string>()));
+				propagatedTags.insert(std::make_pair(entryRel.first, std::unordered_map<std::string, std::string>()));
 			}
 			propagatedTags.find(entryRel.first)->second.insert(propagated.begin(), propagated.end());
 		}
@@ -210,7 +210,7 @@ void OBFrouteDB::iterateMainEntity(std::shared_ptr<EntityBase>& it, OBFResultDB&
 	if (wayItem) {
 		auto tagsIt = propagatedTags.find(wayItem->id);
 		if (tagsIt != propagatedTags.end()) {
-			boost::unordered_map<std::string, std::string>::iterator itTag = tagsIt->second.begin();
+			std::unordered_map<std::string, std::string>::iterator itTag = tagsIt->second.begin();
 				while (itTag != tagsIt->second.end()) {
 					auto ts = *itTag;
 					if (wayItem->getTag(ts.first) == "") {
@@ -323,7 +323,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 
  void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool registerId,long long wayId, int insertAt, int originalInd) {
 		
-		boost::unordered_map<__int64, __int64>::iterator exNode = basemapRemovedNodes.find(pointLoc);
+		std::unordered_map<__int64, __int64>::iterator exNode = basemapRemovedNodes.find(pointLoc);
 		if(insertAt > (1ll << SHIFT_INSERT_AT)) {
 			throw new std::bad_exception("Way index too big");
 		}
@@ -396,7 +396,7 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 			
 			std::pair<double,double> LatLon(-1000,-1000);
 			std::string streetName = "";
-			boost::unordered_set<std::string> isInNames;
+			std::unordered_set<std::string> isInNames;
 			dbContext.loadRelationMembers(i.get());
 			dbContext.loadNodesOnRelation(i.get());
 			
@@ -420,7 +420,7 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 			DBAStreet streetDAO(dbContext);
 
 			if (streetName != "") {
-				boost::unordered_set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
+				std::unordered_set<long long> idsOfStreet = getStreetInCity(isInNames, streetName, "", LatLon, dbContext);
 				if (idsOfStreet.size() > 0) {
 					std::vector<std::shared_ptr<EntityBase>> houses = i->getMembers("house"); // both house and address roles can have address
 					std::vector<std::shared_ptr<EntityBase>> addresses = i->getMembers("address");
@@ -458,13 +458,13 @@ void OBFAddresStreetDB::indexAddressRelation(std::shared_ptr<EntityRelation>& i,
 	}
 
 
-boost::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext) {
+std::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(std::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext) {
 		if (name == "" || location.first == -1000) {
-			return boost::unordered_set<long long>();
+			return std::unordered_set<long long>();
 		
 		}
 		boost::trim(name);
-		boost::unordered_set<CityObj> result;
+		std::unordered_set<CityObj> result;
 		std::list<CityObj> nearestObjects;
 		std::vector<CityObj> objects = cityManager.getClosestObjects(location.first,location.second);
 		nearestObjects.insert(nearestObjects.end(), objects.begin(), objects.end());
@@ -508,7 +508,7 @@ boost::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(boost::unorde
 		//return registerStreetInCities(name, nameEn, location, result);
 
 		if (result.size() == 0) {
-			return boost::unordered_set<long long>();
+			return std::unordered_set<long long>();
 		}
 		if ( boost::empty(nameEn)) {
 
@@ -516,7 +516,7 @@ boost::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(boost::unorde
 		}
 
 		DBAStreet streetDAO(dbContext);
-		boost::unordered_set<long long> values;
+		std::unordered_set<long long> values;
 		for (CityObj city : result) {
 			std::string cityPart = findCityPart(location, city);
 		
@@ -1074,7 +1074,7 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 							streetDAO.removeBuilding(first);
 						}
 						LatLon l = baseItem->getLatLon();
-						boost::unordered_set<__int64> idsOfStreet = getStreetInCity(first->getIsInNames(), first->getTag(OSMTags::ADDR_STREET), "", l, dbContext);
+						std::unordered_set<__int64> idsOfStreet = getStreetInCity(first->getIsInNames(), first->getTag(OSMTags::ADDR_STREET), "", l, dbContext);
 						if (!(idsOfStreet.size() == 0)) {
 							Building building;
 							MapObject::parseMapObject(&building, first.get());
@@ -1107,7 +1107,7 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 			boolean exist = relItem ||  streetDAO.findBuilding(baseItem);
 			if (!exist) {
 				LatLon l = baseItem->getLatLon();
-				boost::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), street, "", l, dbContext);
+				std::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), street, "", l, dbContext);
 				if (idsOfStreet.size()) {
 					Building building;
 					MapObject::parseMapObject(&building, baseItem.get());
@@ -1150,7 +1150,7 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 							MapObject::parseMapObject(&building2, baseItem.get());
 							building2.setBuilding(baseItem.get());
 							building2.setName(hname.substr(secondNumber + 1));
-							boost::unordered_set<__int64> ids2OfStreet = getStreetInCity(baseItem->getIsInNames(), street2, "", l, dbContext);
+							std::unordered_set<__int64> ids2OfStreet = getStreetInCity(baseItem->getIsInNames(), street2, "", l, dbContext);
 							if (ids2OfStreet.size() > 0)
 							{
 								for (__int64 idsParent : idsOfStreet)
@@ -1186,7 +1186,7 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 			// check that street way is not registered already
 			if (!exist) {
 				LatLon l = baseItem->getLatLon();
-				boost::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), baseItem->getTag(OSMTags::NAME), baseItem->getTag(OSMTags::NAME_EN), l, dbContext);
+				std::unordered_set<__int64> idsOfStreet = getStreetInCity(baseItem->getIsInNames(), baseItem->getTag(OSMTags::NAME), baseItem->getTag(OSMTags::NAME_EN), l, dbContext);
 				if (idsOfStreet.size()) {
 					streetDAO.writeStreetWayNodes(idsOfStreet, wayItem);
 				}
@@ -1205,7 +1205,7 @@ void OBFAddresStreetDB::iterateMainEntity(std::shared_ptr<EntityBase>& baseItem,
 void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext)
 {
 	writer.startWriteAddressIndex(regionName);
-		boost::unordered_map<std::string, std::list<CityObj>> cities = readCities(dbContext);
+		std::unordered_map<std::string, std::list<CityObj>> cities = readCities(dbContext);
 
 		int sqlStatus = 0;
 		sqlite3_stmt* streetstat = nullptr;
@@ -1271,8 +1271,8 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 }
 
 
-boost::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCities(OBFResultDB& dbContext){
-		boost::unordered_map<std::string, std::list<CityObj>> cities;
+std::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCities(OBFResultDB& dbContext){
+		std::unordered_map<std::string, std::list<CityObj>> cities;
 		{
 			cities.insert(std::make_pair("city", std::list<CityObj>()));
 			cities.insert(std::make_pair("town", std::list<CityObj>()));
@@ -1366,8 +1366,8 @@ std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sql
 }
 
 void OBFAddresStreetDB::readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuildingsStat, CityObj city,
-			sqlite3_stmt* waynodesStat, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes, boost::unordered_map<__int64, Street>& visitedStreets,
-			boost::unordered_map<std::string, std::vector<Street>>& uniqueNames)  {
+			sqlite3_stmt* waynodesStat, std::unordered_map<Street, std::list<EntityNode>>& streetNodes, std::unordered_map<__int64, Street>& visitedStreets,
+			std::unordered_map<std::string, std::vector<Street>>& uniqueNames)  {
 			sqlite3_bind_int64( streetBuildingsStat, 1, city.getID());
 			int sqlCode = SQLITE_OK;
 			sqlCode = sqlite3_step(streetBuildingsStat);
@@ -1450,7 +1450,7 @@ void OBFAddresStreetDB::readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuild
 		
 	}
 
-double OBFAddresStreetDB::getDistance(Street s, Street c, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes) {
+double OBFAddresStreetDB::getDistance(Street s, Street c, std::unordered_map<Street, std::list<EntityNode>>& streetNodes) {
 		std::list<EntityNode> thisWayNodes = streetNodes[s];
 		std::list<EntityNode> oppositeStreetNodes = streetNodes[c];
 		if(thisWayNodes.size() == 0) {
@@ -1471,9 +1471,9 @@ double OBFAddresStreetDB::getDistance(Street s, Street c, boost::unordered_map<S
 	}
 
 std::list<Street> OBFAddresStreetDB::readStreetsBuildings(sqlite3_stmt* streetBuildingsStat, CityObj city, sqlite3_stmt*  waynodesStat,
-			boost::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs) {
-		boost::unordered_map<__int64, Street> visitedStreets;
-		boost::unordered_map<std::string, std::vector<Street>> uniqueNames;
+			std::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs) {
+		std::unordered_map<__int64, Street> visitedStreets;
+		std::unordered_map<std::string, std::vector<Street>> uniqueNames;
 
 		// read streets for city
 		readStreetsAndBuildingsForCity(streetBuildingsStat, city, waynodesStat, streetNodes, visitedStreets, uniqueNames);
@@ -1500,7 +1500,7 @@ std::list<Street> OBFAddresStreetDB::readStreetsBuildings(sqlite3_stmt* streetBu
 							if(candidate.getName() == s.getName()) {
 								candidate.getCity().unregisterStreet(candidate.getName());
 							}
-							boost::unordered_map<Street, std::list<EntityNode>>::iterator itOld = streetNodes.find(candidate);
+							std::unordered_map<Street, std::list<EntityNode>>::iterator itOld = streetNodes.find(candidate);
 							std::list<EntityNode> old = itOld->second;
 							streetNodes[s].insert(streetNodes[s].end(), old.begin(), old.end());
 							streets.erase(streets.begin()+j);
@@ -1554,7 +1554,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			CityObj city = *cit;
 			BinaryFileReference* ref = refs[i];
 			putNamedMapObject(namesIndex, city, ref->getStartPointer());
-			boost::unordered_map<Street, std::list<EntityNode>> streetNodes;
+			std::unordered_map<Street, std::list<EntityNode>> streetNodes;
 			std::vector<CityObj> listSuburbs;
 			if (!suburbs.empty()) {
 				for (CityObj suburb : suburbs) {

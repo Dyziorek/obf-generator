@@ -20,7 +20,7 @@ std::list<Amenity> Amenity::parseAmenities (OBFRenderingTypes renderer, EntityBa
 	EntityRelation* relIt = dynamic_cast<EntityRelation*>(baseItem);
 	bool isRelation = relIt != nullptr;
 
-	std::list<boost::unordered_map<std::string, std::string>> it = renderer.splitTagsIntoDifferentObjects(baseItem->tags);
+	std::list<std::unordered_map<std::string, std::string>> it = renderer.splitTagsIntoDifferentObjects(baseItem->tags);
 	for (auto tags : it)
 	{
 		if (tags.size() != 0)
@@ -61,7 +61,7 @@ std::list<Amenity> Amenity::parseAmenities (OBFRenderingTypes renderer, EntityBa
 Amenity Amenity::parseAmenity (EntityBase& entity, 
 							  AmenityType type, 
 							  std::string subtype, 
-							  boost::unordered_map<std::string, std::string> tagValues,
+							  std::unordered_map<std::string, std::string> tagValues,
 							  OBFRenderingTypes renderer ) 
 {
 	std::string info;

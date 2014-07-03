@@ -7,7 +7,7 @@ class OBFpoiDB :
 	public OBFResultDB
 {
 	OBFRenderingTypes renderer;
-	std::map<long long, boost::unordered_map<std::string, std::string>> propagatedTags;
+	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	std::list<Amenity> tempAmenityList;
 public:
 	OBFpoiDB(void);
@@ -46,7 +46,7 @@ private:
 	 public:
 		 __int64 id;
 		 int mainType;
-		boost::unordered_set<int> addtypes;
+		std::unordered_set<int> addtypes;
 		std::vector<int> px;
 		std::vector<int> py;
 		
@@ -144,8 +144,8 @@ private:
 		
 		boost::unordered::unordered_set<GeneralizedWay, hashWay, equalWay> ways;
 		// either LinkedList<GeneralizedWay> or GeneralizedWay
-		typedef boost::unordered_map<__int64, boost::container::list<GeneralizedWay>>::iterator mapIt;
-		boost::unordered_map<__int64, boost::container::list<GeneralizedWay>> map;
+		typedef std::unordered_map<__int64, boost::container::list<GeneralizedWay>>::iterator mapIt;
+		std::unordered_map<__int64, boost::container::list<GeneralizedWay>> map;
 		
 		
 		void replaceWayFromLocation(GeneralizedWay deleteWay, int ind, GeneralizedWay toReplace){
@@ -275,10 +275,10 @@ public:
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
 	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
 	void putIntersection(long long  point, long long wayNodeId);
-	boost::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
-	boost::unordered_map<__int64, __int64> basemapRemovedNodes;
-	boost::unordered_map<__int64, RouteMissingPoints> basemapNodesToReinsert;
-	std::map<long long, boost::unordered_map<std::string, std::string>> propagatedTags;
+	std::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
+	std::unordered_map<__int64, __int64> basemapRemovedNodes;
+	std::unordered_map<__int64, RouteMissingPoints> basemapNodesToReinsert;
+	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	OBFRenderingTypes renderer;
 	MapRoutingTypes routingTypes;
 
@@ -325,8 +325,8 @@ public:
 	CityObj createMissingCity(std::shared_ptr<EntityBase>& cityNode, std::string t);
 	std::set<__int64> visitedBoundaryWays;
 	std::vector<std::shared_ptr<EntityRelation>> postalCodeRelations;
-	boost::unordered_map<CityObj, std::shared_ptr<MultiPoly>, cityhash, cityeqal> cityBoundaries;
-	boost::unordered_map<std::shared_ptr<MultiPoly>, std::list<CityObj>> boundaryToContainingCities;
+	std::unordered_map<CityObj, std::shared_ptr<MultiPoly>, cityhash, cityeqal> cityBoundaries;
+	std::unordered_map<std::shared_ptr<MultiPoly>, std::list<CityObj>> boundaryToContainingCities;
 	std::set<std::shared_ptr<MultiPoly>> boundaries;
 	std::set<std::shared_ptr<MultiPoly>> notAssignedBoundaries;
 	OBFAddresStreetDB(void);
@@ -340,20 +340,20 @@ public:
 	std::shared_ptr<MultiPoly> putCityBoundary(std::shared_ptr<MultiPoly> boundary, CityObj cityFound);
 	int getCityBoundaryImportance(std::shared_ptr<MultiPoly> b, CityObj c);
 	void indexAddressRelation(std::shared_ptr<EntityRelation>& i, OBFResultDB& dbContext);
-	boost::unordered_set<long long> getStreetInCity(boost::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
+	std::unordered_set<long long> getStreetInCity(std::unordered_set<std::string> isInNames, std::string name, std::string nameEn, std::pair<double,double> location, OBFResultDB& dbContext);
 	std::string findCityPart(LatLon location, CityObj city);
 	std::string findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext);
 	void putNamedMapObject(std::map<std::string, std::list<MapObject>>& namesIndex, MapObject o, __int64 fileOffset);
 	void readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuildingsStat, CityObj city,
-			sqlite3_stmt* waynodesStat, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes, boost::unordered_map<__int64, Street>& visitedStreets,
-			boost::unordered_map<std::string, std::vector<Street>>& uniqueNames);
-	double getDistance(Street s, Street c, boost::unordered_map<Street, std::list<EntityNode>>& streetNodes);
+			sqlite3_stmt* waynodesStat, std::unordered_map<Street, std::list<EntityNode>>& streetNodes, std::unordered_map<__int64, Street>& visitedStreets,
+			std::unordered_map<std::string, std::vector<Street>>& uniqueNames);
+	double getDistance(Street s, Street c, std::unordered_map<Street, std::list<EntityNode>>& streetNodes);
 	std::list<Street> readStreetsBuildings(sqlite3_stmt* streetBuildingsStat, CityObj city, sqlite3_stmt*  waynodesStat,
-			boost::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs);
+			std::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs);
 	std::vector<EntityNode> loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat);
 	void writeCityBlockIndex(BinaryMapDataWriter& writer, std::string citytype, sqlite3_stmt* streetstat, sqlite3_stmt* waynodesStat,
 			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<MapObject>>& namesIndex);
-	boost::unordered_map<std::string, std::list<CityObj>> readCities(OBFResultDB& dbContext);
+	std::unordered_map<std::string, std::list<CityObj>> readCities(OBFResultDB& dbContext);
 };

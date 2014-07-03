@@ -98,7 +98,7 @@ bool DBAStreet::findBuilding(std::shared_ptr<EntityBase> house)
 	return (SqlCode == SQLITE_ROW);
 }
 
-void DBAStreet::writeBuilding(boost::unordered_set<long long>& idsOfStreet, Building building)
+void DBAStreet::writeBuilding(std::unordered_set<long long>& idsOfStreet, Building building)
 {
 	//"insert into building (id, latitude, longitude, name, name_en, street, postcode, name2, name_en2, lat2, lon2, interval, interpolateType) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9 ,?10 ,?11 ,?12 ,?13)"
 	sqlite3_stmt* bldInsert = workCtx.buildStmt;
@@ -182,7 +182,7 @@ bool DBAStreet::findStreetNode(std::shared_ptr<EntityBase> node)
 	return success;
 }
 
-void DBAStreet::writeStreetWayNodes(boost::unordered_set<long long>& idsOfStreet,std::shared_ptr<EntityWay> wayItem)
+void DBAStreet::writeStreetWayNodes(std::unordered_set<long long>& idsOfStreet,std::shared_ptr<EntityWay> wayItem)
 {
 	//"insert into street_node (id, latitude, longitude, street, way) values (?1, ?2, ?3, ?4, ?5)"
 	sqlite3_stmt* insertStrNodeStmt = workCtx.streetNodeStmt;

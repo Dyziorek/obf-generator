@@ -65,6 +65,7 @@ MapObject::~MapObject(void)
  {
 	 isAlwaysVisible = false;
 	 isin = "";
+	 streets.clear();
  }
  
 CityObj::~CityObj(void)

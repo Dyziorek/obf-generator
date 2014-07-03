@@ -58,7 +58,7 @@ public:
 	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
 	void addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base);
 	OBFResultDB& workContext;
-	std::string encodeAdditionalInfo(boost::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn);
+	std::string encodeAdditionalInfo(std::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn);
 	void commit();
 private:
 	void flush(bool flush = FALSE);

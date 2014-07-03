@@ -66,10 +66,10 @@ public:
 	int zoomWaySmothness;
 
 	void writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& ctx);
-	void writeBinaryMapTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
+	void writeBinaryMapTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
 	void writeBinaryMapBlock(RTreeValued& treeMap, RTreeValued::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,
-			boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
-	void callNodeBox(const RTreeValued::box& re, bool begin, bool hasContent, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
-	void callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValued::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, boost::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, sqlite3_stmt* selectData, boost::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
+			std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, std::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
+	void callNodeBox(const RTreeValued::box& re, bool begin, bool hasContent, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds);
+	void callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValued::value& valData, bool fromleaf, bool isLeaf, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds, sqlite3_stmt* selectData, std::unordered_map<std::string, int>& tempStringTable, std::map<MapRulType, std::string>& tempNames, MapZooms::MapZoomPair level);
 };
 

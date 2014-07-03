@@ -92,13 +92,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;BOOST_IOSTREAMS_NO_LIB;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;..\OBFLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\boost_1_55;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmand\core\externals\skia\upstream.original\third_party\iconv\config\windows;D:\VisualFiles\osmAnd\core\externals\skia\upstream.original\include\device;D:\VisualFiles\tinyxml2-master;..\OBFLibrary;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Debug\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;ObfLibrary.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>skia_sfnt.lib;skia_utils.lib;libboost_serialization-vc110-mt-gd-1_55.lib;libboost_iostreams-vc110-mt-gd-1_55.lib;D:\VisualFiles\osmAnd\core\externals\protobuf\protobuf-2.4.1\vsprojects\Debug\libprotobuf.lib;D:\VisualFiles\osmAnd\core\externals\zlib\zlib-1.2.8\contrib\vstudio\vc11\x86\ZlibStatDebug\zlibstat.lib;skia_core.lib;skia_images.lib;skia_ports.lib;skia_effects.lib;skia_animator.lib;skia_opts.lib;skia_opts_ssse3.lib;skia_skgpu.lib;usp10.lib;opengl32.lib;ObfLibrary.lib;iconv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>NotSet</ShowProgress>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <LinkStatus>true</LinkStatus>
@@ -215,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.h" />
+    <ClInclude Include="BatchUpdater.h" />
     <ClInclude Include="BlockReader.h" />
     <ClInclude Include="DBAStreet.h" />
     <ClInclude Include="OBFElementDB.h" />

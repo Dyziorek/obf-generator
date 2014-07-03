@@ -266,7 +266,7 @@ void BatchUpdater::flush(bool bFlush)
 	}
 }
 
-std::string BatchUpdater::encodeAdditionalInfo(boost::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn) {
+std::string BatchUpdater::encodeAdditionalInfo(std::unordered_map<std::string, std::string>& tempNames, std::string name, std::string nameEn) {
 		if(!(name == "")) {
 			tempNames.insert(std::make_pair("name", name));
 		}

@@ -100,7 +100,7 @@ public:
 	virtual ~CityObj(void);
 	std::size_t operator()(CityObj const& obj) const;
 	bool operator==(const CityObj & x) const;
-	boost::unordered_map<std::string, Street, icaseString::ihash, icaseString::iequal_to> streets;
+	std::unordered_map<std::string, Street, icaseString::ihash, icaseString::iequal_to> streets;
 	Street registerStreet(Street street);
 	Street unregisterStreet(std::string);
 	bool isAlwaysVisible;
@@ -145,7 +145,7 @@ public:
 };
 
 
-namespace boost
+namespace std
 {
 	template<>
 	struct hash<CityObj>
@@ -154,9 +154,9 @@ namespace boost
 		{
 			size_t seed;
 			CityObj& objCon = const_cast<CityObj&>(hashWork);
-			hash_combine(seed, objCon.getName());
-			hash_combine(seed, objCon.getEnName());
-			hash_combine(seed, objCon.getID());
+			boost::hash_combine(seed, objCon.getName());
+			boost::hash_combine(seed, objCon.getEnName());
+			boost::hash_combine(seed, objCon.getID());
 			return seed;
 		}
 	};

@@ -6,12 +6,12 @@ char MapRoutingTypes::TAG_DELIMETER = '/'; //$NON-NLS-1$
 
 std::set<std::string> MapRoutingTypes::TAGS_TO_SAVE;
 std::set<std::string> MapRoutingTypes::TAGS_TO_ACCEPT;
-boost::unordered_map<std::string, std::string> MapRoutingTypes::TAGS_TO_REPLACE;
+std::unordered_map<std::string, std::string> MapRoutingTypes::TAGS_TO_REPLACE;
 std::set<std::string> MapRoutingTypes::TAGS_RELATION_TO_ACCEPT;
 std::set<std::string> MapRoutingTypes::TAGS_TEXT;
 std::set<std::string> MapRoutingTypes::BASE_TAGS_TEXT;
 std::set<std::string> MapRoutingTypes::BASE_TAGS_TO_SAVE;
-boost::unordered_map<std::string, std::string> MapRoutingTypes::BASE_TAGS_TO_REPLACE;
+std::unordered_map<std::string, std::string> MapRoutingTypes::BASE_TAGS_TO_REPLACE;
 
 MapRoutingTypes::MapRoutingTypes(void)
 {
@@ -29,7 +29,7 @@ MapRoutingTypes::~MapRoutingTypes(void)
 		return false;
 	}
 	
-	std::string MapRoutingTypes::getMap(boost::unordered_map<std::string, std::string>& s, std::string tag, std::string value) {
+	std::string MapRoutingTypes::getMap(std::unordered_map<std::string, std::string>& s, std::string tag, std::string value) {
 		//std::string r = s.find(tag);
 		if (s.find(tag) != s.end()) {
 			return s.find(tag)->second;
@@ -152,8 +152,8 @@ MapRoutingTypes::~MapRoutingTypes(void)
 		return nameRuleType;
 	}
 	
-	boost::unordered_map<std::string, std::string> MapRoutingTypes::getRouteRelationPropogatedTags(EntityBase& e) {
-		boost::unordered_map<std::string, std::string> propogated; 
+	std::unordered_map<std::string, std::string> MapRoutingTypes::getRouteRelationPropogatedTags(EntityBase& e) {
+		std::unordered_map<std::string, std::string> propogated; 
 		bool foundProp = false;
 		for(std::pair<std::string, std::string> es : e.tags) {
 			std::string tag = es.first;

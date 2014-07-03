@@ -44,7 +44,7 @@ public:
 	}
 };
 
-namespace boost
+namespace std
 {
 	template<>
 	struct hash<Street>
@@ -53,13 +53,13 @@ namespace boost
 		{
 			size_t seed;
 			Street& objCon = const_cast<Street&>(hashWork);
-			hash_combine(seed, objCon.getName());
-			hash_combine(seed, objCon.getEnName());
-			hash_combine(seed, objCon.getID());
+			boost::hash_combine(seed, objCon.getName());
+			boost::hash_combine(seed, objCon.getEnName());
+			boost::hash_combine(seed, objCon.getID());
 			for (Building build :objCon.getBuildings())
 			{
-				hash_combine(seed, build.getName());
-				hash_combine(seed, build.getID());
+				boost::hash_combine(seed, build.getName());
+				boost::hash_combine(seed, build.getID());
 			}
 			return seed;
 		}

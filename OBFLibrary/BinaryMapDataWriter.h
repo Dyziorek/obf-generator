@@ -173,9 +173,9 @@ public:
 
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
-			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, boost::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
+			std::vector<int> addtypeUse, std::map<MapRulType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::MapDataBlock* dataBlock,
 			bool allowCoordinateSimplification);
-	void writeMapDataBlock(obf::MapDataBlock* builder, boost::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref);
+	void writeMapDataBlock(obf::MapDataBlock* builder, std::unordered_map<std::string, int>& stringTable, BinaryFileReference& ref);
 	void endWriteMapLevelIndex();
 	void endWriteMapIndex();
 	
@@ -185,13 +185,13 @@ public:
 	
 	void startCityBlockIndex(int type);
 	void endCityBlockIndex();
-	void writeAddressNameIndex(boost::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex);
+	void writeAddressNameIndex(std::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex);
 	bool checkEnNameToWrite(MapObject& obj);
-	boost::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> writeIndexedTable(int tag, std::list<std::string> indexedTable);
+	std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> writeIndexedTable(int tag, std::list<std::string> indexedTable);
 	BinaryFileReference* writeCityHeader(MapObject& city, int cityType);
 	obf::StreetIndex createStreetAndBuildings(Street street, int cx, int cy, std::string postcodeFilter, 
-			boost::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes);
-	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, boost::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
+			std::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, std::unordered_map<Street, std::list<EntityNode>>& wayNodes);
+	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, std::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
 			BinaryFileReference* ref);
 	void close();
 

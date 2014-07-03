@@ -64,12 +64,12 @@ public:
 private:
 	static std::set<std::string> TAGS_TO_SAVE;
 	static std::set<std::string> TAGS_TO_ACCEPT;
-	static boost::unordered_map<std::string, std::string> TAGS_TO_REPLACE;
+	static std::unordered_map<std::string, std::string> TAGS_TO_REPLACE;
 	static std::set<std::string> TAGS_RELATION_TO_ACCEPT;
 	static std::set<std::string> TAGS_TEXT;
 	static std::set<std::string> BASE_TAGS_TEXT;
 	static std::set<std::string> BASE_TAGS_TO_SAVE;
-	static boost::unordered_map<std::string, std::string> BASE_TAGS_TO_REPLACE;
+	static std::unordered_map<std::string, std::string> BASE_TAGS_TO_REPLACE;
 	static char TAG_DELIMETER; //$NON-NLS-1$
 	
 	std::map<std::string, MapRouteType> types;
@@ -79,7 +79,7 @@ private:
 	
     bool contains(std::set<std::string> s, std::string tag, std::string value);
 	
-	std::string getMap(boost::unordered_map<std::string, std::string>& s, std::string tag, std::string value);
+	std::string getMap(std::unordered_map<std::string, std::string>& s, std::string tag, std::string value);
 	
 	
 	
@@ -105,7 +105,7 @@ public:
 	
 	MapRouteType getNameRuleType() ;
 	
-	boost::unordered_map<std::string, std::string> getRouteRelationPropogatedTags(EntityBase& e) ;
+	std::unordered_map<std::string, std::string> getRouteRelationPropogatedTags(EntityBase& e) ;
 
 	bool encodeEntity(EntityWay& et, std::vector<int>& outTypes, std::map<MapRouteType, std::string>& names);
 	

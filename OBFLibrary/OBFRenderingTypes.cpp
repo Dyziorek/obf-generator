@@ -24,7 +24,7 @@ unsigned char OBFRenderingTypes::RESTRICTION_ONLY_RIGHT_TURN = 5;
 unsigned char OBFRenderingTypes::RESTRICTION_ONLY_LEFT_TURN = 6;
 unsigned char OBFRenderingTypes::RESTRICTION_ONLY_STRAIGHT_ON = 7;
 
-std::map<AmenityType, boost::unordered_map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
+std::map<AmenityType, std::unordered_map<std::string, std::string>> OBFRenderingTypes::amenityNameVal;
 std::map<std::string, AmenityType> OBFRenderingTypes::namedAmenity;
 std::list<MapRouteTag> OBFRenderingTypes::routeTags;
 NamedRuleContainer OBFRenderingTypes::namedRulType;
@@ -342,8 +342,8 @@ MapRulType* OBFRenderingTypes::registerRuleType(MapRulType* rt) {
 
 std::map<MapRulType, std::string> OBFRenderingTypes::getRelationPropogatedTags(EntityRelation relation) {
 		std::map<MapRulType, std::string> propogated;
-		boost::unordered_map<std::string, std::string> ts = relation.tags;
-		boost::unordered_map<std::string, std::string>::iterator its = ts.begin();
+		std::unordered_map<std::string, std::string> ts = relation.tags;
+		std::unordered_map<std::string, std::string>::iterator its = ts.begin();
 		while(its != ts.end()) {
 			std::pair<std::string, std::string> ev = *its;
 			MapRulType* rule = getRelationalTagValue(ev.first, ev.second);
@@ -523,11 +523,11 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 		return AmenityType();
 	}
 
-	std::list<boost::unordered_map<std::string, std::string>> OBFRenderingTypes::splitTagsIntoDifferentObjects(const boost::unordered_map<std::string, std::string>& tags) {
+	std::list<std::unordered_map<std::string, std::string>> OBFRenderingTypes::splitTagsIntoDifferentObjects(const std::unordered_map<std::string, std::string>& tags) {
 		// check open sea maps tags
 		bool split = splitIsNeeded(tags);
 		if(!split) {
-			 std::list<boost::unordered_map<std::string, std::string>> listMap;
+			 std::list<std::unordered_map<std::string, std::string>> listMap;
 			 listMap.push_back(tags);
 			 return listMap;
 		} else {
@@ -535,9 +535,9 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 		}
 	}
 
-	 std::list<boost::unordered_map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const boost::unordered_map<std::string, std::string>& tags) {
-		std::map<std::string,boost::unordered_map<std::string, std::string>> groupByOpenSeamaps;
-		boost::unordered_map<std::string, std::string> common;
+	 std::list<std::unordered_map<std::string, std::string>> OBFRenderingTypes::splitOpenSeaMapsTags(const std::unordered_map<std::string, std::string>& tags) {
+		std::map<std::string,std::unordered_map<std::string, std::string>> groupByOpenSeamaps;
+		std::unordered_map<std::string, std::string> common;
 		std::string ATTACHED_KEY = "seamark:attached";
 		std::string type = "";
 		for (auto s : tags) {
@@ -554,7 +554,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 					std::string group = openSeaType(stype.substr(0, ind));
 					std::string add = stype.substr(ind + 1);
 					if (groupByOpenSeamaps.find(group) == groupByOpenSeamaps.end()) {
-						groupByOpenSeamaps.insert(std::make_pair(group, boost::unordered_map<std::string, std::string>()));
+						groupByOpenSeamaps.insert(std::make_pair(group, std::unordered_map<std::string, std::string>()));
 					}
 					groupByOpenSeamaps.find(group)->second.insert(std::make_pair("seamark:" + add, value));
 				}
@@ -562,7 +562,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 				common.insert(std::make_pair(s.first, value));
 			}
 		}
-		std::list<boost::unordered_map<std::string, std::string>> res;
+		std::list<std::unordered_map<std::string, std::string>> res;
 		for (auto g : groupByOpenSeamaps) {
 			g.second.insert(common.begin(), common.end());
 			g.second.insert(make_pair("seamark", g.first));
@@ -615,8 +615,8 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 	}
 
 
- boost::unordered_map<std::string, std::string> OBFRenderingTypes::getAmenityAdditionalInfo(boost::unordered_map<std::string, std::string> tags, AmenityType type, std::string subtype) {
-		boost::unordered_map<std::string, std::string> map;
+ std::unordered_map<std::string, std::string> OBFRenderingTypes::getAmenityAdditionalInfo(std::unordered_map<std::string, std::string> tags, AmenityType type, std::string subtype) {
+		std::unordered_map<std::string, std::string> map;
 		for (std::pair<std::string,std::string> tag : tags) {
 			std::string val = tag.second;
 			MapRulType* rType = getRuleType(tag.first, val, true);
@@ -664,7 +664,7 @@ MapRulType* OBFRenderingTypes::getRuleType(std::string tag, std::string val, boo
 				e->tags, zoom, outTypes, outAddTypes, namesToEncode, tempListNotUsed);
 	}
 	
-bool OBFRenderingTypes::encodeEntityWithType(bool isNode, boost::unordered_map<std::string, std::string>& tags, int zoom, std::list<long>& outTypes, 
+bool OBFRenderingTypes::encodeEntityWithType(bool isNode, std::unordered_map<std::string, std::string>& tags, int zoom, std::list<long>& outTypes, 
 			std::list<long>& outAddTypes, std::map<MapRulType, std::string>& namesToEncode, std::list<MapRulType>& tempListNotUsed) {
 		outTypes.clear();
 		outAddTypes.clear();
