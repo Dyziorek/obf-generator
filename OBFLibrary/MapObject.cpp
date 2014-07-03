@@ -68,6 +68,20 @@ MapObject::~MapObject(void)
 	 streets.clear();
  }
  
+ CityObj::CityObj(const CityObj& parent) : MapObject(parent)
+ {
+	 isin = parent.isin;
+	 postcode = parent.postcode;
+	 streets.clear();
+	 if (parent.streets.size() > 0)
+	 {
+		 for (auto stIt : parent.streets)
+		 {
+			 streets.insert(std::make_pair(stIt.first, stIt.second));
+		 }
+	 }
+ }
+
 CityObj::~CityObj(void)
 {
 }

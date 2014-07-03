@@ -97,7 +97,9 @@ private:
 	static long POSTCODE_INTERNAL_ID;
 public:
 	CityObj(void);
+	CityObj(const CityObj& parent);
 	virtual ~CityObj(void);
+
 	std::size_t operator()(CityObj const& obj) const;
 	bool operator==(const CityObj & x) const;
 	std::unordered_map<std::string, Street, icaseString::ihash, icaseString::iequal_to> streets;
