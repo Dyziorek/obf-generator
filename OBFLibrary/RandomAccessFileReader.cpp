@@ -31,7 +31,7 @@ namespace bsys = boost::system;
 namespace fs = boost::filesystem;
 namespace bio = boost::iostreams;
 
-__int64 RandomAccessFileReader::localMemoryBufferLimit = 16 * 1024 * 1024; // 16 mbytes
+unsigned __int64 RandomAccessFileReader::localMemoryBufferLimit = 16 * 1024 * 1024; // 16 mbytes
 
 RandomAccessFileReader::RandomAccessFileReader(void)
 {
@@ -40,6 +40,11 @@ RandomAccessFileReader::RandomAccessFileReader(void)
 
 RandomAccessFileReader::~RandomAccessFileReader(void)
 {
+	if (is_open())
+	{
+		unmap();
+		close();
+	}
 }
 
 RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode/* = READ*/, uint64_t size /*= 0*/) :
@@ -138,30 +143,33 @@ void RandomAccessFileReader::close()
 
 bool RandomAccessFileReader::unmap()
 {
-	bool bRet = UnmapViewOfFile(_currentMapBuffer);
-	if (bRet)
+	if (_currentMapBuffer != nullptr)
 	{
-		_currentMapBuffer = nullptr;
-		return CloseHandle(_hmapfd);
+		BOOL bRet = UnmapViewOfFile(_currentMapBuffer);
+		if (bRet)
+		{
+			_currentMapBuffer = nullptr;
+			return CloseHandle(_hmapfd);
+		}
 	}
-
 	return false;
 }
 
 
-uint8* RandomAccessFileReader::map(__int64 position, __int64* newSize)
+uint8* RandomAccessFileReader::map(unsigned __int64 position, unsigned __int64* newSize)
 {
 	auto mappedSize = *newSize;
     if(filePointer + mappedSize >= _size)
         mappedSize = _size - filePointer;
     
-	int positionOffset = (position / pageSize) * pageSize;
-	int iViewDelta = position - positionOffset;
+	LARGE_INTEGER positioner;
+	positioner.QuadPart = (position / pageSize) * pageSize;
+	unsigned __int64 iViewDelta = position - positioner.QuadPart;
 
 	_hmapfd = CreateFileMapping(_fd, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (_hmapfd != nullptr)
 	{
-		void* data = MapViewOfFile(_hmapfd, FILE_MAP_READ, 0, positionOffset, mappedSize);
+		void* data = MapViewOfFile(_hmapfd, FILE_MAP_READ, positioner.HighPart, positioner.LowPart, mappedSize);
 		if (data != nullptr)
 		{
 			uint8* initialOffset = static_cast<uint8*>(data);
@@ -204,6 +212,7 @@ uint8* RandomAccessFileReader::map(__int64 position, __int64* newSize)
         0, NULL );
 		LocalFree(lpMsgBuf);
 	}
+	return NULL;
 }
 
 __int64 RandomAccessFileReader::ByteCount() const
@@ -253,7 +262,7 @@ bool RandomAccessFileReader::Next(const void** src, int* size)
         filePointer += mappedSize;
 
         *src = _currentBuffer;
-        *size = mappedSize;
+        *size = (int)mappedSize;
         return true;
 	}
 

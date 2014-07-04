@@ -34,6 +34,93 @@ using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
 
 
+#pragma push_macro("max")
+#undef max
+
+ BinaryMapRules::BinaryMapRules() :  name_encodingRuleId(0), 
+	ref_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastline_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalLand_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastlineBroken_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    naturalCoastlineLine_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    highway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    oneway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    onewayReverse_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    tunnel_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    bridge_encodingRuleId(std::numeric_limits<uint32_t>::max()),
+    layerLowest_encodingRuleId(std::numeric_limits<uint32_t>::max())
+ {
+
+ }
+
+#pragma pop_macro("max")
+
+BinaryMapRules::~BinaryMapRules()
+{
+}
+
+void BinaryMapRules::createMissingRules()
+{
+	
+}
+
+void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name, std::string value)
+{
+	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>::iterator itMapRule = mapRuleIdNames.find(name);
+	if (itMapRule == mapRuleIdNames.end())
+	{
+		itMapRule = mapRuleIdNames.insert(std::make_pair(name, std::unordered_map<std::string, uint32_t>())).first;
+	}
+	(*itMapRule).second.insert(std::make_pair(value, id));
+	//mapRuleIdNames.insert(itMapRule, std::make_pair(name, id));
+	if (mapRules.find(id) == mapRules.end())
+	{
+		MapDecodingRule ruleData;
+		ruleData.type = ruleType;
+		ruleData.tag = name;
+		ruleData.value = value;
+		mapRules.insert(std::make_pair(id, ruleData));
+	}
+	if(name == "name")
+        name_encodingRuleId = id;
+    else if(name == "ref")
+        ref_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline")
+        naturalCoastline_encodingRuleId = id;
+    else if(name == "natural" && value == "land")
+        naturalLand_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline_broken")
+        naturalCoastlineBroken_encodingRuleId = id;
+    else if(name == "natural" && value == "coastline_line")
+        naturalCoastlineLine_encodingRuleId = id;
+    else if(name == "oneway" && value == "yes")
+        oneway_encodingRuleId = id;
+    else if(name == "oneway" && value == "-1")
+        onewayReverse_encodingRuleId = id;
+    else if(name == "tunnel" && value == "yes")
+    {
+        tunnel_encodingRuleId = id;
+        negativeLayers_encodingRuleIds.insert(id);
+    }
+    else if(name == "bridge"  && value == "yes")
+    {
+        bridge_encodingRuleId = id;
+        positiveLayers_encodingRuleIds.insert(id);
+    }
+    else if(name == "layer")
+    {
+        if(!value.empty() && value != "0")
+        {
+            if(value[0] == '-')
+                negativeLayers_encodingRuleIds.insert(id);
+            else if(value[0] == '0')
+                zeroLayers_encodingRuleIds.insert(id);
+            else
+                positiveLayers_encodingRuleIds.insert(id);
+        }
+    }
+}
+
 BinaryMapDataReader::BinaryMapDataReader(void) : mapRules(new BinaryMapRules)
 {
 }
@@ -124,9 +211,9 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
             {
                 // Save boxes offset
                 section->offset = tagPos - parentoffset;
-
+				loadTreeNodes(cis, section);
                 // Skip reading boxes and surely, following blocks
-                cis->Skip(cis->BytesUntilLimit());
+                //cis->Skip(cis->BytesUntilLimit());
             }
             return;
         default:
@@ -179,89 +266,51 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 	}
  }
 
-#pragma push_macro("max")
-#undef max
 
- BinaryMapRules::BinaryMapRules() :  name_encodingRuleId(0), 
-	ref_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    naturalCoastline_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    naturalLand_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    naturalCoastlineBroken_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    naturalCoastlineLine_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    highway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    oneway_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    onewayReverse_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    tunnel_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    bridge_encodingRuleId(std::numeric_limits<uint32_t>::max()),
-    layerLowest_encodingRuleId(std::numeric_limits<uint32_t>::max())
- {
 
- }
 
-#pragma pop_macro("max")
-
-BinaryMapRules::~BinaryMapRules()
+void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section)
 {
-}
-
-void BinaryMapRules::createMissingRules()
-{
-	
-}
-
-void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name, std::string value)
-{
-	std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>::iterator itMapRule = mapRuleIdNames.find(name);
-	if (itMapRule == mapRuleIdNames.end())
+	gp::uint32 BoxLength;
+	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
+	gp::uint32 oldVal = cis->PushLimit(BoxLength);
+	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
+	for (;;)
 	{
-		itMapRule = mapRuleIdNames.insert(std::make_pair(name, std::unordered_map<std::string, uint32_t>())).first;
+
+		uint32_t tag = cis->ReadTag();
+		uint32_t tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		int32_t value;
+		switch (tagVal)
+		{
+		case 0:
+			cis->PopLimit(oldVal);
+			return;
+		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.min_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.max_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.min_corner().set<1>(section->rootBox.min_corner().get<1>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
+			//loadChildTreeNode(cis, childSection);
+			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		default:
+			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		}
+
 	}
-	(*itMapRule).second.insert(std::make_pair(value, id));
-	//mapRuleIdNames.insert(itMapRule, std::make_pair(name, id));
-	if (mapRules.find(id) == mapRules.end())
-	{
-		MapDecodingRule ruleData;
-		ruleData.type = ruleType;
-		ruleData.tag = name;
-		ruleData.value = value;
-		mapRules.insert(std::make_pair(id, ruleData));
-	}
-	if(name == "name")
-        name_encodingRuleId = id;
-    else if(name == "ref")
-        ref_encodingRuleId = id;
-    else if(name == "natural" && value == "coastline")
-        naturalCoastline_encodingRuleId = id;
-    else if(name == "natural" && value == "land")
-        naturalLand_encodingRuleId = id;
-    else if(name == "natural" && value == "coastline_broken")
-        naturalCoastlineBroken_encodingRuleId = id;
-    else if(name == "natural" && value == "coastline_line")
-        naturalCoastlineLine_encodingRuleId = id;
-    else if(name == "oneway" && value == "yes")
-        oneway_encodingRuleId = id;
-    else if(name == "oneway" && value == "-1")
-        onewayReverse_encodingRuleId = id;
-    else if(name == "tunnel" && value == "yes")
-    {
-        tunnel_encodingRuleId = id;
-        negativeLayers_encodingRuleIds.insert(id);
-    }
-    else if(name == "bridge"  && value == "yes")
-    {
-        bridge_encodingRuleId = id;
-        positiveLayers_encodingRuleIds.insert(id);
-    }
-    else if(name == "layer")
-    {
-        if(!value.empty() && value != "0")
-        {
-            if(value[0] == '-')
-                negativeLayers_encodingRuleIds.insert(id);
-            else if(value[0] == '0')
-                zeroLayers_encodingRuleIds.insert(id);
-            else
-                positiveLayers_encodingRuleIds.insert(id);
-        }
-    }
+
 }

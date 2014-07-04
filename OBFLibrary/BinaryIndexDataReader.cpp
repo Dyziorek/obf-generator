@@ -122,6 +122,15 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 
 }
 
+bool BinaryIndexDataReader::readSInt32( gio::CodedInputStream* cis, int32_t& output )
+{
+	uint32_t newVal;
+	bool returnData;
+	returnData = cis->ReadVarint32(&newVal);
+	output = wfl::WireFormatLite::ZigZagDecode32(newVal);
+	return returnData;
+}
+
 bool BinaryIndexDataReader::readString( gio::CodedInputStream* cis, std::string& output )
 {
     std::string value;

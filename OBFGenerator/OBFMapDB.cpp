@@ -1156,25 +1156,7 @@ void OBFMapDB::writeBinaryMapTree(RTreeValued& treeMap, RTreeValued::box& re, Bi
 		}, nullptr);
 
 		writer.endWriteMapTreeElement();
-		//writer.endWriteMapTreeElement();
-		//bool containsLeaf = countLeafs;
-		///*for (int i = 0; i < parent.getTotalElements(); i++) {
-		//	if (e[i].getElementType() == rtree.Node.LEAF_NODE) {
-		//		containsLeaf = true;
-		//	}
-		//}*/
-		//std::unique_ptr<BinaryFileReference> ref = writer.startMapTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), containsLeaf, 0);
-		//if (ref) {
-		//	bounds[treeMap.getNodeIndex()] = ref;
-		//}
-		//for (int i = 0; i < parent.getTotalElements(); i++) {
-		//	if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
-		//		rtree.Node chNode = r.getReadNode(e[i].getPtr());
-		//		writeBinaryMapTree(chNode, e[i].getRect(), r, writer, bounds);
-		//	}
-		//}
-		
-	}
+}
 
 
 void OBFMapDB::callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValued::value& valData, bool startBlock, bool inside, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds,
@@ -1285,15 +1267,6 @@ void OBFMapDB::callNodeBoxBlock(const RTreeValued::box& boxParam,const RTreeValu
 				}
 				sqlite3_reset(selectData);
 		}
-		//	}
-		//}
-		/*for (int i = 0; i < parent.getTotalElements(); i++) {
-			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
-				long ptr = e[i].getPtr();
-				rtree.Node ns = r.getReadNode(ptr);
-				writeBinaryMapBlock(ns, e[i].getRect(), r, writer, selectData, bounds, tempStringTable, tempNames,level);
-			}
-		}*/
 }
 
 void OBFMapDB::writeBinaryMapBlock(RTreeValued& treeMap, RTreeValued::box& parentBounds, BinaryMapDataWriter& writer, sqlite3_stmt* selectData,

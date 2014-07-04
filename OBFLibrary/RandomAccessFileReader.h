@@ -12,11 +12,11 @@ private:
 	HANDLE _hmapfd;
 
 	boost::filesystem::path _path;
-	__int64 filePointer;
+	unsigned __int64 filePointer;
 	uint64_t _size;
 
 	bool unmap();
-	uint8* map(__int64 position, __int64* newSize);
+	uint8* map(unsigned __int64 position,unsigned __int64* newSize);
 public:
 	enum Mode {
 	READ = 1,
@@ -62,7 +62,7 @@ public:
 	__int64 ByteCount() const;
 
 private:
-	static __int64 localMemoryBufferLimit;
+	static unsigned __int64 localMemoryBufferLimit;
 	int pageSize;
 	gio::CodedInputStream* codeWork;
 	uint8* _currentBuffer;

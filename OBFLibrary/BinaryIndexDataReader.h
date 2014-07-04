@@ -17,6 +17,7 @@ public:
 	
 	static void readStringTable( gio::CodedInputStream* cis, std::list<std::string>& stringTableOut );
 	static bool readString( gio::CodedInputStream* cis, std::string& output );
+	static bool readSInt32( gio::CodedInputStream* cis, int32_t& output );
 	static void skipUnknownField( google::protobuf::io::CodedInputStream* cis, int tag );
 
 	const BinaryMapDataReader& GetReader() const {return reader;}

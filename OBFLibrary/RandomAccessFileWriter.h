@@ -11,7 +11,7 @@ class RandomAccessFileWriter : boost::noncopyable, public gio::ZeroCopyOutputStr
 private:
 	HANDLE _fd;
 	boost::filesystem::path _path;
-	__int64 filePointer;
+	unsigned __int64 filePointer;
 	uint64_t _size;
 public:
 	enum Mode {
