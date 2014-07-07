@@ -23,6 +23,7 @@
 #include "Building.h"
 #include "Street.h"
 #include "DBAStreet.h"
+#include "iconv.h"
 #include "ArchiveIO.h"
 
 
@@ -512,7 +513,8 @@ std::unordered_set<long long> OBFAddresStreetDB::getStreetInCity(std::unordered_
 		}
 		if ( boost::empty(nameEn)) {
 
-			nameEn = boost::trim_copy(name);
+			iconverter ic("UTF-8", "ASCII");
+			nameEn = ic.convert(boost::trim_copy(name));
 		}
 
 		DBAStreet streetDAO(dbContext);

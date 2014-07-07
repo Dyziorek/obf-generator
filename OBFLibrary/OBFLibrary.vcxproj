@@ -87,7 +87,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;OBFLIBRARY_EXPORTS;BOOST_IOSTREAMS_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;OBFLIBRARY_EXPORTS;BOOST_IOSTREAMS_NO_LIB;BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\device;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

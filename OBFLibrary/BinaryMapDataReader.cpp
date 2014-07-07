@@ -29,6 +29,7 @@
 #include "BinaryIndexDataReader.h"
 #include "ArchiveIO.h"
 #include <limits>
+//#include "Rtree_Serialization.h"
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
@@ -137,7 +138,8 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 	while(true)
 	{
 		int tag = cis->ReadTag();
-		switch (WireFormatLite::GetTagFieldNumber(tag))
+		int tagVal = WireFormatLite::GetTagFieldNumber(tag);
+		switch (tagVal)
 		{
 		case 0:
 			return;

@@ -1,4 +1,7 @@
 #pragma once
+
+#include "iconv.h"
+
 class ArchiveIO
 {
 public:
@@ -105,3 +108,53 @@ int parseIntFromBytes(const void* byteData, int position);
 
 inline void
 reverse_bytes(char size, char *address);
+
+struct iconverter
+{
+	iconverter(const char* from, const char* to) 
+	{
+		_i = iconv_open(to, from);
+		if (_i != (iconv_t)-1)
+		{
+			int transVal = 1;
+			iconvctl(_i, ICONV_SET_TRANSLITERATE, (void*)&transVal);
+		}
+	}
+	~iconverter()
+	{
+		if (_i != (iconv_t)-1)
+		{
+			iconv_close(_i);
+		}
+	}
+	std::string convert(const std::string& utf8str)
+	{
+		if (_i == (iconv_t)-1)
+		{
+			return utf8str;
+		}
+		std::string ret;
+		ret.resize(utf8str.size());
+		size_t retStr = ret.size();
+		size_t inpSize = utf8str.size();
+		const char* inputStr = &utf8str[0];
+		char* outStr = &ret[0];
+		size_t proc = iconv(_i, (const char **)&inputStr, &inpSize, &outStr, &retStr);
+		if (proc == (size_t)-1 && errno == E2BIG)
+		{
+			const size_t delta = outStr - &ret[0];
+			retStr += ret.size();
+			ret.resize(ret.size() * 2);
+			outStr = &ret[delta];
+			proc = iconv(_i, (const char **)&inputStr, &inpSize, &outStr, &retStr);
+			if (proc == (size_t)-1) {
+				return utf8str;
+			}
+
+		}
+		ret.resize(ret.size()-retStr);
+		return ret;
+	}
+	
+	iconv_t _i;
+};
