@@ -33,6 +33,7 @@ public:
 	std::map<long long, std::vector<long>> multiPolygonsWays;
 	std::list<std::shared_ptr<MultiPoly>> polyLines;
 	static int numberCalls;
+	sqlite3_stmt* selectData;
 
 	OBFRenderingTypes renderEncoder;
 	std::map<long long, std::map<std::string, std::string>> propagatedTags;

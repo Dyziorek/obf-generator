@@ -305,8 +305,8 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
-			//loadChildTreeNode(cis, childSection);
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			loadChildTreeNode(cis, childSection);
+			//BinaryIndexDataReader::skipUnknownField(cis, tag);
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -315,4 +315,49 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 
 	}
 
+}
+
+void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section)
+{
+	gp::uint32 BoxLength;
+	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
+	gp::uint32 oldVal = cis->PushLimit(BoxLength);
+	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
+	for (;;)
+	{
+
+		uint32_t tag = cis->ReadTag();
+		uint32_t tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		int32_t value;
+		switch (tagVal)
+		{
+		case 0:
+			cis->PopLimit(oldVal);
+			return;
+		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.min_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.max_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.min_corner().set<1>(section->rootBox.min_corner().get<1>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
+			BinaryIndexDataReader::readSInt32(cis, value);
+			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
+			loadChildTreeNode(cis, childSection);
+			//BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		default:
+			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		}
+
+	}
 }

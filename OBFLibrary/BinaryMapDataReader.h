@@ -60,6 +60,7 @@ public:
 
 	void readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId);
 	void loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section);
+	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection);
 
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;

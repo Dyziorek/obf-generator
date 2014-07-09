@@ -171,5 +171,7 @@ public:
 		return new BinaryFileReference(pointerToWrite, pointerShiftFrom);
 	}
 	
+public:
+	int l, r, t, b;
 
 };

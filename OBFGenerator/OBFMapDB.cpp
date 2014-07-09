@@ -34,7 +34,7 @@
 #include "boost/multi_array.hpp"
 #include "ArchiveIO.h"
 
-
+#include "Rtree_Serialization.h"
 
 
 namespace io = boost::iostreams;
@@ -1081,28 +1081,34 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	char* errMsg;
 	sqlite3_stmt* pSelector = nullptr;
 	int sqlResult = sqlite3_prepare_v2(dbContext.dbMapCtx, "SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?", sizeof("SELECT area, coordinates, innerPolygons, types, additionalTypes, name FROM binary_map_objects WHERE id = ?"), &pSelector,(const char**)&errMsg);
-
+	selectData = pSelector;
 	boost::tuple<obf::MapDataBlock*,BinaryFileReference*> tpLa;
 
 	
-
+	std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>> treeHeaders;
+	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> bouncer;
 	for (int i = 0; i < mapZooms.size(); i++)
 	{
 		RTreeValued rtree = mapTree[i];
-		std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>> treeHeaders;
+		
 		RTreeValued::box rootBounds = rtree.calculateBounds();
+		
 		if (rootBounds.max_corner().get<0>() != 0) {
 			writer.startWriteMapLevelIndex(mapZooms.getLevel(i).getMinZoom(), mapZooms.getLevel(i).getMaxZoom(),
 				rootBounds.min_corner().get<0>(), rootBounds.max_corner().get<0>(), rootBounds.min_corner().get<1>(), rootBounds.max_corner().get<1>());
-			writeBinaryMapTree(rtree, rootBounds, writer, treeHeaders);
+
+			boost::serializationOBF::saveOBF<BinaryMapDataWriter, RTreeValued::SI::value_type, RTreeValued::SI::parameters_type, RTreeValued::SI::indexable_getter, RTreeValued::SI::value_equal, RTreeValued::SI::allocator_type>(writer, rtree.spaceTree ,bouncer, *this,&rootBounds, mapZooms.getLevel(i));
+			//writeBinaryMapTree(rtree, rootBounds, writer, treeHeaders);
 					
-			writeBinaryMapBlock(rtree,  rootBounds,  writer, pSelector, treeHeaders, std::unordered_map<std::string, int>(), std::map<MapRulType, std::string>(), mapZooms.getLevel(i));
+			//writeBinaryMapBlock(rtree,  rootBounds,  writer, pSelector, treeHeaders, std::unordered_map<std::string, int>(), std::map<MapRulType, std::string>(), mapZooms.getLevel(i));
 
 			writer.endWriteMapLevelIndex();
 		}
 
 	}
 	writer.endWriteMapIndex();
+	sqlite3_finalize(pSelector);
+	selectData = nullptr;
 }
 
 void OBFMapDB::callNodeBox(const RTreeValued::box& boxParam, bool begin, bool isLeaf, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)
