@@ -182,8 +182,9 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
     {
         const auto tagPos = cis->CurrentPosition();
         const auto tag = cis->ReadTag();
+		const auto tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
 		gp::uint32 BoxVal;
-        switch(wfl::WireFormatLite::GetTagFieldNumber(tag))
+        switch(tagVal)
         {
         case 0:
             return;
@@ -217,7 +218,12 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
                 // Skip reading boxes and surely, following blocks
                 //cis->Skip(cis->BytesUntilLimit());
             }
-            return;
+            break;
+		case OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber:
+			{
+			  BinaryIndexDataReader::skipUnknownField(cis, tag);
+              break;
+			}
         default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
             break;

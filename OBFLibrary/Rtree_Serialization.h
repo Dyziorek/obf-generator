@@ -353,8 +353,8 @@ void saveOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& r
     }
 }
 
-template<class Archive, typename V, typename P, typename I, typename E, typename A>
-void load(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, unsigned int version)
+template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
+void loadOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, unsigned int version)
 {
     namespace detail = boost::geometry::index::detail;
 

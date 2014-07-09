@@ -385,6 +385,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		ref.writeReference(*raf, getFilePointer());
 		//MapDataBlock block = builder.build();
 		//MAP_DATA_SIZE += block.getSerializedSize();
+		dataOut.WriteVarint32(builder->ByteSize());
 		builder->SerializeToCodedStream(&dataOut);
 		//codedOutStream.writeMessageNoTag(block);
 	}
