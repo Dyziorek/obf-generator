@@ -1084,13 +1084,16 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	selectData = pSelector;
 	boost::tuple<obf::MapDataBlock*,BinaryFileReference*> tpLa;
 
+	namespace detail = boost::geometry::index::detail;
+
+	
 	
 	std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>> treeHeaders;
 	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> bouncer;
 	for (int i = 0; i < mapZooms.size(); i++)
 	{
 		RTreeValued rtree = mapTree[i];
-		
+		boost::geometry::index::detail::rtree::const_private_view<RTreeValued::SI> view(rtree.spaceTree);
 		RTreeValued::box rootBounds = rtree.calculateBounds();
 		
 		if (rootBounds.max_corner().get<0>() != 0) {
@@ -1110,15 +1113,17 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	sqlite3_finalize(pSelector);
 	selectData = nullptr;
 	auto itBegin = bouncer.begin();
-	while (itBegin++ != bouncer.end())
+	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>::iterator previt = itBegin;
+	while (itBegin != bouncer.end())
 	{
-		if (itBegin->second.get() != nullptr)
+		if (previt->second.get() != nullptr)
 		{
 			std::wstringstream wstr;
 			wstr << L"Bouncer unused : id" << itBegin->first << std::endl;
 			OutputDebugString(wstr.str().c_str());
 		}
-
+		previt = itBegin;
+		itBegin++;
 	}
 	/*for(auto bounce : bouncer)
 	{

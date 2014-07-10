@@ -50,7 +50,7 @@ public:
 		std::unique_ptr<BinaryFileReference> ref = m_archive.startMapTreeElement(parentBox->min_corner().get<0>(),parentBox->max_corner().get<0>(), parentBox->min_corner().get<1>(), parentBox->max_corner().get<1>(), isLeafNode, 0);
 		if (ref)
 		{
-			__int64 boxVal = (__int64)parentBox;
+			__int64 boxVal = (__int64)&n;
 			ref->l = parentBox->min_corner().get<0>();
 			ref->r = parentBox->max_corner().get<0>();
 			ref->t = parentBox->min_corner().get<1>();
