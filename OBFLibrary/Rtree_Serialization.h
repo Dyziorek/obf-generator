@@ -245,25 +245,27 @@ class loadMessage
     typedef typename Allocators::size_type size_type;
 
 public:
-    template <typename Message> inline static
-    node_pointer apply(Message & msg, unsigned int version, size_type leafs_level, size_type & values_count, parameters_type const& parameters, Translator const& translator, Allocators & allocators)
+    template <typename CodedInputMessage> inline static
+    node_pointer apply(CodedInputMessage & msg, unsigned int version, size_type leafs_level, size_type & values_count, parameters_type const& parameters, Translator const& translator, Allocators & allocators)
     {
         values_count = 0;
         return raw_apply(msg, version, leafs_level, values_count, parameters, translator, allocators);
     }
 
 private:
-    template <typename Message> inline static
-    node_pointer raw_apply(Message & msg, unsigned int version, size_type leafs_level, size_type & values_count, parameters_type const& parameters, Translator const& translator, Allocators & allocators, size_type current_level = 0)
+    template <typename CodedInputMessage> inline static
+    node_pointer raw_apply(CodedInputMessage & cis, unsigned int version, size_type leafs_level, size_type & values_count, parameters_type const& parameters, Translator const& translator, Allocators & allocators, size_type current_level = 0)
     {
         //BOOST_GEOMETRY_INDEX_ASSERT(current_level <= leafs_level, "invalid parameter");
 
         // change to elements_type::size_type or size_type?
         size_t elements_count;
         //ar >> boost::serialization::make_nvp("s", elements_count);
+		
+        /*if ( elements_count < parameters.get_min_elements() || parameters.get_max_elements() < elements_count )
+            BOOST_THROW_EXCEPTION(std::runtime_error("rtree loading error"));*/
 
-        if ( elements_count < parameters.get_min_elements() || parameters.get_max_elements() < elements_count )
-            BOOST_THROW_EXCEPTION(std::runtime_error("rtree loading error"));
+
 
         if ( current_level < leafs_level )
         {
@@ -373,22 +375,21 @@ void loadOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, un
 
     view tree(rt);
 
-    parameters_type params = detail::serialization_load<parameters_type>("parameters", ar);
+	parameters_type params = rt.parameters();
 
     size_type values_count, leafs_level;
-    ar >> boost::serialization::make_nvp("values_count", values_count);
-    ar >> boost::serialization::make_nvp("leafs_level", leafs_level);
+    
 
     node_pointer n(0);
-    if ( 0 < values_count )
+    if ( /*0 < values_count*/ true )
     {
         size_type loaded_values_count = 0;
-        n = detail::rtree::load<value_type, options_type, translator_type, box_type, allocators_type>
+        n = detail::rtree::loadMessage<value_type, options_type, translator_type, box_type, allocators_type>
             ::apply(ar, version, leafs_level, loaded_values_count, params, tree.members().translator(), tree.members().allocators());                                        // MAY THROW
 
         node_auto_ptr remover(n, tree.members().allocators());
-        if ( loaded_values_count != values_count )
-            BOOST_THROW_EXCEPTION(std::runtime_error("unexpected number of values")); // TODO change exception type
+        //if ( loaded_values_count != values_count )
+        //    BOOST_THROW_EXCEPTION(std::runtime_error("unexpected number of values")); // TODO change exception type
         remover.release();
     }
 

@@ -1109,6 +1109,26 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	writer.endWriteMapIndex();
 	sqlite3_finalize(pSelector);
 	selectData = nullptr;
+	auto itBegin = bouncer.begin();
+	while (itBegin++ != bouncer.end())
+	{
+		if (itBegin->second.get() != nullptr)
+		{
+			std::wstringstream wstr;
+			wstr << L"Bouncer unused : id" << itBegin->first << std::endl;
+			OutputDebugString(wstr.str().c_str());
+		}
+
+	}
+	/*for(auto bounce : bouncer)
+	{
+		if (!(bounce.second.operator int std::_Bool_struct<std::unique_ptr<BinaryFileReference, std::default_delete<BinaryFileReference>>>::*()))
+		{
+			std::wstringstream wstr;
+			wstr << L"Bouncer unused : id" << bounce.first << std::endl;
+			OutputDebugString(wstr.str().c_str());
+		}
+	}*/
 }
 
 void OBFMapDB::callNodeBox(const RTreeValued::box& boxParam, bool begin, bool isLeaf, BinaryMapDataWriter& writer, std::unordered_map<__int64, boost::tuple<obf::MapDataBlock*,BinaryFileReference*>>& bounds)

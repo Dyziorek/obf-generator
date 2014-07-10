@@ -142,6 +142,30 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 		switch (tagVal)
 		{
 		case 0:
+			{
+				std::wstringstream strmData;
+				strmData << L"Sections count: " << sections.size() << std::endl;
+				for(auto secIt : sections)
+				{
+					strmData << L"Section: minX "<<	MapUtils::get31LongitudeX(std::get<0>(secIt).min_corner().get<0>()) << L" minY "<< MapUtils::get31LatitudeY(std::get<0>(secIt).min_corner().get<1>()) << std::endl;
+					strmData << L"Section: maxX "<<	MapUtils::get31LongitudeX(std::get<0>(secIt).max_corner().get<0>()) << L" maxY "<< MapUtils::get31LatitudeY(std::get<0>(secIt).max_corner().get<1>()) << std::endl;
+					strmData << L"Children count " << 	std::get<2>(secIt)->childSections.size() << std::endl;
+					for (auto childSection : std::get<2>(secIt)->childSections)
+					{
+						strmData <<  L"    " << L" minX:" << childSection->geoBox.min_corner().get<0>() << L" minY:" << childSection->geoBox.min_corner().get<1>() << std::endl;
+						strmData <<  L"    " << L" maxX:" << childSection->geoBox.max_corner().get<0>() << L" maxY:" << childSection->geoBox.max_corner().get<1>() << std::endl;
+						strmData  <<  L"    " << L"Sub Children count " << 	childSection->childSections.size() << std::endl;
+						for (auto childSectionSub : childSection->childSections)
+						{
+							strmData <<  L"    " <<  L"    " << L" minX:" << childSectionSub->geoBox.min_corner().get<0>() << L" minY:" << childSectionSub->geoBox.min_corner().get<1>() << std::endl;
+							strmData <<  L"    " <<  L"    " << L" maxX:" << childSectionSub->geoBox.max_corner().get<0>() << L" maxY:" << childSectionSub->geoBox.max_corner().get<1>() << std::endl;
+						}
+
+					}
+
+				}
+				OutputDebugString(strmData.str().c_str());
+			}
 			return;
 		case OsmAndMapIndex::kNameFieldNumber:
 			WireFormatLite::ReadString(cis, &mapName);
@@ -168,11 +192,14 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 
 	}
 
+
+
 	//boost::promise<int> nextData;
 
 	//boost::shared_future<int> dataLoad;
 	//boost::async(
 	//dataLoad.get();
+	
 }
 
  void BinaryMapDataReader::readMapLevelHeader(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection> section, int parentoffset)
@@ -187,6 +214,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
         switch(tagVal)
         {
         case 0:
+			section->translateBox();
             return;
         case OsmAndMapIndex_MapRootLevel::kMaxZoomFieldNumber:
 			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.first));
@@ -293,6 +321,8 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 		{
 		case 0:
 			cis->PopLimit(oldVal);
+			section->childSections.push_back(childSection);
+			childSection->translateBox();
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -313,6 +343,9 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
 			loadChildTreeNode(cis, childSection);
 			//BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
+			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -339,6 +372,8 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 		{
 		case 0:
 			cis->PopLimit(oldVal);
+			section->childSections.push_back(childSection);
+			childSection->translateBox();
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -359,6 +394,9 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
 			loadChildTreeNode(cis, childSection);
 			//BinaryIndexDataReader::skipUnknownField(cis, tag);
+			break;
+		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
+			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);

@@ -7,12 +7,29 @@ namespace gio = google::protobuf::io;
 
 typedef RTree<std::pair<__int64, std::vector<std::shared_ptr<MapObjectData>>>> treeMap;
 
-struct BinaryMapSection
+typedef bg::model::point<int, 2, bg::cs::cartesian> point;
+typedef bg::model::box<point> box;
+
+struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 {
 	std::pair<gp::uint32, gp::uint32> zoomLevels;
 	treeMap::box rootBox;
+	boost::geometry::model::box<boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>> geoBox;
 	gp::uint32 offset;
-	treeMap mapDataTree;
+	gp::uint32 dataOffset;
+	std::list<std::shared_ptr<BinaryMapSection>> childSections;
+	std::shared_ptr<BinaryMapSection> getSharedPtr()
+	{
+		return shared_from_this();
+	}
+
+	void translateBox()
+	{
+		geoBox.min_corner().set<0>(MapUtils::get31LongitudeX(rootBox.min_corner().get<0>()));
+		geoBox.min_corner().set<1>(MapUtils::get31LatitudeY(rootBox.min_corner().get<1>()));
+		geoBox.max_corner().set<0>(MapUtils::get31LongitudeX(rootBox.max_corner().get<0>()));
+		geoBox.max_corner().set<1>(MapUtils::get31LatitudeY(rootBox.max_corner().get<1>()));
+	}
 };
 
 
