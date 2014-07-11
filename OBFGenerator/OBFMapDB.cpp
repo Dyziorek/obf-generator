@@ -1093,7 +1093,6 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 	for (int i = 0; i < mapZooms.size(); i++)
 	{
 		RTreeValued rtree = mapTree[i];
-		boost::geometry::index::detail::rtree::const_private_view<RTreeValued::SI> view(rtree.spaceTree);
 		RTreeValued::box rootBounds = rtree.calculateBounds();
 		
 		if (rootBounds.max_corner().get<0>() != 0) {

@@ -4,6 +4,7 @@
 
 MapObjectData::MapObjectData(void)
 {
+
 }
 
 

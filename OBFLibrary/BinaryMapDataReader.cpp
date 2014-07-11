@@ -17,6 +17,15 @@
 #include <sstream>
 #include <sys/stat.h>
 #include "RTree.h"
+
+#include "SkCanvas.h"
+#include "SkSurface.h"
+#include "SkImage.h"
+#include "SkData.h"
+#include "SkStream.h"
+#include "SkGraphics.h"
+
+
 #include "targetver.h"
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
@@ -33,6 +42,7 @@
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
+
 
 
 #pragma push_macro("max")
@@ -134,6 +144,10 @@ BinaryMapDataReader::~BinaryMapDataReader(void)
 
 void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 {
+	boxI initBox;
+	boost::geometry::assign_inverse(initBox);
+	pointI ptCenter;
+	
 	uint32_t defaultId = 1;
 	while(true)
 	{
@@ -143,28 +157,47 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 		{
 		case 0:
 			{
+#ifdef _DEBUG
 				std::wstringstream strmData;
 				strmData << L"Sections count: " << sections.size() << std::endl;
 				for(auto secIt : sections)
 				{
 					strmData << L"Section: minX "<<	MapUtils::get31LongitudeX(std::get<0>(secIt).min_corner().get<0>()) << L" minY "<< MapUtils::get31LatitudeY(std::get<0>(secIt).min_corner().get<1>()) << std::endl;
-					strmData << L"Section: maxX "<<	MapUtils::get31LongitudeX(std::get<0>(secIt).max_corner().get<0>()) << L" maxY "<< MapUtils::get31LatitudeY(std::get<0>(secIt).max_corner().get<1>()) << std::endl;
+					strmData << L"         maxX "<<	MapUtils::get31LongitudeX(std::get<0>(secIt).max_corner().get<0>()) << L" maxY "<< MapUtils::get31LatitudeY(std::get<0>(secIt).max_corner().get<1>()) << std::endl;
 					strmData << L"Children count " << 	std::get<2>(secIt)->childSections.size() << std::endl;
-					for (auto childSection : std::get<2>(secIt)->childSections)
+					if (std::get<2>(secIt)->childSections.size() > 0)
 					{
-						strmData <<  L"    " << L" minX:" << childSection->geoBox.min_corner().get<0>() << L" minY:" << childSection->geoBox.min_corner().get<1>() << std::endl;
-						strmData <<  L"    " << L" maxX:" << childSection->geoBox.max_corner().get<0>() << L" maxY:" << childSection->geoBox.max_corner().get<1>() << std::endl;
-						strmData  <<  L"    " << L"Sub Children count " << 	childSection->childSections.size() << std::endl;
-						for (auto childSectionSub : childSection->childSections)
+						auto childSection = std::get<2>(secIt)->childSections.front();
 						{
-							strmData <<  L"    " <<  L"    " << L" minX:" << childSectionSub->geoBox.min_corner().get<0>() << L" minY:" << childSectionSub->geoBox.min_corner().get<1>() << std::endl;
-							strmData <<  L"    " <<  L"    " << L" maxX:" << childSectionSub->geoBox.max_corner().get<0>() << L" maxY:" << childSectionSub->geoBox.max_corner().get<1>() << std::endl;
+							strmData  <<  L"    " << L"Sub Children count " << 	childSection->childSections.size() << std::endl;
+							for (auto childSectionSub : childSection->childSections)
+							{
+								strmData <<  L"    " <<  L"    " << L" minX:" << childSectionSub->geoBox.min_corner().get<0>() << L" minY:" << childSectionSub->geoBox.min_corner().get<1>() << std::endl;
+								strmData <<  L"    " <<  L"    " << L" maxX:" << childSectionSub->geoBox.max_corner().get<0>() << L" maxY:" << childSectionSub->geoBox.max_corner().get<1>() << std::endl;
+								if (childSectionSub->childSections.size() > 0)
+								{
+									strmData  <<  L"    " << L"Sub Sub Children count " << 	childSectionSub->childSections.size() << std::endl;
+									for (auto childSectionSubSub : childSectionSub->childSections)
+									{
+										strmData <<  L"    " << L"    " <<  L"    " << L" minX:" << childSectionSubSub->geoBox.min_corner().get<0>() << L" minY:" << childSectionSubSub->geoBox.min_corner().get<1>() << std::endl;
+										strmData <<  L"    " << L"    " <<  L"    " << L" maxX:" << childSectionSubSub->geoBox.max_corner().get<0>() << L" maxY:" << childSectionSubSub->geoBox.max_corner().get<1>() << std::endl;
+									}
+								}
+							}
 						}
-
 					}
-
 				}
-				OutputDebugString(strmData.str().c_str());
+				std::wstring strText = strmData.str();
+				if (strText.size() > 1024)
+				{
+					while (strText.size() > 1024)
+					{
+						OutputDebugString(strText.substr(0, 1024).c_str());
+						strText = strText.substr(1024, std::wstring::npos);
+					}
+				}
+				OutputDebugString(strText.c_str());
+#endif // _DEBUG
 			}
 			return;
 		case OsmAndMapIndex::kNameFieldNumber:
@@ -176,7 +209,8 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
             auto offset = cis->CurrentPosition();
             auto oldLimit = cis->PushLimit(length);
 			std::shared_ptr<BinaryMapSection> section(new BinaryMapSection());
-            readMapLevelHeader(cis, section, offset);
+			section->offset = offset;
+            readMapLevelHeader(cis, section, offset, initBox);
 			sections.push_back(std::make_tuple(section->rootBox, section->zoomLevels, section));
             cis->PopLimit(oldLimit);
 
@@ -192,8 +226,6 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 
 	}
 
-
-
 	//boost::promise<int> nextData;
 
 	//boost::shared_future<int> dataLoad;
@@ -202,64 +234,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 	
 }
 
- void BinaryMapDataReader::readMapLevelHeader(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection> section, int parentoffset)
- {
-	
-	for(;;)
-    {
-        const auto tagPos = cis->CurrentPosition();
-        const auto tag = cis->ReadTag();
-		const auto tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
-		gp::uint32 BoxVal;
-        switch(tagVal)
-        {
-        case 0:
-			section->translateBox();
-            return;
-        case OsmAndMapIndex_MapRootLevel::kMaxZoomFieldNumber:
-			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.first));
-            break;
-        case OsmAndMapIndex_MapRootLevel::kMinZoomFieldNumber:
-			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.second));
-            break;
-        case OsmAndMapIndex_MapRootLevel::kLeftFieldNumber:
-			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
-			section->rootBox.min_corner().set<0>(BoxVal);
-            break;
-        case OsmAndMapIndex_MapRootLevel::kRightFieldNumber:
-            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
-			section->rootBox.max_corner().set<0>(BoxVal);
-            break;
-        case OsmAndMapIndex_MapRootLevel::kTopFieldNumber:
-            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
-			section->rootBox.min_corner().set<1>(BoxVal);
-            break;
-        case OsmAndMapIndex_MapRootLevel::kBottomFieldNumber:
-            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
-			section->rootBox.max_corner().set<1>(BoxVal);
-            break;
-        case OsmAndMapIndex_MapRootLevel::kBoxesFieldNumber:
-            {
-                // Save boxes offset
-                section->offset = tagPos - parentoffset;
-				loadTreeNodes(cis, section);
-                // Skip reading boxes and surely, following blocks
-                //cis->Skip(cis->BytesUntilLimit());
-            }
-            break;
-		case OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber:
-			{
-			  BinaryIndexDataReader::skipUnknownField(cis, tag);
-              break;
-			}
-        default:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
-            break;
-        }
-    }
- }
-
- void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId)
+void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId)
  {
 	 uint32_t rlength = 0;
 	 cis->ReadVarint32(&rlength);
@@ -303,9 +278,65 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
  }
 
 
+ void BinaryMapDataReader::readMapLevelHeader(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection> section, int parentoffset, boxI& region)
+ {
+	
+	for(;;)
+    {
+        const auto tagPos = cis->CurrentPosition();
+        const auto tag = cis->ReadTag();
+		const auto tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		gp::uint32 BoxVal;
+        switch(tagVal)
+        {
+        case 0:
+			section->translateBox();
+            return;
+        case OsmAndMapIndex_MapRootLevel::kMaxZoomFieldNumber:
+			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.first));
+            break;
+        case OsmAndMapIndex_MapRootLevel::kMinZoomFieldNumber:
+			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.second));
+            break;
+        case OsmAndMapIndex_MapRootLevel::kLeftFieldNumber:
+			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
+			section->rootBox.min_corner().set<0>(BoxVal);
+            break;
+        case OsmAndMapIndex_MapRootLevel::kRightFieldNumber:
+            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
+			section->rootBox.max_corner().set<0>(BoxVal);
+            break;
+        case OsmAndMapIndex_MapRootLevel::kTopFieldNumber:
+            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
+			section->rootBox.min_corner().set<1>(BoxVal);
+            break;
+        case OsmAndMapIndex_MapRootLevel::kBottomFieldNumber:
+            cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&BoxVal));
+			section->rootBox.max_corner().set<1>(BoxVal);
+            break;
+        case OsmAndMapIndex_MapRootLevel::kBoxesFieldNumber:
+            {
+                // Save boxes offset
+                section->offset = tagPos - parentoffset;
+				loadTreeNodes(cis, section, region);
+                // Skip reading boxes and surely, following blocks
+                //cis->Skip(cis->BytesUntilLimit());
+            }
+            break;
+		case OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber:
+			{
+			  BinaryIndexDataReader::skipUnknownField(cis, tag);
+              break;
+			}
+        default:
+			BinaryIndexDataReader::skipUnknownField(cis, tag);
+            break;
+        }
+    }
+ }
 
-
-void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section)
+ 
+void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area)
 {
 	gp::uint32 BoxLength;
 	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
@@ -330,7 +361,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
-			childSection->rootBox.max_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			childSection->rootBox.max_corner().set<0>(section->rootBox.max_corner().get<0>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -341,7 +372,24 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
-			loadChildTreeNode(cis, childSection);
+			{
+				pointI ptCenter;
+				boxI bxInit;
+				bg::centroid(section->rootBox, ptCenter);
+				bg::assign_inverse(bxInit);
+				bxInit.min_corner().set<0>(section->rootBox.min_corner().get<0>());
+				bxInit.min_corner().set<1>(section->rootBox.min_corner().get<1>());
+				bxInit.max_corner().set<0>(ptCenter.get<0>());
+				bxInit.max_corner().set<1>(ptCenter.get<1>());
+				if (/*bg::intersects(bxInit, section->rootBox )*/ true)
+				{
+					loadChildTreeNode(cis, childSection, bxInit);
+				}
+				else
+				{
+					BinaryIndexDataReader::skipUnknownField(cis, tag);
+				}
+			}
 			//BinaryIndexDataReader::skipUnknownField(cis, tag);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
@@ -356,7 +404,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 
 }
 
-void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section)
+void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& region)
 {
 	gp::uint32 BoxLength;
 	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
@@ -381,7 +429,7 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
-			childSection->rootBox.max_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
+			childSection->rootBox.max_corner().set<0>(section->rootBox.max_corner().get<0>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -392,7 +440,7 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
-			loadChildTreeNode(cis, childSection);
+			loadChildTreeNode(cis, childSection, region);
 			//BinaryIndexDataReader::skipUnknownField(cis, tag);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
@@ -404,4 +452,98 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 		}
 
 	}
+}
+
+
+void BinaryMapDataReader::PaintSections()
+{
+	if (sections.size() > 0)
+	{
+		for (int indexSect = 0; indexSect < sections.size(); indexSect++)
+		{
+			auto sectionInfo = std::get<2>(sections[indexSect]);
+			if (sectionInfo->childSections.size() > 0)
+			{
+				SkImage::Info info = {
+				1600, 1000, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+				};
+				SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
+				SkCanvas* painter = imageRender->getCanvas();
+				painter->drawColor(SK_ColorWHITE);
+				SkRect limits;
+				painter->getClipBounds(&limits);
+				SkScalar w = limits.width();
+				SkScalar h = limits.height();
+				SkPaint paint;
+				paint.setColor(SK_ColorBLACK);
+				paint.setStyle(SkPaint::Style::kStroke_Style);
+				paint.setStrokeWidth(0);
+				SkPaint paintSub;
+				paintSub.setColor(SK_ColorBLUE);
+				paintSub.setStyle(SkPaint::Style::kStroke_Style);
+				double maxY = -1000, maxX = -1000;
+				double minY = 1000, minX = 1000;
+				auto rootBoxData = sectionInfo->childSections.front();
+				minX = std::min(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
+				maxX = std::max(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
+				minY = std::min(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
+				maxY = std::max(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
+				double scale = 1.0;
+				if (maxX - minX > w || maxY - minY > h)
+				{
+					if ((maxX - minX - w) > (maxY - minY - h))
+					{
+						scale = w / (maxX - minX);
+					}
+					else
+					{
+						scale = w / (maxY - minY);
+					}
+				}
+				else if (maxX - minX < w && maxY - minY < h)
+				{
+					scale = std::min<SkScalar>(w / (maxX - minX)   , h / (maxY - minY));
+				}
+				for (auto subChilds : sectionInfo->childSections.front()->childSections)
+				{
+					double maxYC = -1000, maxXC = -1000;
+					double minYC = 1000, minXC = 1000;
+					minXC = std::min(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
+					maxXC = std::max(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
+					minYC = std::min(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
+					maxYC = std::max(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
+					if (subChilds->childSections.size() > 0)
+					{
+						for (auto subChildsPop : subChilds->childSections)
+						{
+							double maxYS = -1000, maxXS = -1000;
+							double minYS = 1000, minXS = 1000;
+							minXS = std::min(subChildsPop->geoBox.min_corner().get<0>(), 	subChildsPop->geoBox.max_corner().get<0>());
+							maxXS = std::max(subChildsPop->geoBox.min_corner().get<0>(), 	subChildsPop->geoBox.max_corner().get<0>());
+							minYS = std::min(subChildsPop->geoBox.min_corner().get<1>(), 	subChildsPop->geoBox.max_corner().get<1>());
+							maxYS = std::max(subChildsPop->geoBox.min_corner().get<1>(), 	subChildsPop->geoBox.max_corner().get<1>());
+							painter->drawRectCoords((minXS - minX) * scale, (minYS- minY)*scale, (maxXS - minX)*scale, (maxYS - minY)*scale, paintSub);
+						}
+					}
+					{
+						painter->drawRectCoords((minXC - minX) * scale, (minYC- minY)*scale, (maxXC - minX)*scale, (maxYC - minY)*scale, paint);
+					}
+
+				}
+
+				SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
+				SkAutoDataUnref data(image->encode());
+				if (NULL == data.get()) {
+					return ;
+				}
+				char buff[10];
+				_ultoa_s(indexSect, buff,10);
+				std::string pathImage = "D:\\osmData\\resultImageBox" + std::string(buff) + std::string(".png");
+				SkFILEWStream stream(pathImage.c_str());
+
+				stream.write(data->data(), data->size());
+			}
+		}
+	}
+
 }

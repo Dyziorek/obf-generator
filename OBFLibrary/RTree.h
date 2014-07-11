@@ -137,7 +137,7 @@ public:
 	{
 		box boxPoint(point(a, b), point(c,d));
 		initStore.push_back(std::make_pair(boxPoint, types));
-		//spaceTree.insert(boost::make_tuple(boxPoint, id, typesMap));
+		//spaceTree.insert(std::make_pair(boxPoint, types));
 	}
 
 

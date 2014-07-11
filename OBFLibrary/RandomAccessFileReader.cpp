@@ -163,18 +163,33 @@ uint8* RandomAccessFileReader::map(unsigned __int64 position, unsigned __int64* 
         mappedSize = _size - filePointer;
     
 	LARGE_INTEGER positioner;
-	positioner.QuadPart = (position / pageSize) * pageSize;
-	unsigned __int64 iViewDelta = position - positioner.QuadPart;
+	positioner.HighPart = position >> 32;
+	positioner.LowPart = position & (unsigned __int64)0xFFFFFFFF;
+	//positioner.QuadPart = (position / pageSize) * pageSize;
+	unsigned __int64 iViewDelta = position & (pageSize - 1);
+
+	if (iViewDelta)
+	{
+		positioner.LowPart = positioner.LowPart & ~(pageSize - 1);
+	}
 
 	_hmapfd = CreateFileMapping(_fd, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (_hmapfd != nullptr)
 	{
-		void* data = MapViewOfFile(_hmapfd, FILE_MAP_READ, positioner.HighPart, positioner.LowPart, mappedSize);
+		void* data = nullptr;
+		if (mappedSize < localMemoryBufferLimit)
+		{
+			data = MapViewOfFile(_hmapfd, FILE_MAP_READ, positioner.HighPart, positioner.LowPart, iViewDelta + mappedSize);
+		}
+		else
+		{
+			data = MapViewOfFile(_hmapfd, FILE_MAP_READ, positioner.HighPart, positioner.LowPart, mappedSize + iViewDelta);
+		}
 		if (data != nullptr)
 		{
 			uint8* initialOffset = static_cast<uint8*>(data);
 			_currentMapBuffer = static_cast<uint8*>(data);
-			*newSize = mappedSize - iViewDelta;
+			*newSize = mappedSize;
 			return initialOffset + iViewDelta;
 		}
 		else

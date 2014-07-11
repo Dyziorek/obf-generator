@@ -4,17 +4,20 @@
 #include "MapObjectData.h"
 namespace gp = google::protobuf;
 namespace gio = google::protobuf::io;
+namespace bgm = boost::geometry::model;
 
 typedef RTree<std::pair<__int64, std::vector<std::shared_ptr<MapObjectData>>>> treeMap;
 
-typedef bg::model::point<int, 2, bg::cs::cartesian> point;
-typedef bg::model::box<point> box;
+typedef bgm::point<int, 2, bg::cs::cartesian> pointI;
+typedef bgm::box<pointI> boxI;
+typedef bgm::point<double, 2, bg::cs::cartesian> pointD;
+typedef bgm::box<pointD> boxD;
 
 struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 {
 	std::pair<gp::uint32, gp::uint32> zoomLevels;
 	treeMap::box rootBox;
-	boost::geometry::model::box<boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>> geoBox;
+	boxD geoBox;
 	gp::uint32 offset;
 	gp::uint32 dataOffset;
 	std::list<std::shared_ptr<BinaryMapSection>> childSections;
@@ -73,12 +76,12 @@ public:
 
 	
 	void ReadMapDataSection(gio::CodedInputStream* cis);
-	void readMapLevelHeader(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection> section, int offset);
+	void readMapLevelHeader(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection> section, int offset, boxI& region);
 
 	void readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId);
-	void loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section);
-	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection);
-
+	void loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area);
+	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection, boxI& area);
+	void PaintSections();
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;
