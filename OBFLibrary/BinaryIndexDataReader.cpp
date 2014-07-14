@@ -115,7 +115,7 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 	int limitValue = readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
-	reader.ReadMapDataSection(cis);
+	reader.ReadMapDataSection(cis, rad);
 
 	reader.PaintSections();
 	cis->PopLimit(oldLimit);
@@ -131,6 +131,16 @@ bool BinaryIndexDataReader::readSInt32( gio::CodedInputStream* cis, int32_t& out
 	output = wfl::WireFormatLite::ZigZagDecode32(newVal);
 	return returnData;
 }
+
+int64_t BinaryIndexDataReader::readSInt64( gio::CodedInputStream* cis )
+{
+	uint64_t newVal;
+	int64_t result = -1LL;
+	if(cis->ReadVarint64(&newVal))
+		result = wfl::WireFormatLite::ZigZagDecode64(newVal);
+	return result;
+}
+
 
 bool BinaryIndexDataReader::readString( gio::CodedInputStream* cis, std::string& output )
 {

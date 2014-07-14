@@ -142,7 +142,7 @@ BinaryMapDataReader::~BinaryMapDataReader(void)
 }
 
 
-void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
+void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis, RandomAccessFileReader* outData)
 {
 	boxI initBox;
 	boost::geometry::assign_inverse(initBox);
@@ -319,13 +319,28 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
                 // Save boxes offset
                 section->offset = tagPos - parentoffset;
 				loadTreeNodes(cis, section, region);
+				getBoxesReferences(section);
                 // Skip reading boxes and surely, following blocks
                 //cis->Skip(cis->BytesUntilLimit());
             }
             break;
 		case OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber:
 			{
+			  if (bg::area(region) > 1)
+			  {
+				  if (mapDataReferences.find(cis->CurrentPosition()) != mapDataReferences.end())
+				  {
+					  loadMapDataObjects(cis, mapDataReferences[cis->CurrentPosition()], region);
+				  }
+				  else
+				  {
+					  BinaryIndexDataReader::skipUnknownField(cis, tag);
+				  }
+			  }
+			  else
+			  {
 			  BinaryIndexDataReader::skipUnknownField(cis, tag);
+			  }
               break;
 			}
         default:
@@ -339,9 +354,11 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area)
 {
 	gp::uint32 BoxLength;
+	uint32_t currOffset = cis->CurrentPosition();
 	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
 	gp::uint32 oldVal = cis->PushLimit(BoxLength);
 	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
+	childSection->offset = currOffset;
 	for (;;)
 	{
 
@@ -384,7 +401,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 				if (/*bg::intersects(bxInit, section->rootBox )*/ true)
 				{
 					loadChildTreeNode(cis, childSection, bxInit);
-				}
+}
 				else
 				{
 					BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -440,8 +457,14 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
-			loadChildTreeNode(cis, childSection, region);
-			//BinaryIndexDataReader::skipUnknownField(cis, tag);
+			if (bg::area(region) > 1 && bg::intersects(region, childSection->rootBox))
+			{
+				loadChildTreeNode(cis, childSection, region);
+			}
+			else
+			{
+				BinaryIndexDataReader::skipUnknownField(cis, tag);
+			}
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
 			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
@@ -545,5 +568,179 @@ void BinaryMapDataReader::PaintSections()
 			}
 		}
 	}
+
+}
+
+void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area)
+{
+	uint32_t limitSize;
+	cis->ReadVarint32(&limitSize);
+	uint32_t oldLimit = cis->PushLimit(limitSize);
+	
+	std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> objects;
+	
+	bool continueWhile;
+
+	uint64_t baseId;
+
+	while (continueWhile)
+	{
+		uint32_t tag = cis->ReadTag();
+		uint32_t tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		switch(tagVal)
+		{
+			case 0:
+			{
+				continueWhile = false;
+			}
+			break;
+
+			case obf::MapDataBlock::kBaseIdFieldNumber:
+				cis->ReadVarint64(&baseId);
+				break;
+			case obf::MapDataBlock::kDataObjectsFieldNumber:
+				{
+				uint32_t	 len;
+				cis->ReadVarint32(&len);
+				uint32_t localimit = cis->PushLimit(len);
+				readMapObject(cis, section, baseId, objects); 
+				cis->PopLimit(localimit);
+				}
+				break;
+			default:
+				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				break;
+		}
+	}
+	
+	cis->PopLimit(oldLimit);
+}
+
+void BinaryMapDataReader::getBoxesReferences(std::shared_ptr<BinaryMapSection>& section)
+{
+	if (section->dataOffset >= 0)
+	{
+		mapDataReferences.insert(std::make_pair(section->offset + section->dataOffset, section));
+	}
+	for(auto childData : section->childSections)
+	{
+		getBoxesReferences(childData);
+	}
+}
+
+void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, uint64_t baseid,std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects)
+{
+	uint64_t baseId;
+	bool continueWhile = true;
+	 __int64 idDef;
+	 MapObjectData* localMapObj = nullptr;
+	while (continueWhile)
+	{
+		uint32_t tag = cis->ReadTag();
+		uint32_t tagVal = wfl::WireFormatLite::GetTagFieldNumber(tag);
+		switch(tagVal)
+		{
+			case 0:
+			{
+				continueWhile = false;
+			}
+			break;
+			case obf::MapData::kIdFieldNumber:
+				{
+				 idDef = BinaryIndexDataReader::readSInt64(cis);
+				 objects.insert(std::make_pair(baseId+idDef, std::shared_ptr<MapObjectData>(new MapObjectData)));
+				 localMapObj = objects[baseid+idDef].get();
+				 localMapObj->localId = baseId+idDef;
+				}
+				break;
+			case obf::MapData::kAreaCoordinatesFieldNumber:
+			case obf::MapData::kCoordinatesFieldNumber:
+				{
+					uint32_t limitVtx;
+					cis->ReadVarint32(&limitVtx);
+					uint32_t oldLimitVtx = cis->PushLimit(limitVtx);
+					
+					pointI ptRef;
+					ptRef.set<0>(section->rootBox.min_corner().get<0>() & MaskToRead);
+					ptRef.set<1>(section->rootBox.min_corner().get<1>() & MaskToRead);
+
+					std::vector<pointI> ptDataVec(cis->BytesUntilLimit()/2);
+					auto verticesCount = 0;
+					auto pointerData = ptDataVec.data();
+					while(cis->BytesUntilLimit() > 0)
+					{
+						int32_t x = 0;
+						int32_t y = 0;
+						pointI ptData;
+						BinaryIndexDataReader::readSInt32(cis, x);
+						BinaryIndexDataReader::readSInt32(cis, y);
+						ptRef.set<0>(ptRef.get<0>() + (x << ShiftCoordinates));
+						ptRef.set<1>(ptRef.get<1>() + (y << ShiftCoordinates));
+						(*pointerData++) = ptRef;
+						verticesCount++;
+					}
+					cis->PopLimit(oldLimitVtx);
+					ptDataVec.resize(verticesCount);
+					if (localMapObj != nullptr)
+					{
+						
+						localMapObj->points = ptDataVec;
+						localMapObj->isArea = obf::MapData::kAreaCoordinatesFieldNumber == tagVal;
+						polyArea polyData;
+						polyData.outer().insert(polyData.outer().end(), localMapObj->points.begin(), localMapObj->points.end());
+						bg::envelope(polyData, localMapObj->bbox);
+						
+					}
+				}
+				break;
+			case obf::MapData::kPolygonInnerCoordinatesFieldNumber:
+				{
+					uint32_t limitVtx;
+					cis->ReadVarint32(&limitVtx);
+					uint32_t oldLimitVtx = cis->PushLimit(limitVtx);
+					
+					pointI ptRef;
+					ptRef.set<0>(section->rootBox.min_corner().get<0>() & MaskToRead);
+					ptRef.set<1>(section->rootBox.min_corner().get<1>() & MaskToRead);
+
+					
+
+					std::vector<pointI> ptDataVec(cis->BytesUntilLimit()/2);
+					auto verticesCount = 0;
+					auto pointerData = ptDataVec.data();
+					while(cis->BytesUntilLimit() > 0)
+					{
+						int32_t x = 0;
+						int32_t y = 0;
+						pointI ptData;
+						BinaryIndexDataReader::readSInt32(cis, x);
+						BinaryIndexDataReader::readSInt32(cis, y);
+						ptRef.set<0>(ptRef.get<0>() + (x << ShiftCoordinates));
+						ptRef.set<1>(ptRef.get<1>() + (y << ShiftCoordinates));
+						(*pointerData++) = ptRef;
+						verticesCount++;
+					}
+					cis->PopLimit(oldLimitVtx);
+					ptDataVec.resize(verticesCount);
+					if (localMapObj != nullptr)
+					{
+						localMapObj->innerpolypoints.push_back(ptDataVec);
+					}
+				}
+				break;
+			default:
+				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				break;
+		}
+	}
+
+	// few assertions
+#ifdef _DEBUG
+	polyArea polyData;
+	polyData.outer().insert(polyData.outer().end(), localMapObj->points.begin(), localMapObj->points.end());
+	AreaI locBox;
+	bg::envelope(polyData, locBox);
+	bool insider = bg::within(locBox, section->rootBox);
+#endif
 
 }

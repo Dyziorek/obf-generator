@@ -367,7 +367,17 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		checkPeek(vacP, sizeof(vacP)/sizeof(int));
 		obf::StringTable bs;
 		if (!stringTable.empty()) {
+			std::list<std::pair<std::string, int>> sortList;
 			for (std::pair<std::string,int> s : stringTable) {
+				sortList.push_back(s);
+			}
+
+			sortList.sort([](std::pair<std::string, int> elemSort1, std::pair<std::string, int> elem2)
+			{
+				return elemSort1.second < elem2.second;
+			});
+
+			for (std::pair<std::string,int> s : sortList) {
 				bs.add_s(s.first);
 			}
 		
