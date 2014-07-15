@@ -326,9 +326,11 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
             break;
 		case OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber:
 			{
-			  if (bg::area(region) > 1)
+				auto areaVal = fabs(bg::area(region));
+			  if (areaVal >= 1)
 			  {
-				  if (mapDataReferences.find(cis->CurrentPosition()) != mapDataReferences.end())
+				  auto posBlock = cis->CurrentPosition();
+				  if (mapDataReferences.find(posBlock) != mapDataReferences.end())
 				  {
 					  loadMapDataObjects(cis, mapDataReferences[cis->CurrentPosition()], region);
 				  }
@@ -369,6 +371,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 		{
 		case 0:
 			cis->PopLimit(oldVal);
+
 			section->childSections.push_back(childSection);
 			childSection->translateBox();
 			return;
@@ -392,13 +395,15 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			{
 				pointI ptCenter;
 				boxI bxInit;
-				bg::centroid(section->rootBox, ptCenter);
+				boxL bxCalc;
+				bg::convert(section->rootBox, bxCalc);
+				bg::centroid(bxCalc, ptCenter);
 				bg::assign_inverse(bxInit);
 				bxInit.min_corner().set<0>(section->rootBox.min_corner().get<0>());
 				bxInit.min_corner().set<1>(section->rootBox.min_corner().get<1>());
 				bxInit.max_corner().set<0>(ptCenter.get<0>());
 				bxInit.max_corner().set<1>(ptCenter.get<1>());
-				if (/*bg::intersects(bxInit, section->rootBox )*/ true)
+				if (bg::covered_by(bxInit, section->rootBox ))
 				{
 					loadChildTreeNode(cis, childSection, bxInit);
 }
@@ -411,6 +416,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
 			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
+			childSection->offset = cis->CurrentPosition();
 			break;
 		default:
 			BinaryIndexDataReader::skipUnknownField(cis, tag);
@@ -427,6 +433,7 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
 	gp::uint32 oldVal = cis->PushLimit(BoxLength);
 	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
+	childSection->offset = cis->CurrentPosition();
 	for (;;)
 	{
 
@@ -457,13 +464,16 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
-			if (bg::area(region) > 1 && bg::intersects(region, childSection->rootBox))
 			{
-				loadChildTreeNode(cis, childSection, region);
-			}
-			else
-			{
-				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				auto areaVal = bg::area(region);
+				if (/*fabs(areaVal) > 1 && bg::covered_by(region, childSection->rootBox)*/true)
+				{
+					loadChildTreeNode(cis, childSection, region);
+				}
+				else
+				{
+					BinaryIndexDataReader::skipUnknownField(cis, tag);
+				}
 			}
 			break;
 		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
@@ -578,8 +588,8 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 	uint32_t oldLimit = cis->PushLimit(limitSize);
 	
 	std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> objects;
-	
-	bool continueWhile;
+	std::vector<std::string> stringTable;
+	bool continueWhile = true;
 
 	uint64_t baseId;
 
@@ -607,18 +617,36 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 				cis->PopLimit(localimit);
 				}
 				break;
+			case obf::MapDataBlock::kStringTableFieldNumber:
+				{
+					uint32_t lenStr;
+					cis->ReadVarint32(&lenStr);
+					auto oldStrLimit = cis->PushLimit(lenStr);
+					if(objects.empty())
+					{
+						cis->Skip(lenStr);
+						cis->PopLimit(oldStrLimit);
+						break;
+					}
+					BinaryIndexDataReader::readStringTable(cis, stringTable);
+					assert(cis->BytesUntilLimit() == 0);
+					cis->PopLimit(oldStrLimit);
+				}
+				break;
 			default:
 				BinaryIndexDataReader::skipUnknownField(cis, tag);
 				break;
 		}
 	}
 	
+	MergeStringsToObjects(objects, stringTable);
+
 	cis->PopLimit(oldLimit);
 }
 
 void BinaryMapDataReader::getBoxesReferences(std::shared_ptr<BinaryMapSection>& section)
 {
-	if (section->dataOffset >= 0)
+	if (section->dataOffset > 0)
 	{
 		mapDataReferences.insert(std::make_pair(section->offset + section->dataOffset, section));
 	}
@@ -630,10 +658,9 @@ void BinaryMapDataReader::getBoxesReferences(std::shared_ptr<BinaryMapSection>& 
 
 void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, uint64_t baseid,std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects)
 {
-	uint64_t baseId;
 	bool continueWhile = true;
 	 __int64 idDef;
-	 MapObjectData* localMapObj = nullptr;
+	 MapObjectData* localMapObj = new MapObjectData;
 	while (continueWhile)
 	{
 		uint32_t tag = cis->ReadTag();
@@ -648,9 +675,8 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 			case obf::MapData::kIdFieldNumber:
 				{
 				 idDef = BinaryIndexDataReader::readSInt64(cis);
-				 objects.insert(std::make_pair(baseId+idDef, std::shared_ptr<MapObjectData>(new MapObjectData)));
-				 localMapObj = objects[baseid+idDef].get();
-				 localMapObj->localId = baseId+idDef;
+				 objects.insert(std::make_pair(baseid+idDef, std::shared_ptr<MapObjectData>(localMapObj)));
+    			 localMapObj->localId = baseid+idDef;
 				}
 				break;
 			case obf::MapData::kAreaCoordinatesFieldNumber:
@@ -728,6 +754,37 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					}
 				}
 				break;
+			case obf::MapData::kTypesFieldNumber:
+			case obf::MapData::kAdditionalTypesFieldNumber:
+				{
+					uint32_t limitTypes;
+					cis->ReadVarint32(&limitTypes);
+					uint32_t oldLimitTypes = cis->PushLimit(limitTypes);
+					std::list<int>& typeIds = tagVal == obf::MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
+					while(cis->BytesUntilLimit() > 0)
+					{
+						uint32_t ruleId;
+						cis->ReadVarint32(&ruleId);
+						typeIds.push_back(ruleId);
+					}
+					cis->PopLimit(oldLimitTypes);
+				}
+				break;
+			case obf::MapData::kStringNamesFieldNumber:
+				{
+					uint32_t limitNames;
+					cis->ReadVarint32(&limitNames);
+					uint32_t oldLimitNames = cis->PushLimit(limitNames);
+					while(cis->BytesUntilLimit() > 0)
+					{
+						uint32_t ruleId, ruleValId;
+						cis->ReadVarint32(&ruleId);
+						cis->ReadVarint32(&ruleValId);
+						localMapObj->nameTypeString.push_back(std::make_tuple(ruleId, ruleValId, ""));
+					}
+					cis->PopLimit(oldLimitNames);
+				}				
+				break;
 			default:
 				BinaryIndexDataReader::skipUnknownField(cis, tag);
 				break;
@@ -740,7 +797,28 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 	polyData.outer().insert(polyData.outer().end(), localMapObj->points.begin(), localMapObj->points.end());
 	AreaI locBox;
 	bg::envelope(polyData, locBox);
-	bool insider = bg::within(locBox, section->rootBox);
+	localMapObj->correctBBox = bg::covered_by(locBox, section->rootBox);
 #endif
+
+}
+
+void BinaryMapDataReader::MergeStringsToObjects(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects, std::vector<std::string>& stringList)
+{
+	bool uncorectbbox = false;
+	for (auto mapDataItem : objects)
+	{
+		for (std::list<std::tuple<int,int,std::string>>::iterator itemString = mapDataItem.second->nameTypeString.begin(); itemString != mapDataItem.second->nameTypeString.end(); itemString++)
+		{
+			assert(std::get<1>(*itemString) >= 0 && std::get<1>(*itemString) < stringList.size());
+			std::string value = stringList[std::get<1>(*itemString)];
+			std::get<2>(*itemString) = value;
+			value = std::get<2>(*itemString);
+		}
+		if (mapDataItem.second->correctBBox == false)
+			uncorectbbox = true;
+	}
+	std::wstringstream strmData;
+	strmData << L"Sections objects : " << objects.size() << L" has incrrect bbxo" << std::endl;
+	OutputDebugString(strmData.str().c_str());
 
 }

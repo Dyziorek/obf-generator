@@ -152,7 +152,7 @@ bool BinaryIndexDataReader::readString( gio::CodedInputStream* cis, std::string&
     return true;
 }
 
-void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::list<std::string>& stringTableOut )
+void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::vector<std::string>& stringTableOut )
 {
     for(;;)
     {

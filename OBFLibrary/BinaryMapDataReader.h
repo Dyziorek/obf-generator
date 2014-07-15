@@ -8,8 +8,10 @@ namespace bgm = boost::geometry::model;
 
 typedef RTree<std::pair<__int64, std::vector<std::shared_ptr<MapObjectData>>>> treeMap;
 
+typedef bgm::point<__int64, 2, bg::cs::cartesian> pointL;
 typedef bgm::point<int, 2, bg::cs::cartesian> pointI;
 typedef bgm::box<pointI> boxI;
+typedef bgm::box<pointL> boxL;
 typedef bgm::point<double, 2, bg::cs::cartesian> pointD;
 typedef bgm::box<pointD> boxD;
 typedef boost::geometry::model::box<pointI> AreaI;
@@ -38,8 +40,8 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 	}
 	BinaryMapSection()
 	{
-		offset = -1;
-		dataOffset = -1;
+		offset = 0;
+		dataOffset = 0;
 	}
 };
 
@@ -93,6 +95,7 @@ public:
 	void PaintSections();
 	void getBoxesReferences(std::shared_ptr<BinaryMapSection>& section);
 	void readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section,uint64_t baseid, std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects);
+	void MergeStringsToObjects(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects, std::vector<std::string>& stringList);
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;

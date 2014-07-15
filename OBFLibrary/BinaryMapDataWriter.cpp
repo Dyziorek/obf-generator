@@ -83,13 +83,13 @@ int BinaryMapDataWriter::writeInt32Size()
 
 void BinaryMapDataWriter::writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32)
 {
-	google::protobuf::uint32 result = wfl::WireFormatLite::ZigZagEncode32(toVarint32);
-	while (result & 0x7F != 0)
+	//google::protobuf::uint32 result = wfl::WireFormatLite::ZigZagEncode32(toVarint32);
+	while (toVarint32 > 0x7F)
 	{
-		mapDataBuf.push_back((result & 0x7F) | 0x80);
-		result >>= 7;
+		mapDataBuf.push_back((static_cast<uint8>(toVarint32) & 0x7F) | 0x80);
+		toVarint32 >>= 7;
 	}
-	mapDataBuf.push_back(result);
+	mapDataBuf.push_back(static_cast<uint8>(toVarint32) & 0x7F);
 }
 
 bool BinaryMapDataWriter::writeStartMapIndex(std::string name)
@@ -266,8 +266,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			int y = parseIntFromBytes(plData, i * 8 + 4);
 			int tx = (x >> SHIFT_COORDINATES) - pcalcx;
 			int ty = (y >> SHIFT_COORDINATES) - pcalcy;
-			writeRawVarint32(mapDataBuf, tx);
-			writeRawVarint32(mapDataBuf, ty);
+			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(tx));
+			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(ty));
 			pcalcx = pcalcx + tx ;
 			pcalcy = pcalcy + ty ;
 			delta = 1;
@@ -304,8 +304,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 					int tx = (x >> SHIFT_COORDINATES) - pcalcx;
 					int ty = (y >> SHIFT_COORDINATES) - pcalcy;
 
-					writeRawVarint32(mapDataBuf, tx);
-					writeRawVarint32(mapDataBuf, ty);
+					writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(tx));
+					writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(ty));
 
 					pcalcx = pcalcx + tx ;
 					pcalcy = pcalcy + ty ;
@@ -340,7 +340,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 				int ls = 0;
 				if (stringTable.find(s.second) == stringTable.end())
 				{
-					int ls = stringTable.size();
+					ls = stringTable.size();
 					stringTable.insert(std::make_pair(s.second, ls));
 				}
 				else

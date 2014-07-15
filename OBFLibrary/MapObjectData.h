@@ -20,7 +20,12 @@ struct MapObjectData
 	int64_t localId;
 	bool isArea;
 	AreaI bbox;
-public:
+	std::list<int> type;
+	std::list<int> addtype;
+	std::list<std::tuple<int,int,std::string>> nameTypeString;
+#ifdef _DEBUG
+	bool correctBBox;
+#endif
 	MapObjectData(void);
 	~MapObjectData(void);
 };
