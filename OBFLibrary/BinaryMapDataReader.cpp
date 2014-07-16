@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "OBFRenderingTypes.h"
 #include <google\protobuf\descriptor.h>
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
@@ -130,6 +131,11 @@ void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name
                 positiveLayers_encodingRuleIds.insert(id);
         }
     }
+}
+
+uint32_t BinaryMapRules::getruleIdFromNames(std::string tag, std::string name)
+{
+	return mapRuleIdNames.find(tag)->second.find(name)->second;
 }
 
 BinaryMapDataReader::BinaryMapDataReader(void) : mapRules(new BinaryMapRules)
@@ -502,6 +508,7 @@ void BinaryMapDataReader::PaintSections()
 				};
 				SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 				SkCanvas* painter = imageRender->getCanvas();
+				
 				painter->drawColor(SK_ColorWHITE);
 				SkRect limits;
 				painter->getClipBounds(&limits);
@@ -517,68 +524,180 @@ void BinaryMapDataReader::PaintSections()
 				double maxY = -1000, maxX = -1000;
 				double minY = 1000, minX = 1000;
 				auto rootBoxData = sectionInfo->childSections.front();
+				boxD wholeMapBox;
+				boxI lockerBox;
 				minX = std::min(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
 				maxX = std::max(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
 				minY = std::min(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
 				maxY = std::max(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
-				double scale = 1.0;
-				if (maxX - minX > w || maxY - minY > h)
+				double widthStep = (maxX - minX)/4;
+				double heightStep = (maxY - minY)/4;
+				if (rootBoxData->geoBox.min_corner().get<0>() > rootBoxData->geoBox.max_corner().get<0>())
 				{
-					if ((maxX - minX - w) > (maxY - minY - h))
+					widthStep = -widthStep;
+				}
+				if (rootBoxData->geoBox.min_corner().get<1>() >	rootBoxData->geoBox.max_corner().get<1>())
+				{
+					heightStep = -heightStep;
+				}
+				for (int idx = 0; idx < 16; idx++)
+				{
+					double YStep = fabs(heightStep);
+					double XStep = fabs(widthStep);
+					if (heightStep < 0)
 					{
-						scale = w / (maxX - minX);
+						wholeMapBox.max_corner().set<1>(minY + (YStep * (idx % 4)));
+						wholeMapBox.min_corner().set<1>(minY + YStep * ((idx % 4)+1));
 					}
 					else
 					{
-						scale = w / (maxY - minY);
+						wholeMapBox.max_corner().set<1>(minY + YStep * ((idx % 4)+1));
+						wholeMapBox.min_corner().set<1>(minY + YStep * (idx % 4));
 					}
-				}
-				else if (maxX - minX < w && maxY - minY < h)
-				{
-					scale = std::min<SkScalar>(w / (maxX - minX)   , h / (maxY - minY));
-				}
-				for (auto subChilds : sectionInfo->childSections.front()->childSections)
-				{
-					double maxYC = -1000, maxXC = -1000;
-					double minYC = 1000, minXC = 1000;
-					minXC = std::min(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
-					maxXC = std::max(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
-					minYC = std::min(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
-					maxYC = std::max(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
-					if (subChilds->childSections.size() > 0)
+					if (widthStep < 0)
 					{
-						for (auto subChildsPop : subChilds->childSections)
+						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 4));
+						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 4)+1));
+					}
+					else
+					{
+						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 4));
+						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 4)+1));
+					}
+					minX = std::min(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
+					maxX = std::max(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
+					minY = std::min(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
+					maxY = std::max(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
+					double scale = 1.0;
+					bool painted = false;
+					if (maxX - minX > w || maxY - minY > h)
+					{
+						if ((maxX - minX - w) > (maxY - minY - h))
 						{
-							double maxYS = -1000, maxXS = -1000;
-							double minYS = 1000, minXS = 1000;
-							minXS = std::min(subChildsPop->geoBox.min_corner().get<0>(), 	subChildsPop->geoBox.max_corner().get<0>());
-							maxXS = std::max(subChildsPop->geoBox.min_corner().get<0>(), 	subChildsPop->geoBox.max_corner().get<0>());
-							minYS = std::min(subChildsPop->geoBox.min_corner().get<1>(), 	subChildsPop->geoBox.max_corner().get<1>());
-							maxYS = std::max(subChildsPop->geoBox.min_corner().get<1>(), 	subChildsPop->geoBox.max_corner().get<1>());
-							painter->drawRectCoords((minXS - minX) * scale, (minYS- minY)*scale, (maxXS - minX)*scale, (maxYS - minY)*scale, paintSub);
+							scale = w / (maxX - minX);
+						}
+						else
+						{
+							scale = w / (maxY - minY);
 						}
 					}
+					else if (maxX - minX < w && maxY - minY < h)
 					{
-						painter->drawRectCoords((minXC - minX) * scale, (minYC- minY)*scale, (maxXC - minX)*scale, (maxYC - minY)*scale, paint);
+						scale = std::min<SkScalar>(w / (maxX - minX)   , h / (maxY - minY));
+					}
+					lockerBox.max_corner().set<0>();
+					lockerBox.max_corner().set<1>();
+					lockerBox.max_corner().set<0>();
+					for( auto subChilds : sectionInfo->childSections.front()->childSections)
+					{
+						if (bg::covered_by(subChilds->geoBox, wholeMapBox) || bg::covered_by(wholeMapBox, subChilds->geoBox ) || bg::intersects(wholeMapBox,  subChilds->geoBox))
+						{
+							double maxYC = -1000, maxXC = -1000;
+							double minYC = 1000, minXC = 1000;
+							painted = true;
+							minXC = std::min(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
+							maxXC = std::max(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
+							minYC = std::min(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
+							maxYC = std::max(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
+							if (subChilds->childSections.size() > 0)
+							{
+								for (auto subChildsPop : subChilds->childSections)
+								{
+									paintSection(subChildsPop, minX, minY, scale, painter);
+								}
+							}
+							{
+								painter->drawRectCoords((minXC - minX) * scale, h - (minYC- minY)*scale, (maxXC - minX)*scale, h - (maxYC - minY)*scale, paint);
+							}
+						}
+						
 					}
 
-				}
+				
+					if (painted)
+					{
+						SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
+				
+						SkAutoDataUnref data(image->encode());
+						if (NULL == data.get()) {
+							return ;
+						}
+						std::string buff;
+						buff = boost::lexical_cast<std::string,int>(indexSect);
+						buff += "_";
+						buff += boost::lexical_cast<std::string,int>(idx);
+						std::string pathImage = "D:\\osmData\\resultImageBox" + buff + std::string(".png");
+						SkFILEWStream stream(pathImage.c_str());
 
-				SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
-				SkAutoDataUnref data(image->encode());
-				if (NULL == data.get()) {
-					return ;
+						stream.write(data->data(), data->size());
+					}
 				}
-				char buff[10];
-				_ultoa_s(indexSect, buff,10);
-				std::string pathImage = "D:\\osmData\\resultImageBox" + std::string(buff) + std::string(".png");
-				SkFILEWStream stream(pathImage.c_str());
-
-				stream.write(data->data(), data->size());
 			}
 		}
 	}
 
+}
+
+void BinaryMapDataReader::paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop,double  minX,double minY, double scale, void* painter)
+{
+	if (subChildsPop->sectionData.size() > 0)
+	{
+		paintSectionData(subChildsPop->sectionData, minX, minY, scale, painter);
+	}
+	if (subChildsPop->childSections.size() > 0)
+	{
+		for (auto subChilds : subChildsPop->childSections)
+		{
+			paintSection(subChilds, minX, minY, scale, painter);
+		}
+	}
+}
+
+void BinaryMapDataReader::paintSectionData(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& sectionData, double minX, double minY,double scale, void* painterPass)
+{
+	SkCanvas* painter = (SkCanvas*)painterPass;
+	SkPaint paintSubPrimary;
+	paintSubPrimary.setColor(SK_ColorRED);
+	paintSubPrimary.setStyle(SkPaint::Style::kStroke_Style);
+	paintSubPrimary.setStrokeWidth(2);
+	SkPaint paintSub;
+	paintSub.setColor(SK_ColorGREEN);
+	paintSub.setStyle(SkPaint::Style::kStroke_Style);
+	SkRect bounds;
+	painter->getClipBounds(&bounds);
+	for (auto sectionElem : sectionData)
+	{
+		for (int typeId : sectionElem.second->type)
+		{
+			MapDecodingRule rule = mapRules->getRuleInfo(typeId);
+			if (rule.tag == "highway")
+			{
+				
+				SkPath pather;
+				std::vector<SkPoint> pathPoints;
+				for (pointI ptI : sectionElem.second->points)
+				{
+					pointD mapPoint;
+					mapPoint.set<0>(MapUtils::get31LongitudeX(ptI.get<0>()));
+					mapPoint.set<1>(MapUtils::get31LatitudeY(ptI.get<1>()));
+					SkPoint ptData;
+					ptData.fX = (mapPoint.get<0>() - minX) * scale;
+					ptData.fY = bounds.height() - (mapPoint.get<1>() - minY) * scale;
+					pathPoints.push_back(ptData);
+				}
+				pather.addPoly(pathPoints.data(), pathPoints.size(), false);
+				if (rule.value == "primary")
+				{
+					painter->drawPath(pather, paintSubPrimary);
+				}
+				if (rule.value == "residential")
+				{
+					painter->drawPath(pather, paintSub);
+				}
+				
+			}
+		}
+	}
 }
 
 void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area)
@@ -640,7 +759,7 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 	}
 	
 	MergeStringsToObjects(objects, stringTable);
-
+	section->sectionData = std::move(objects);
 	cis->PopLimit(oldLimit);
 }
 
@@ -814,11 +933,15 @@ void BinaryMapDataReader::MergeStringsToObjects(std::unordered_map<uint64_t, std
 			std::get<2>(*itemString) = value;
 			value = std::get<2>(*itemString);
 		}
+#ifdef _DEBUG
 		if (mapDataItem.second->correctBBox == false)
 			uncorectbbox = true;
+#endif
 	}
-	std::wstringstream strmData;
-	strmData << L"Sections objects : " << objects.size() << L" has incrrect bbxo" << std::endl;
-	OutputDebugString(strmData.str().c_str());
-
+	if (uncorectbbox)
+	{
+		std::wstringstream strmData;
+		strmData << L"Sections objects : " << objects.size() << L" has incrrect bbxo" << std::endl;
+		OutputDebugString(strmData.str().c_str());
+	}
 }

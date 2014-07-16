@@ -740,8 +740,12 @@ int COBFGeneratorDlg::PrepareTempDB()
 	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 	USES_CONVERSION;
 	results.mapName = W2A(m_fileName.GetString());
+	strMessage.Format(L"Saving binary result");
+	delete[] msgTxt;
+	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
+	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
+	::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 	results.iterateOverElements(PHASESAVE);
-
 	return 0;
 }
 

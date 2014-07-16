@@ -18,6 +18,9 @@ typedef boost::geometry::model::box<pointI> AreaI;
 typedef boost::geometry::model::box<pointD> AreaD;
 typedef boost::geometry::model::polygon<pointI> polyArea;
 typedef boost::geometry::model::polygon<pointI, true, false> polyLine;
+
+
+
 struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 {
 	std::pair<gp::uint32, gp::uint32> zoomLevels;
@@ -26,6 +29,7 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 	gp::uint32 offset;
 	gp::uint32 dataOffset;
 	std::list<std::shared_ptr<BinaryMapSection>> childSections;
+	std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> sectionData;
 	std::shared_ptr<BinaryMapSection> getSharedPtr()
 	{
 		return shared_from_this();
@@ -54,6 +58,8 @@ public:
 
 	void createMissingRules();
 	void createRule(uint32_t id, uint32_t ruleType, std::string name, std::string value);
+	uint32_t getruleIdFromNames(std::string tag, std::string name);
+	MapDecodingRule getRuleInfo(uint32_t id) { return mapRules[id];}
 private:
     uint32_t name_encodingRuleId;
     uint32_t ref_encodingRuleId;
@@ -93,6 +99,8 @@ public:
 	void loadMapDataObjects(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection>& section, boxI& area);
 	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection, boxI& area);
 	void PaintSections();
+	void paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop,double  minX,double minY, double scale, void* painter);
+	void paintSectionData(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> &sectionData, double minX, double minY,double scale, void* painter);
 	void getBoxesReferences(std::shared_ptr<BinaryMapSection>& section);
 	void readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section,uint64_t baseid, std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects);
 	void MergeStringsToObjects(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects, std::vector<std::string>& stringList);
@@ -101,6 +109,7 @@ private:
 	std::string mapName;
 	std::unique_ptr<BinaryMapRules> mapRules;
 	std::map<long long, std::shared_ptr<BinaryMapSection>> mapDataReferences;
+	OBFRenderingTypes renderEncoder;
 	GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(BinaryMapDataReader);
 
 	    enum {
