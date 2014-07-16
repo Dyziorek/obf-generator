@@ -31,13 +31,7 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 		return shared_from_this();
 	}
 
-	void translateBox()
-	{
-		geoBox.min_corner().set<0>(MapUtils::get31LongitudeX(rootBox.min_corner().get<0>()));
-		geoBox.min_corner().set<1>(MapUtils::get31LatitudeY(rootBox.min_corner().get<1>()));
-		geoBox.max_corner().set<0>(MapUtils::get31LongitudeX(rootBox.max_corner().get<0>()));
-		geoBox.max_corner().set<1>(MapUtils::get31LatitudeY(rootBox.max_corner().get<1>()));
-	}
+
 	BinaryMapSection()
 	{
 		offset = 0;
@@ -45,6 +39,7 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 	}
 };
 
+boxD translateBox(boxI inputBox);
 
 class BinaryMapRules
 {

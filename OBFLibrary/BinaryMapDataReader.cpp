@@ -43,6 +43,15 @@
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
 
+boxD translateBox(boxI inputBox)
+{
+	boxD geoBox;
+	geoBox.min_corner().set<0>(MapUtils::get31LongitudeX(inputBox.min_corner().get<0>()));
+	geoBox.min_corner().set<1>(MapUtils::get31LatitudeY(inputBox.min_corner().get<1>()));
+	geoBox.max_corner().set<0>(MapUtils::get31LongitudeX(inputBox.max_corner().get<0>()));
+	geoBox.max_corner().set<1>(MapUtils::get31LatitudeY(inputBox.max_corner().get<1>()));
+	return geoBox;
+}
 
 
 #pragma push_macro("max")
@@ -290,7 +299,7 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
         switch(tagVal)
         {
         case 0:
-			section->translateBox();
+			section->geoBox = translateBox(section->rootBox);
             return;
         case OsmAndMapIndex_MapRootLevel::kMaxZoomFieldNumber:
 			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.first));
@@ -373,7 +382,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			cis->PopLimit(oldVal);
 
 			section->childSections.push_back(childSection);
-			childSection->translateBox();
+			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -445,7 +454,7 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 		case 0:
 			cis->PopLimit(oldVal);
 			section->childSections.push_back(childSection);
-			childSection->translateBox();
+			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -798,6 +807,17 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 	AreaI locBox;
 	bg::envelope(polyData, locBox);
 	localMapObj->correctBBox = bg::covered_by(locBox, section->rootBox);
+	if (localMapObj->correctBBox == true)
+	{
+		AreaD translated = translateBox(locBox);
+		AreaD translatedRoot = translateBox(section->rootBox);
+		bool interData = bg::intersects(translated, translatedRoot );
+		if (interData == false)
+		{
+			bg::expand(translated, translatedRoot);
+		}
+		interData = bg::intersects(translated, translatedRoot );
+	}
 #endif
 
 }
@@ -817,8 +837,11 @@ void BinaryMapDataReader::MergeStringsToObjects(std::unordered_map<uint64_t, std
 		if (mapDataItem.second->correctBBox == false)
 			uncorectbbox = true;
 	}
-	std::wstringstream strmData;
-	strmData << L"Sections objects : " << objects.size() << L" has incrrect bbxo" << std::endl;
-	OutputDebugString(strmData.str().c_str());
+	if (uncorectbbox)
+	{
+		std::wstringstream strmData;
+		strmData << L"Sections objects : " << objects.size() << L" has incrrect bbxo" << std::endl;
+		OutputDebugString(strmData.str().c_str());
+	}
 
 }
