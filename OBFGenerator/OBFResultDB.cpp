@@ -429,7 +429,10 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASESAVE)
 	{
-		boost::filesystem::path pather("D:\\osmData\\binarResult.bin");
+		std::string pathTxt = "D:\\osmData\\";
+		pathTxt += mapName;
+		pathTxt += ".bin";
+		boost::filesystem::path pather(pathTxt);
 		
 		RandomAccessFileWriter rafek(pather, RandomAccessFileWriter::READWRITE);
 
