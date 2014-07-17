@@ -95,7 +95,8 @@ public:
 	void loadMapDataObjects(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection>& section, boxI& area);
 	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection, boxI& area);
 	void PaintSections();
-	void paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop,double  minX,double minY, double scale, void* painter);
+	void paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover, double  minX,double minY, double scale, void* painter);
+	bool isCovered(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover);
 	void paintSectionData(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> &sectionData, double minX, double minY,double scale, void* painter);
 	void getBoxesReferences(std::shared_ptr<BinaryMapSection>& section);
 	void readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section,uint64_t baseid, std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects);
