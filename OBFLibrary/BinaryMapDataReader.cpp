@@ -44,7 +44,25 @@
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
 
+boxD translateBox(boxI rootBox)
+{
+	boxD geoBox;
+	geoBox.min_corner().set<0>(MapUtils::get31LongitudeX(rootBox.min_corner().get<0>()));
+	geoBox.min_corner().set<1>(MapUtils::get31LatitudeY(rootBox.min_corner().get<1>()));
+	geoBox.max_corner().set<0>(MapUtils::get31LongitudeX(rootBox.max_corner().get<0>()));
+	geoBox.max_corner().set<1>(MapUtils::get31LatitudeY(rootBox.max_corner().get<1>()));
+	return geoBox;
+}
 
+boxI invTranslateBox(boxD geoBox)
+{
+	boxI tileBox;
+	tileBox.min_corner().set<0>(MapUtils::get31TileNumberX(geoBox.min_corner().get<0>()));
+	tileBox.min_corner().set<1>(MapUtils::get31TileNumberY(geoBox.min_corner().get<1>()));
+	tileBox.max_corner().set<0>(MapUtils::get31TileNumberX(geoBox.max_corner().get<0>()));
+	tileBox.max_corner().set<1>(MapUtils::get31TileNumberY(geoBox.max_corner().get<1>()));
+	return tileBox;
+}
 
 #pragma push_macro("max")
 #undef max
@@ -296,7 +314,7 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
         switch(tagVal)
         {
         case 0:
-			section->translateBox();
+			section->geoBox = translateBox(section->rootBox);
             return;
         case OsmAndMapIndex_MapRootLevel::kMaxZoomFieldNumber:
 			cis->ReadVarint32(reinterpret_cast<gp::uint32*>(&section->zoomLevels.first));
@@ -379,7 +397,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			cis->PopLimit(oldVal);
 
 			section->childSections.push_back(childSection);
-			childSection->translateBox();
+			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -451,7 +469,7 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 		case 0:
 			cis->PopLimit(oldVal);
 			section->childSections.push_back(childSection);
-			childSection->translateBox();
+			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
 		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
 			BinaryIndexDataReader::readSInt32(cis, value);
@@ -530,8 +548,8 @@ void BinaryMapDataReader::PaintSections()
 				maxX = std::max(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
 				minY = std::min(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
 				maxY = std::max(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
-				double widthStep = (maxX - minX)/4;
-				double heightStep = (maxY - minY)/4;
+				double widthStep = (maxX - minX)/2;
+				double heightStep = (maxY - minY)/2;
 				if (rootBoxData->geoBox.min_corner().get<0>() > rootBoxData->geoBox.max_corner().get<0>())
 				{
 					widthStep = -widthStep;
@@ -540,70 +558,74 @@ void BinaryMapDataReader::PaintSections()
 				{
 					heightStep = -heightStep;
 				}
-				for (int idx = 0; idx < 16; idx++)
+				for (int idx = 0; idx < 4; idx++)
 				{
 					double YStep = fabs(heightStep);
 					double XStep = fabs(widthStep);
 					if (heightStep < 0)
 					{
-						wholeMapBox.max_corner().set<1>(minY + (YStep * (idx % 4)));
-						wholeMapBox.min_corner().set<1>(minY + YStep * ((idx % 4)+1));
+						wholeMapBox.max_corner().set<1>(minY + (YStep * (idx % 2)));
+						wholeMapBox.min_corner().set<1>(minY + YStep * ((idx % 2)+1));
 					}
 					else
 					{
-						wholeMapBox.max_corner().set<1>(minY + YStep * ((idx % 4)+1));
-						wholeMapBox.min_corner().set<1>(minY + YStep * (idx % 4));
+						wholeMapBox.max_corner().set<1>(minY + YStep * ((idx % 2)+1));
+						wholeMapBox.min_corner().set<1>(minY + YStep * (idx % 2));
 					}
 					if (widthStep < 0)
 					{
-						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 4));
-						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 4)+1));
+						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 2));
+						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 2)+1));
 					}
 					else
 					{
-						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 4));
-						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 4)+1));
+						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 2));
+						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 2)+1));
 					}
-					minX = std::min(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
-					maxX = std::max(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
-					minY = std::min(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
-					maxY = std::max(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
+					double minXW = std::min(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
+					double maxXW = std::max(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
+					double minYW = std::min(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
+					double maxYW = std::max(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
 					double scale = 1.0;
 					bool painted = false;
-					if (maxX - minX > w || maxY - minY > h)
+					if (maxXW - minXW > w || maxYW - minYW > h)
 					{
-						if ((maxX - minX - w) > (maxY - minY - h))
+						if ((maxXW - minXW - w) > (maxYW - minYW - h))
 						{
-							scale = w / (maxX - minX);
+							scale = w / (maxXW - minXW);
 						}
 						else
 						{
-							scale = w / (maxY - minY);
+							scale = w / (maxYW - minYW);
 						}
 					}
-					else if (maxX - minX < w && maxY - minY < h)
+					else if (maxXW - minXW < w && maxYW - minYW < h)
 					{
-						scale = std::min<SkScalar>(w / (maxX - minX)   , h / (maxY - minY));
+						scale = std::min<SkScalar>(w / (maxXW - minXW)   , h / (maxYW - minYW));
 					}
-					lockerBox.max_corner().set<0>();
-					lockerBox.max_corner().set<1>();
-					lockerBox.max_corner().set<0>();
+					boxI tileMapBox = invTranslateBox(wholeMapBox);
 					for( auto subChilds : sectionInfo->childSections.front()->childSections)
 					{
-						if (bg::covered_by(subChilds->geoBox, wholeMapBox) || bg::covered_by(wholeMapBox, subChilds->geoBox ) || bg::intersects(wholeMapBox,  subChilds->geoBox))
+						bool isCoveredSegment = isCovered(subChilds, sectionInfo->rootBox);
+						if (isCoveredSegment && isCovered(subChilds, tileMapBox) /*|| bg::covered_by(tileMapBox, subChilds->rootBox )  || bg::intersects(tileMapBox,  subChilds->rootBox)*/)
 						{
 							double maxYC = -1000, maxXC = -1000;
 							double minYC = 1000, minXC = 1000;
+							double scaleC = 1.0;
 							painted = true;
 							minXC = std::min(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
 							maxXC = std::max(subChilds->geoBox.min_corner().get<0>(), 	subChilds->geoBox.max_corner().get<0>());
 							minYC = std::min(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
 							maxYC = std::max(subChilds->geoBox.min_corner().get<1>(), 	subChilds->geoBox.max_corner().get<1>());
+							if (maxXC - minXC < w && maxYC - minYC < h)
+							{
+								scaleC = std::min<SkScalar>(w / (maxXC - minXC)   , h / (maxYC - minYC));
+							}
 							if (subChilds->childSections.size() > 0)
 							{
 								for (auto subChildsPop : subChilds->childSections)
 								{
-									paintSection(subChildsPop, minX, minY, scale, painter);
+									paintSection(subChildsPop, tileMapBox, minXW, minYW, scale, painter);
 								}
 							}
 							{
@@ -638,9 +660,23 @@ void BinaryMapDataReader::PaintSections()
 
 }
 
-void BinaryMapDataReader::paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop,double  minX,double minY, double scale, void* painter)
+bool BinaryMapDataReader::isCovered(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover)
 {
-	if (subChildsPop->sectionData.size() > 0)
+	if (bg::covered_by( cover, subChildsPop->rootBox))
+	{
+		return true;
+	}
+	for (auto subChilds : subChildsPop->childSections)
+	{
+		if (isCovered(subChilds, cover))
+			return true;
+	}
+	return false;
+}
+
+void BinaryMapDataReader::paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover, double  minX,double minY, double scale, void* painter)
+{
+	if (subChildsPop->sectionData.size() > 0 && bg::covered_by(subChildsPop->rootBox, cover))
 	{
 		paintSectionData(subChildsPop->sectionData, minX, minY, scale, painter);
 	}
@@ -648,7 +684,7 @@ void BinaryMapDataReader::paintSection(std::shared_ptr<BinaryMapSection>& subChi
 	{
 		for (auto subChilds : subChildsPop->childSections)
 		{
-			paintSection(subChilds, minX, minY, scale, painter);
+			paintSection(subChilds, cover, minX, minY, scale, painter);
 		}
 	}
 }
@@ -663,6 +699,9 @@ void BinaryMapDataReader::paintSectionData(std::unordered_map<uint64_t, std::sha
 	SkPaint paintSub;
 	paintSub.setColor(SK_ColorGREEN);
 	paintSub.setStyle(SkPaint::Style::kStroke_Style);
+	SkPaint paintOther;
+	paintOther.setColor(SK_ColorGRAY);
+	paintOther.setStyle(SkPaint::Style::kStroke_Style);
 	SkRect bounds;
 	painter->getClipBounds(&bounds);
 	for (auto sectionElem : sectionData)
@@ -670,7 +709,7 @@ void BinaryMapDataReader::paintSectionData(std::unordered_map<uint64_t, std::sha
 		for (int typeId : sectionElem.second->type)
 		{
 			MapDecodingRule rule = mapRules->getRuleInfo(typeId);
-			if (rule.tag == "highway")
+			if (rule.tag == "highway" || rule.tag == "boundary")
 			{
 				
 				SkPath pather;
@@ -690,11 +729,14 @@ void BinaryMapDataReader::paintSectionData(std::unordered_map<uint64_t, std::sha
 				{
 					painter->drawPath(pather, paintSubPrimary);
 				}
-				if (rule.value == "residential")
+				else if (rule.value == "residential")
 				{
 					painter->drawPath(pather, paintSub);
 				}
-				
+				else if (rule.tag == "boundary")
+				{
+					painter->drawPath(pather, paintOther);
+				}
 			}
 		}
 	}
@@ -831,10 +873,22 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 						
 						localMapObj->points = ptDataVec;
 						localMapObj->isArea = obf::MapData::kAreaCoordinatesFieldNumber == tagVal;
+#ifdef _DEBUG 
+						for(pointI ptVec : ptDataVec)
+						{
+							pointD geoPt;
+							geoPt.set<0>(MapUtils::get31LongitudeX(ptVec.get<0>()));
+							geoPt.set<1>(MapUtils::get31LatitudeY(ptVec.get<1>()));
+							localMapObj->geoPoints.push_back(geoPt);	
+						}
+
+#endif
 						polyArea polyData;
 						polyData.outer().insert(polyData.outer().end(), localMapObj->points.begin(), localMapObj->points.end());
 						bg::envelope(polyData, localMapObj->bbox);
-						
+#ifdef _DEBUG
+						localMapObj->geoBBox = translateBox(localMapObj->bbox);
+#endif
 					}
 				}
 				break;

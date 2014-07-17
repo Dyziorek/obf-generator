@@ -25,6 +25,8 @@ struct MapObjectData
 	std::list<std::tuple<int,int,std::string>> nameTypeString;
 #ifdef _DEBUG
 	bool correctBBox;
+	std::vector<pointD> geoPoints;
+	AreaD geoBBox;
 #endif
 	MapObjectData(void);
 	~MapObjectData(void);

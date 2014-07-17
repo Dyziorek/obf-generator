@@ -35,13 +35,7 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 		return shared_from_this();
 	}
 
-	void translateBox()
-	{
-		geoBox.min_corner().set<0>(MapUtils::get31LongitudeX(rootBox.min_corner().get<0>()));
-		geoBox.min_corner().set<1>(MapUtils::get31LatitudeY(rootBox.min_corner().get<1>()));
-		geoBox.max_corner().set<0>(MapUtils::get31LongitudeX(rootBox.max_corner().get<0>()));
-		geoBox.max_corner().set<1>(MapUtils::get31LatitudeY(rootBox.max_corner().get<1>()));
-	}
+	
 	BinaryMapSection()
 	{
 		offset = 0;
@@ -99,7 +93,8 @@ public:
 	void loadMapDataObjects(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection>& section, boxI& area);
 	void loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& childSection, boxI& area);
 	void PaintSections();
-	void paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop,double  minX,double minY, double scale, void* painter);
+	void paintSection(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover, double  minX,double minY, double scale, void* painter);
+	bool isCovered(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover);
 	void paintSectionData(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> &sectionData, double minX, double minY,double scale, void* painter);
 	void getBoxesReferences(std::shared_ptr<BinaryMapSection>& section);
 	void readMapObject(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section,uint64_t baseid, std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects);
