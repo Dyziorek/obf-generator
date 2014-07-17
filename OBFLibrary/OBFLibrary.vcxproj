@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\boost_1_55;D:\VisualFiles\tinyxml2-master;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmand\core\externals\zlib\zlib-1.2.8;$(IncludePath)</IncludePath>
+    <IncludePath>C:\boost_1_55;D:\VisualFiles\tinyxml2-master;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include;D:\VisualFiles\osmand\core\externals\protobuf\protobuf-2.4.1\src;D:\VisualFiles\osmand\core\externals\zlib\zlib-1.2.8;D:\VisualFiles\osmand\core\externals\skia\upstream.original\third_party\iconv\config\windows;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -177,21 +177,13 @@
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
     <ClCompile Include="BinaryMapDataReader.cpp" />
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\file_descriptor.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\gzip.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="C:\boost_1_55\libs\iostreams\src\mapped_file.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="MapObjectData.cpp" />
     <ClCompile Include="RandomAccessFileReader.cpp" />

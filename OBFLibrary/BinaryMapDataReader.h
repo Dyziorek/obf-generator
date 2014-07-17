@@ -44,6 +44,7 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 };
 
 boxD translateBox(boxI inputBox);
+boxI invTranslateBox(boxD geoBox);
 
 class BinaryMapRules
 {

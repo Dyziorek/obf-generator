@@ -54,6 +54,15 @@ boxD translateBox(boxI inputBox)
 	return geoBox;
 }
 
+boxI invTranslateBox(boxD geoBox)
+{
+	boxI tileBox;
+	tileBox.min_corner().set<0>(MapUtils::get31TileNumberX(geoBox.min_corner().get<0>()));
+	tileBox.min_corner().set<1>(MapUtils::get31TileNumberY(geoBox.min_corner().get<1>()));
+	tileBox.max_corner().set<0>(MapUtils::get31TileNumberX(geoBox.max_corner().get<0>()));
+	tileBox.max_corner().set<1>(MapUtils::get31TileNumberY(geoBox.max_corner().get<1>()));
+	return tileBox;
+}
 
 #pragma push_macro("max")
 #undef max
@@ -594,12 +603,11 @@ void BinaryMapDataReader::PaintSections()
 					{
 						scale = std::min<SkScalar>(w / (maxX - minX)   , h / (maxY - minY));
 					}
-					lockerBox.max_corner().set<0>();
-					lockerBox.max_corner().set<1>();
-					lockerBox.max_corner().set<0>();
+					lockerBox = invTranslateBox(wholeMapBox);
+					boxD retBox = translateBox(lockerBox);
 					for( auto subChilds : sectionInfo->childSections.front()->childSections)
 					{
-						if (bg::covered_by(subChilds->geoBox, wholeMapBox) || bg::covered_by(wholeMapBox, subChilds->geoBox ) || bg::intersects(wholeMapBox,  subChilds->geoBox))
+						if (bg::covered_by(subChilds->rootBox, lockerBox) || bg::covered_by(lockerBox, subChilds->rootBox )|| bg::intersects(lockerBox,  subChilds->rootBox))
 						{
 							double maxYC = -1000, maxXC = -1000;
 							double minYC = 1000, minXC = 1000;
