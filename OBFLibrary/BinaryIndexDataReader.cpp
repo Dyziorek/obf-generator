@@ -22,6 +22,7 @@
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
+#include "BinaryAddressDataReader.h"
 #include "BinaryIndexDataReader.h"
 #include <boost/detail/endian.hpp>
 
@@ -75,6 +76,9 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 		case OsmAndStructure::kMapIndexFieldNumber:
 			ReadMapData(&strmData);
 			break;
+		case OsmAndStructure::kAddressIndexFieldNumber:
+			ReadAddresIndex(&strmData);
+			break;
 		default:
 			skipUnknownField(&strmData, tagCode);
 			break;
@@ -121,6 +125,16 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 	cis->PopLimit(oldLimit);
 	
 
+}
+
+void BinaryIndexDataReader::ReadAddresIndex(google::protobuf::io::CodedInputStream* cis)
+{
+	int limitValue = readBigEndianInt(cis);
+	int offset = cis->CurrentPosition();
+	int oldLimit = cis->PushLimit(limitValue);
+	addresser.ReadMapAddresses(cis, rad);
+	cis->PopLimit(oldLimit);
+	cis->Seek(offset + limitValue);
 }
 
 bool BinaryIndexDataReader::readSInt32( gio::CodedInputStream* cis, int32_t& output )

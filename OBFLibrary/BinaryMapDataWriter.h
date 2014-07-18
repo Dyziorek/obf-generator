@@ -185,7 +185,7 @@ public:
 	
 	void startCityBlockIndex(int type);
 	void endCityBlockIndex();
-	void writeAddressNameIndex(std::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex);
+	void writeAddressNameIndex(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex);
 	bool checkEnNameToWrite(MapObject& obj);
 	std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> writeIndexedTable(int tag, std::list<std::string> indexedTable);
 	BinaryFileReference* writeCityHeader(MapObject& city, int cityType);

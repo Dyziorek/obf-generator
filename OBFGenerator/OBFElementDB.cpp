@@ -1239,30 +1239,39 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 		//
 		//progress.startTask(Messages.getString("IndexCreator.SERIALIZING_ADRESS"), cityTowns.size() + villages.size() / 100 + 1); //$NON-NLS-1$
 		//
-		std::map<std::string, std::list<MapObject>> namesIndex;
+		std::map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex;
 		std::map<std::string, CityObj> postcodes;
 		writeCityBlockIndex(writer, "cities",  streetstat, wayStreetstat, suburbs, cityTowns, postcodes, namesIndex);
 		writeCityBlockIndex(writer, "villages",  streetstat, wayStreetstat, std::list<CityObj>(), villages, postcodes, namesIndex);
 		//
 		//// write postcodes		
-		//List<BinaryFileReference> refs = new ArrayList<BinaryFileReference>();		
-		//writer.startCityBlockIndex(POSTCODES_TYPE);
-		//ArrayList<City> posts = new ArrayList<City>(postcodes.values());
-		//for (City s : posts) {
-		//	refs.add(writer.writeCityHeader(s, -1));
-		//}
-		//for (int i = 0; i < posts.size(); i++) {
-		//	City postCode = posts.get(i);
-		//	BinaryFileReference ref = refs.get(i);
-		//	putNamedMapObject(namesIndex, postCode, ref.getStartPointer());
-		//	writer.writeCityIndex(postCode, new ArrayList<Street>(postCode.getStreets()), null, ref);
-		//}
-		//writer.endCityBlockIndex();
+		std::vector<std::shared_ptr<BinaryFileReference>> refs;
+		writer.startCityBlockIndex(2);
+		std::vector<CityObj> posts;
+		std::for_each(postcodes.begin(), postcodes.end(), [&posts] (std::pair<std::string, CityObj> itMap)
+		{
+			posts.push_back(itMap.second);
+		});
+		for (CityObj s : posts) {
+			refs.push_back(std::shared_ptr<BinaryFileReference>(writer.writeCityHeader(s, -1)));
+		}
+		for (int i = 0; i < posts.size(); i++) {
+			CityObj postCode = posts[i];
+			std::shared_ptr<BinaryFileReference> ref = refs[i];
+			putNamedMapObject(namesIndex, std::make_shared<MapObject>(postCode), ref->getStartPointer());
+			std::list<Street> streePost;
+			std::for_each(postCode.streets.begin(), postCode.streets.end(), [&streePost] (std::pair<std::string, Street> itMap)
+			{
+				streePost.push_back(itMap.second);
+			});
+			writer.writeCityIndex(postCode, streePost, std::unordered_map<Street, std::list<EntityNode>>(), ref.get());
+		}
+		writer.endCityBlockIndex();
 
 
 		//progress.finishTask();
 
-		//writer.writeAddressNameIndex(namesIndex);
+		writer.writeAddressNameIndex(namesIndex);
 		//writer.endWriteAddressIndex();
 		//writer.flush();
 		//streetstat.close();
@@ -1320,9 +1329,9 @@ std::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCitie
 		return cities;
 	}
 
-void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObject>>& namesIndex, MapObject o, __int64 fileOffset)
+void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex, std::shared_ptr<MapObject> o, __int64 fileOffset)
 {
-	std::string name = o.getName();
+	std::string name = o->getName();
 	
 	int prev = -1;
 	for (int i = 0; i <= name.length(); i++) 
@@ -1335,7 +1344,7 @@ void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObj
 				}
 				std::string val = boost::to_lower_copy(substr);
 				if(namesIndex.find(val) == namesIndex.end()){
-					namesIndex.insert(std::make_pair(val, std::list<MapObject>()));
+					namesIndex.insert(std::make_pair(val, std::list<std::shared_ptr<MapObject>>()));
 				}
 				namesIndex[val].push_back(o);
 				prev = -1;
@@ -1350,7 +1359,7 @@ void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObj
 	if (fileOffset > INT_MAX) {
 		throw std::bad_exception("File offset > 2 GB.");
 	}
-	o.setFileOffset((int) fileOffset);
+	o->setFileOffset((int) fileOffset);
 }
 
 std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat)
@@ -1535,7 +1544,7 @@ std::list<Street> OBFAddresStreetDB::readStreetsBuildings(sqlite3_stmt* streetBu
 
 
 void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::string citytype, sqlite3_stmt* streetstat, sqlite3_stmt* waynodesStat,
-			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<MapObject>>& namesIndex)			
+			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex)			
 			 {
 		std::vector<BinaryFileReference*> refs;
 		// 1. write cities
@@ -1555,7 +1564,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			std::advance(cities.begin(), i);
 			CityObj city = *cit;
 			BinaryFileReference* ref = refs[i];
-			putNamedMapObject(namesIndex, city, ref->getStartPointer());
+			putNamedMapObject(namesIndex, std::make_shared<MapObject>(city), ref->getStartPointer());
 			std::unordered_map<Street, std::list<EntityNode>> streetNodes;
 			std::vector<CityObj> listSuburbs;
 			if (!suburbs.empty()) {
@@ -1575,7 +1584,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			int bCount = 0;
 			// register postcodes and name index
 			for (Street s : streets) {
-				putNamedMapObject(namesIndex, s, s.getFileOffset());
+				putNamedMapObject(namesIndex, std::make_shared<MapObject>(s), s.getFileOffset());
 				
 				for (Building b : s.getBuildings()) {
 					bCount++;

@@ -36,6 +36,7 @@
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
+#include "BinaryAddressDataReader.h"
 #include "BinaryIndexDataReader.h"
 #include "ArchiveIO.h"
 #include <limits>
@@ -257,6 +258,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis, RandomA
 	//dataLoad.get();
 	
 }
+
 
 void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId)
  {
@@ -539,38 +541,38 @@ void BinaryMapDataReader::PaintSections()
 				SkPaint paintSub;
 				paintSub.setColor(SK_ColorBLUE);
 				paintSub.setStyle(SkPaint::Style::kStroke_Style);
-				double maxY = -1000, maxX = -1000;
-				double minY = 1000, minX = 1000;
+				int maxY = -1000, maxX = -1000;
+				int minY = 1000, minX = 1000;
 				auto rootBoxData = sectionInfo->childSections.front();
-				boxD wholeMapBox;
+				boxI wholeMapBox;
 				boxI lockerBox;
-				minX = std::min(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
-				maxX = std::max(rootBoxData->geoBox.min_corner().get<0>(), 	rootBoxData->geoBox.max_corner().get<0>());
-				minY = std::min(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
-				maxY = std::max(rootBoxData->geoBox.min_corner().get<1>(), 	rootBoxData->geoBox.max_corner().get<1>());
-				double widthStep = (maxX - minX)/2;
-				double heightStep = (maxY - minY)/2;
-				if (rootBoxData->geoBox.min_corner().get<0>() > rootBoxData->geoBox.max_corner().get<0>())
+				minX = std::min(rootBoxData->rootBox.min_corner().get<0>(), 	rootBoxData->rootBox.max_corner().get<0>());
+				maxX = std::max(rootBoxData->rootBox.min_corner().get<0>(), 	rootBoxData->rootBox.max_corner().get<0>());
+				minY = std::min(rootBoxData->rootBox.min_corner().get<1>(), 	rootBoxData->rootBox.max_corner().get<1>());
+				maxY = std::max(rootBoxData->rootBox.min_corner().get<1>(), 	rootBoxData->rootBox.max_corner().get<1>());
+				int widthStep = (maxX - minX)/2;
+				int heightStep = (maxY - minY)/2;
+				if (rootBoxData->rootBox.min_corner().get<0>() > rootBoxData->rootBox.max_corner().get<0>())
 				{
 					widthStep = -widthStep;
 				}
-				if (rootBoxData->geoBox.min_corner().get<1>() >	rootBoxData->geoBox.max_corner().get<1>())
+				if (rootBoxData->rootBox.min_corner().get<1>() >	rootBoxData->rootBox.max_corner().get<1>())
 				{
 					heightStep = -heightStep;
 				}
 				for (int idx = 0; idx < 4; idx++)
 				{
-					double YStep = fabs(heightStep);
-					double XStep = fabs(widthStep);
+					int YStep = abs(heightStep);
+					int XStep = abs(widthStep);
 					if (heightStep < 0)
 					{
-						wholeMapBox.max_corner().set<1>(minY + (YStep * (idx % 2)));
-						wholeMapBox.min_corner().set<1>(minY + YStep * ((idx % 2)+1));
+						wholeMapBox.max_corner().set<1>(minY + (YStep * ((idx/2) % 2)));
+						wholeMapBox.min_corner().set<1>(minY + YStep * (((idx/2) % 2)+1));
 					}
 					else
 					{
-						wholeMapBox.max_corner().set<1>(minY + YStep * ((idx % 2)+1));
-						wholeMapBox.min_corner().set<1>(minY + YStep * (idx % 2));
+						wholeMapBox.max_corner().set<1>(minY + YStep * (((idx/2) % 2)+1));
+						wholeMapBox.min_corner().set<1>(minY + YStep * ((idx/2) % 2));
 					}
 					if (widthStep < 0)
 					{
@@ -582,10 +584,11 @@ void BinaryMapDataReader::PaintSections()
 						wholeMapBox.min_corner().set<0>(minX + XStep * (idx % 2));
 						wholeMapBox.max_corner().set<0>(minX + XStep * ((idx % 2)+1));
 					}
-					double minXW = std::min(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
-					double maxXW = std::max(wholeMapBox.min_corner().get<0>(), 	wholeMapBox.max_corner().get<0>());
-					double minYW = std::min(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
-					double maxYW = std::max(wholeMapBox.min_corner().get<1>(), 	wholeMapBox.max_corner().get<1>());
+					boxD lockerBox = translateBox(wholeMapBox);
+					double minXW = std::min(lockerBox.min_corner().get<0>(), 	lockerBox.max_corner().get<0>());
+					double maxXW = std::max(lockerBox.min_corner().get<0>(), 	lockerBox.max_corner().get<0>());
+					double minYW = std::min(lockerBox.min_corner().get<1>(), 	lockerBox.max_corner().get<1>());
+					double maxYW = std::max(lockerBox.min_corner().get<1>(), 	lockerBox.max_corner().get<1>());
 					double scale = 1.0;
 					bool painted = false;
 					if (maxXW - minXW > w || maxYW - minYW > h)
@@ -603,11 +606,11 @@ void BinaryMapDataReader::PaintSections()
 					{
 						scale = std::min<SkScalar>(w / (maxXW - minXW)   , h / (maxYW - minYW));
 					}
-					boxI tileMapBox = invTranslateBox(wholeMapBox);
+					bool isCoveredSegment = isCovered(sectionInfo, wholeMapBox);
 					for( auto subChilds : sectionInfo->childSections.front()->childSections)
 					{
-						bool isCoveredSegment = isCovered(subChilds, sectionInfo->rootBox);
-						if (isCoveredSegment && isCovered(subChilds, tileMapBox) /*|| bg::covered_by(tileMapBox, subChilds->rootBox )  || bg::intersects(tileMapBox,  subChilds->rootBox)*/)
+						
+						if (isCoveredSegment && isCovered(subChilds, wholeMapBox) /*|| bg::covered_by(tileMapBox, subChilds->rootBox )  || bg::intersects(tileMapBox,  subChilds->rootBox)*/)
 						{
 							double maxYC = -1000, maxXC = -1000;
 							double minYC = 1000, minXC = 1000;
@@ -625,7 +628,7 @@ void BinaryMapDataReader::PaintSections()
 							{
 								for (auto subChildsPop : subChilds->childSections)
 								{
-									paintSection(subChildsPop, tileMapBox, minXW, minYW, scale, painter);
+									paintSection(subChildsPop, wholeMapBox, minXW, minYW, scale, painter);
 								}
 							}
 							{
@@ -662,7 +665,7 @@ void BinaryMapDataReader::PaintSections()
 
 bool BinaryMapDataReader::isCovered(std::shared_ptr<BinaryMapSection>& subChildsPop, boxI& cover)
 {
-	if (bg::covered_by( cover, subChildsPop->rootBox))
+	if (bg::covered_by( subChildsPop->rootBox, cover))
 	{
 		return true;
 	}

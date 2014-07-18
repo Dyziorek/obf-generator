@@ -90,6 +90,9 @@
     <ClInclude Include="Rtree_Serialization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BinaryAddressDataReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -174,6 +177,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MapObjectData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryAddressDataReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

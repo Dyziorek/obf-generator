@@ -22,6 +22,7 @@
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "RandomAccessFileReader.h"
+#include "BinaryAddressDataReader.h"
 #include "BinaryMapDataReader.h"
 #include "BinaryIndexDataReader.h"
 

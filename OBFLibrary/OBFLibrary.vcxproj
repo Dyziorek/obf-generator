@@ -148,6 +148,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BinaryAddressDataReader.h" />
     <ClInclude Include="BinaryIndexDataReader.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BinaryMapDataReader.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BinaryAddressDataReader.cpp" />
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
     <ClCompile Include="BinaryMapDataReader.cpp" />

@@ -485,7 +485,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		return res;
 	}
 
-	void BinaryMapDataWriter::writeAddressNameIndex(std::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex){
+	void BinaryMapDataWriter::writeAddressNameIndex(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex){
 		int peeker[] = {ADDRESS_INDEX_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
 		wfl::WireFormatLite::WriteTag(obf::OsmAndAddressIndex::kNameIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
@@ -504,7 +504,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			if(ref != nullptr) {
 				ref->writeReference(*raf, getFilePointer());
 			}
-			obf::OsmAndAddressNameIndexData builder;
+			obf::OsmAndAddressNameIndexData_AddressNameIndexData builder;
 			// collapse same name ?
 			for(std::shared_ptr<MapObject> om : entry.second){
 				obf::AddressNameIndexDataAtom atom;
@@ -530,11 +530,12 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 					type = 4;
 				}
 				atom.set_type(type); 
-				atom.add_shifttocityindex((int) (pointer - oc->getFileOffset()));
+				atom.add_shifttocityindex((int) (pointer - om->getFileOffset()));
 				if(os){
 					atom.add_shifttocityindex((int) (pointer - os->getCity().getFileOffset()));
 				}
 				builder.add_atom()->MergeFrom(atom);
+
 			}
 			builder.SerializeToCodedStream(&dataOut);
 		}
