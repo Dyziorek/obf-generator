@@ -111,6 +111,164 @@ void OBFpoiDB::insertAmenityIntoPoi(Amenity amenity, OBFResultDB& dbContext) {
 	dbContext.addBatch(amenity);
 }
 
+
+void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx, std::string poiTableName)
+{
+	POITree treeData;
+	std::unordered_map<std::string, std::unordered_set<POIBox>> namesIndex;
+	boxI bbox;
+	processPOIIntoTree(dbCtx, treeData, 6, bbox, namesIndex);
+
+}
+
+void OBFpoiDB::POICategory::addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags)
+{
+	for (std::pair<MapRulType , std::string> rvalue : addTags)
+	{
+		attributes.insert(rvalue.first);
+	}
+	if (categories.find(type) == categories.end())
+	{
+		categories.insert(std::make_pair(type,std::set<std::string>()));
+	}
+	if (!boost::find(addType, boost::is_any_of(std::string(",|;"))).empty())
+	{
+		std::vector<std::string> splits;
+		boost::split(splits, addType, boost::is_any_of(std::string(",|;")), boost::token_compress_on);
+		for (std::string strTag : splits)
+			categories[type].insert(boost::trim_copy(strTag));
+	}
+	else
+	{
+		categories[type].insert(boost::trim_copy(addType));
+	}
+}
+
+void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex)
+{
+	int sqlRes = 0;
+	sqlite3_stmt* poiSelect = nullptr;
+
+	sqlRes = sqlite3_prepare_v2(dbCtx.dbPoiCtx, "SELECT x,y,type,subtype,id,additionalTags from poi", sizeof("SELECT x,y,type,subtype,id,additionalTags from poi"), &poiSelect, NULL);
+
+	if (poiSelect == nullptr)
+	{
+		return;
+	}
+	std::unordered_map<MapRulType, std::string> typeMap;
+	sqlRes = sqlite3_step(poiSelect);
+	while (sqlRes == SQLITE_ROW)
+	{
+		int x = sqlite3_column_int(poiSelect, 1);
+		int y = sqlite3_column_int(poiSelect, 2);
+		bbox.min_corner().set<0>(min(x, bbox.min_corner().get<0>()));
+		bbox.min_corner().set<1>(min(y, bbox.min_corner().get<1>()));
+		bbox.max_corner().set<0>(max(x, bbox.max_corner().get<0>()));
+		bbox.max_corner().set<1>(max(y, bbox.max_corner().get<1>()));
+		const unsigned char* typeChar = sqlite3_column_text(poiSelect, 3);
+		const unsigned char* subTypeChar = sqlite3_column_text(poiSelect, 4);
+		const unsigned char* addTypeChar = sqlite3_column_text(poiSelect, 6);
+		decodeAdditionalType(addTypeChar,  typeMap);
+		POITree* oldTree = &treeData;
+		std::string sType = typeChar == nullptr ? "" : std::string((const char*)typeChar);
+		std::string subType = subTypeChar == nullptr ? "" : std::string((const char*)subTypeChar);
+		treeData.node.category.addCategory(sType, subType, typeMap);
+
+		for (int i = zoomLevel; i <= 16; i++) {
+				int xs = x >> (31 - i);
+				int ys = y >> (31 - i);
+				std::shared_ptr<POITree> subtree;
+				for (std::shared_ptr<POITree> sub : oldTree->subNodes) {
+					if (sub->node.x == xs && sub->node.y == ys && sub->node.zoom == i) {
+						subtree = sub;
+						break;
+					}
+				}
+				if (!subtree) {
+					subtree = std::make_shared<POITree>(POITree());
+					POIBox poiBox;
+					subtree->node = poiBox;
+					poiBox.x = xs;
+					poiBox.y = ys;
+					poiBox.zoom = i;
+
+					oldTree->subNodes.push_back(subtree);
+				}
+				subtree->node.category.addCategory(sType, subType, typeMap);
+
+				oldTree = subtree.get();
+				subtree.reset();
+			}
+
+		sqlRes = sqlite3_step(poiSelect);
+	}
+
+}
+
+void OBFpoiDB::addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData) 
+{
+		if (name != "") {
+			parsePrefix(name, data, poiData);
+			if (nameEn != "") {
+				nameEn = Junidecode.unidecode(name);
+			}
+			if (!Algorithms.objectEquals(nameEn, name)) {
+				parsePrefix(nameEn, data, poiData);
+			}
+		}
+}
+
+void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData) {
+		int prev = -1;
+		for (int i = 0; i <= name.size(); i++) {
+			if (i == name.length() || (!boost::all(name[i],boost::is_alpha()) && !boost::all(name[i], boost::is_digit()) && name[i] != '\'')) {
+				if (prev != -1) {
+					std::string substr = name.substr(prev, i);
+					if (substr.size() > 4) {
+						substr = substr.substr(0, 4);
+					}
+					std::string val = boost::to_lower_copy(substr);
+					if(poiData.find(val) == poiData.end()){
+						poiData.insert(std::make_pair(val, std::set<POIBox>()));
+					}
+					poiData[val].insert(data);
+					prev = -1;
+				}
+			} else {
+				if(prev == -1){
+					prev = i;
+				}
+			}
+		}
+		
+	}
+
+void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap)
+{
+	typeMap.clear();
+	if (addTypeChar == nullptr)
+	{
+		return;
+	}
+	std::string addTypes((const char*)addTypeChar);
+	int i, p = 0;
+
+	while (addTypes.size() > 0)
+	{
+		p = addTypes.find_first_of(-1, i);
+		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
+		MapRulType rType = renderer.getTypeByInternalId((int)rText[0]);
+		typeMap.insert(std::make_pair(rType, rText.substr(1)));
+		if (rType.isAdditional() && rType.getValue() == "")
+		{
+			throw std::bad_exception("Map ryle type is wrong");
+		}
+		if (p == -1)
+			break;
+		i = p+1;
+	}
+}
+
 OBFtransportDB::OBFtransportDB(void)
 {
 }

@@ -6,6 +6,58 @@
 class OBFpoiDB :
 	public OBFResultDB
 {
+	typedef boost::geometry::model::box<int> boxI;
+
+	//struct poiEqual;
+
+	struct POIData
+	{
+		int x, y;
+		__int64 id;
+		std::string type;
+		std::string subType;
+	};
+
+	struct POICategory
+	{
+		std::map<std::string, std::set<std::string>> categories;
+		std::set<MapRulType> attributes;
+		void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags);
+	};
+
+	struct POIBox
+	{
+		int x;
+		int y;
+		int zoom;
+		std::list<POIData> values;
+		POICategory category;
+	};
+
+	struct POITree
+	{
+		POIBox node;
+		std::list<std::shared_ptr<POITree>> subNodes;
+		void collectDataFromLevel(std::list<POIBox>& data, int level)
+		{
+			if (level == 0)
+			{
+				data.push_back(node);
+			}
+			if (level > 0)
+			{
+				if (!subNodes.empty())
+				{
+					for(std::shared_ptr<POITree> subNode : subNodes)
+					{
+						subNode->collectDataFromLevel(data, level - 1);
+					}
+				}
+			}
+		}
+
+	};
+
 	OBFRenderingTypes renderer;
 	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	std::list<Amenity> tempAmenityList;
@@ -15,7 +67,17 @@ public:
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
 	void insertAmenityIntoPoi(Amenity amenity, OBFResultDB& dbContext);
+	void writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbContext, std::string poiTableName);
+	void processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex);
+
+
+private:
+	void addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData);
+	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData);
+	void decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap);
 };
+
+
 
 
 class OBFtransportDB :
