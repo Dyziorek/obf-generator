@@ -421,7 +421,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			{
 				pointI ptCenter;
 				boxI bxInit;
-				boxL bxCalc;
+				boxI bxCalc;
 				bg::convert(section->rootBox, bxCalc);
 				bg::centroid(bxCalc, ptCenter);
 				bg::assign_inverse(bxInit);

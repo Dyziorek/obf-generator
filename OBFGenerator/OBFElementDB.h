@@ -6,7 +6,7 @@
 class OBFpoiDB :
 	public OBFResultDB
 {
-	typedef boost::geometry::model::box<int> boxI;
+	typedef boost::geometry::model::box<boost::geometry::model::point<int, 2, boost::geometry::cs::cartesian>> boxI;
 
 	//struct poiEqual;
 
@@ -16,6 +16,7 @@ class OBFpoiDB :
 		__int64 id;
 		std::string type;
 		std::string subType;
+		std::unordered_map<MapRulType, std::string> additionalTags;
 	};
 
 	struct POICategory
@@ -25,6 +26,7 @@ class OBFpoiDB :
 		void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags);
 	};
 
+public:
 	struct POIBox
 	{
 		int x;
@@ -32,7 +34,17 @@ class OBFpoiDB :
 		int zoom;
 		std::list<POIData> values;
 		POICategory category;
+		bool operator==(const POIBox& op2) const
+		{
+			return x == op2.x 
+				&& y == op2.y 
+				&& zoom == op2.zoom 
+				&& values.size() == op2.values.size() 
+				&& category.attributes.size() == op2.category.attributes.size();
+		}
 	};
+
+	
 
 	struct POITree
 	{
@@ -72,12 +84,26 @@ public:
 
 
 private:
-	void addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData);
-	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData);
+	void addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
+	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
 	void decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap);
 };
 
 
+template<>
+	struct std::hash<OBFpoiDB::POIBox>
+		: public std::unary_function<OBFpoiDB::POIBox, size_t>
+	{	
+		size_t operator()(const OBFpoiDB::POIBox& argValue) const
+		{
+			size_t xaHashData = 16777619U;
+			xaHashData *= argValue.x;
+			xaHashData *= argValue.y;
+			xaHashData *= argValue.zoom;
+			xaHashData *= argValue.values.size();
+			return xaHashData;
+		}
+	};	
 
 
 class OBFtransportDB :

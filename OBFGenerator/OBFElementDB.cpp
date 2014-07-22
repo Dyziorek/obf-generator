@@ -131,10 +131,10 @@ void OBFpoiDB::POICategory::addCategory(std::string type, std::string addType, s
 	{
 		categories.insert(std::make_pair(type,std::set<std::string>()));
 	}
-	if (!boost::find(addType, boost::is_any_of(std::string(",|;"))).empty())
+	if (std::find_if(addType.begin(), addType.end(), boost::is_any_of(std::string(",;"))) !=  addType.end())
 	{
 		std::vector<std::string> splits;
-		boost::split(splits, addType, boost::is_any_of(std::string(",|;")), boost::token_compress_on);
+		boost::split(splits, addType, boost::is_any_of(std::string(",;")), boost::token_compress_on);
 		for (std::string strTag : splits)
 			categories[type].insert(boost::trim_copy(strTag));
 	}
@@ -148,6 +148,9 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 {
 	int sqlRes = 0;
 	sqlite3_stmt* poiSelect = nullptr;
+
+	MapRulType* nameRuleMap = renderer.nameRule;
+	MapRulType* nameEnRuleMap = renderer.nameEnRule;
 
 	sqlRes = sqlite3_prepare_v2(dbCtx.dbPoiCtx, "SELECT x,y,type,subtype,id,additionalTags from poi", sizeof("SELECT x,y,type,subtype,id,additionalTags from poi"), &poiSelect, NULL);
 
@@ -199,29 +202,40 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 				oldTree = subtree.get();
 				subtree.reset();
 			}
+		addNamePrefix(typeMap.at(*nameRuleMap), typeMap.at(*nameEnRuleMap), oldTree->node, nameIndex);
+
+		POIData poiData;
+		poiData.x = x;
+		poiData.y = y;
+		poiData.additionalTags = typeMap;
+		poiData.subType = subType;
+		poiData.type = sType;
+
+		oldTree->node.values.push_back(poiData);
 
 		sqlRes = sqlite3_step(poiSelect);
 	}
 
 }
 
-void OBFpoiDB::addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData) 
+void OBFpoiDB::addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
 {
 		if (name != "") {
 			parsePrefix(name, data, poiData);
 			if (nameEn != "") {
-				nameEn = Junidecode.unidecode(name);
+				iconverter ic("UTF-8", "ASCII");
+				nameEn = ic.convert(name);
 			}
-			if (!Algorithms.objectEquals(nameEn, name)) {
+			if (!boost::iequals(nameEn, name)) {
 				parsePrefix(nameEn, data, poiData);
 			}
 		}
 }
 
-void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::set<POIBox>>& poiData) {
+void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) {
 		int prev = -1;
 		for (int i = 0; i <= name.size(); i++) {
-			if (i == name.length() || (!boost::all(name[i],boost::is_alpha()) && !boost::all(name[i], boost::is_digit()) && name[i] != '\'')) {
+			if (i == name.length() || (!std::isalpha(name[i])  && !std::isdigit(name[i]) && name[i] != '\'')) {
 				if (prev != -1) {
 					std::string substr = name.substr(prev, i);
 					if (substr.size() > 4) {
@@ -229,7 +243,7 @@ void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std
 					}
 					std::string val = boost::to_lower_copy(substr);
 					if(poiData.find(val) == poiData.end()){
-						poiData.insert(std::make_pair(val, std::set<POIBox>()));
+						poiData.insert(std::make_pair(val, std::unordered_set<POIBox>()));
 					}
 					poiData[val].insert(data);
 					prev = -1;
@@ -251,7 +265,7 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unord
 		return;
 	}
 	std::string addTypes((const char*)addTypeChar);
-	int i, p = 0;
+	int i =0, p = 0;
 
 	while (addTypes.size() > 0)
 	{

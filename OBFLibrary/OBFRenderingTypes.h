@@ -402,6 +402,15 @@ public:
 		
 	};
 
+namespace std
+{
+	template<>
+	struct hash<MapRulType>
+		: public _Bitwise_hash<MapRulType>
+	{	// hash functor for bool
+	};
+}
+
 	class MapRouteTag {
 	public:
 		bool relation;
