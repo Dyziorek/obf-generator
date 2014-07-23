@@ -111,6 +111,233 @@ void OBFpoiDB::insertAmenityIntoPoi(Amenity amenity, OBFResultDB& dbContext) {
 	dbContext.addBatch(amenity);
 }
 
+
+void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx, std::string poiTableName)
+{
+	POITree treeData;
+	std::unordered_map<std::string, std::unordered_set<POIBox>> namesIndex;
+	boxI bbox;
+	int zoomStart = 6;
+	processPOIIntoTree(dbCtx, treeData, zoomStart, bbox, namesIndex);
+
+	__int64 fileP = writer.startWritePoiIndex("POIDATA", bbox.min_corner().get<0>(), bbox.max_corner().get<0>(), bbox.min_corner().get<1>(), bbox.max_corner().get<1>());
+
+	writer.writePoiCategoriesTable(treeData.node.category);
+
+	std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> poiDataIdx = writer.writePoiNameIndex(namesIndex, fileP);
+
+	int level = 0;
+		for (; level < (16 - zoomStart); level++) {
+			int subtrees = treeData.getSubTreesOnLevel(level);
+			if (subtrees > 8) {
+				level--;
+				break;
+			}
+		}
+		if (level > 0) {
+			treeData.extractChildrenFromLevel(level);
+			zoomStart = zoomStart + level;
+		}
+		for (std::shared_ptr<POITree> subs : treeData.subNodes) {
+			writePoiBoxes(writer, subs, fileP, poiDataIdx, treeData.node.category);
+		}
+
+		for (auto entry : poiDataIdx) {
+			int z = entry.first.zoom;
+			int x = entry.first.x;
+			int y = entry.first.y;
+			std::vector<std::shared_ptr<BinaryFileReference>> vecDD;
+			vecDD.reserve(entry.second.size());
+			std::copy(entry.second.begin(), entry.second.end(), vecDD.begin());
+			writer.startWritePoiData(z, x, y, vecDD);
+
+			{
+				std::list<POIData> poiData = entry.first.values;
+				
+				for(POIData poi : poiData){
+					int x31 = poi.x;
+					int y31 = poi.y;
+					std::string type = poi.type;
+					std::string subtype = poi.subType;
+					int x24shift = (x31 >> 7) - (x << (24 - z));
+					int y24shift = (y31 >> 7) - (y << (24 - z));
+					writer.writePoiDataAtom(poi.id, x24shift, y24shift, type, subtype, poi.additionalTags, renderer, 
+							treeData.node.category);	
+				}
+				
+			} 
+		}
+}
+
+void OBFpoiDB::writePoiBoxes(BinaryMapDataWriter& writer, std::shared_ptr<POITree> tree, 
+			__int64 startFpPoiIndex, std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>>& fpToWriteSeeks,
+			POICategory& globalCategories) {
+				int x = tree->node.x;
+		int y = tree->node.y;
+		int zoom = tree->node.zoom;
+		boolean end = zoom == 16;
+		std::shared_ptr<BinaryFileReference> fileRef = writer.startWritePoiBox(zoom, x, y, startFpPoiIndex, end);
+		if(fileRef){
+			if(fpToWriteSeeks.find(tree->node) == fpToWriteSeeks.end()) {
+				fpToWriteSeeks.insert(std::make_pair(tree->node, std::list<std::shared_ptr<BinaryFileReference>>()));
+			}
+			fpToWriteSeeks[tree->node].push_back(fileRef);
+		}
+		if(zoom >= 12 && zoom <= 16){
+			POICategory& boxCats = tree->node.category;
+			boxCats.buildCategoriesToWrite(globalCategories);
+			writer.writePoiCategories(boxCats);
+		}
+		
+		if (!end) {
+			for (std::shared_ptr<POITree> subTree : tree->subNodes) {
+				writePoiBoxes(writer, subTree, startFpPoiIndex, fpToWriteSeeks, globalCategories);
+			}
+		}
+		writer.endWritePoiBox();
+	}
+
+void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex)
+{
+	int sqlRes = 0;
+	sqlite3_stmt* poiSelect = nullptr;
+
+	MapRulType* nameRuleMap = renderer.nameRule;
+	MapRulType* nameEnRuleMap = renderer.nameEnRule;
+
+	sqlRes = sqlite3_prepare_v2(dbCtx.dbPoiCtx, "SELECT x,y,type,subtype,id,additionalTags from poi", sizeof("SELECT x,y,type,subtype,id,additionalTags from poi"), &poiSelect, NULL);
+
+	if (poiSelect == nullptr)
+	{
+		return;
+	}
+	std::unordered_map<MapRulType, std::string> typeMap;
+	sqlRes = sqlite3_step(poiSelect);
+	while (sqlRes == SQLITE_ROW)
+	{
+		int x = sqlite3_column_int(poiSelect, 1);
+		int y = sqlite3_column_int(poiSelect, 2);
+		bbox.min_corner().set<0>(min(x, bbox.min_corner().get<0>()));
+		bbox.min_corner().set<1>(min(y, bbox.min_corner().get<1>()));
+		bbox.max_corner().set<0>(max(x, bbox.max_corner().get<0>()));
+		bbox.max_corner().set<1>(max(y, bbox.max_corner().get<1>()));
+		const unsigned char* typeChar = sqlite3_column_text(poiSelect, 3);
+		const unsigned char* subTypeChar = sqlite3_column_text(poiSelect, 4);
+		const unsigned char* addTypeChar = sqlite3_column_text(poiSelect, 6);
+		decodeAdditionalType(addTypeChar,  typeMap);
+		POITree* oldTree = &treeData;
+		std::string sType = typeChar == nullptr ? "" : std::string((const char*)typeChar);
+		std::string subType = subTypeChar == nullptr ? "" : std::string((const char*)subTypeChar);
+		treeData.node.category.addCategory(sType, subType, typeMap);
+
+		for (int i = zoomLevel; i <= 16; i++) {
+				int xs = x >> (31 - i);
+				int ys = y >> (31 - i);
+				std::shared_ptr<POITree> subtree;
+				for (std::shared_ptr<POITree> sub : oldTree->subNodes) {
+					if (sub->node.x == xs && sub->node.y == ys && sub->node.zoom == i) {
+						subtree = sub;
+						break;
+					}
+				}
+				if (!subtree) {
+					subtree = std::make_shared<POITree>(POITree());
+					POIBox poiBox;
+					subtree->node = poiBox;
+					poiBox.x = xs;
+					poiBox.y = ys;
+					poiBox.zoom = i;
+
+					oldTree->subNodes.push_back(subtree);
+				}
+				subtree->node.category.addCategory(sType, subType, typeMap);
+
+				oldTree = subtree.get();
+				subtree.reset();
+			}
+		std::unordered_map<MapRulType, std::string>::iterator lookup;
+		
+		addNamePrefix(typeMap.find(*nameRuleMap), typeMap.find(*nameEnRuleMap), oldTree->node, nameIndex);
+
+		POIData poiData;
+		poiData.x = x;
+		poiData.y = y;
+		poiData.additionalTags = typeMap;
+		poiData.subType = subType;
+		poiData.type = sType;
+
+		oldTree->node.values.push_back(poiData);
+
+		sqlRes = sqlite3_step(poiSelect);
+	}
+
+}
+
+void OBFpoiDB::addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
+{
+	if (name._Ptr != nullptr) {
+		parsePrefix(name->second, data, poiData);
+		if (nameEn._Ptr != nullptr) {
+				iconverter ic("UTF-8", "ASCII");
+				nameEn->second = ic.convert(name->second);
+			}
+		if (!boost::iequals(nameEn->second, name->second)) {
+				parsePrefix(nameEn->second, data, poiData);
+			}
+		}
+}
+
+void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) {
+		int prev = -1;
+		for (int i = 0; i <= name.size(); i++) {
+			if (i == name.length() || (!std::isalpha(name[i])  && !std::isdigit(name[i]) && name[i] != '\'')) {
+				if (prev != -1) {
+					std::string substr = name.substr(prev, i);
+					if (substr.size() > 4) {
+						substr = substr.substr(0, 4);
+					}
+					std::string val = boost::to_lower_copy(substr);
+					if(poiData.find(val) == poiData.end()){
+						poiData.insert(std::make_pair(val, std::unordered_set<POIBox>()));
+					}
+					poiData[val].insert(data);
+					prev = -1;
+				}
+			} else {
+				if(prev == -1){
+					prev = i;
+				}
+			}
+		}
+		
+	}
+
+void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap)
+{
+	typeMap.clear();
+	if (addTypeChar == nullptr)
+	{
+		return;
+	}
+	std::string addTypes((const char*)addTypeChar);
+	int i = 0, p = 0;
+
+	while (addTypes.size() > 0)
+	{
+		p = addTypes.find_first_of(-1, i);
+		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
+		MapRulType rType = renderer.getTypeByInternalId((int)rText[0]);
+		typeMap.insert(std::make_pair(rType, rText.substr(1)));
+		if (rType.isAdditional() && rType.getValue() == "")
+		{
+			throw std::bad_exception("Map rule type is wrong");
+		}
+		if (p == -1)
+			break;
+		i = p+1;
+	}
+}
+
 OBFtransportDB::OBFtransportDB(void)
 {
 }
@@ -1239,30 +1466,39 @@ void OBFAddresStreetDB::writeAddresMapIndex(BinaryMapDataWriter& writer, std::st
 		//
 		//progress.startTask(Messages.getString("IndexCreator.SERIALIZING_ADRESS"), cityTowns.size() + villages.size() / 100 + 1); //$NON-NLS-1$
 		//
-		std::map<std::string, std::list<MapObject>> namesIndex;
+		std::map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex;
 		std::map<std::string, CityObj> postcodes;
 		writeCityBlockIndex(writer, "cities",  streetstat, wayStreetstat, suburbs, cityTowns, postcodes, namesIndex);
 		writeCityBlockIndex(writer, "villages",  streetstat, wayStreetstat, std::list<CityObj>(), villages, postcodes, namesIndex);
 		//
 		//// write postcodes		
-		//List<BinaryFileReference> refs = new ArrayList<BinaryFileReference>();		
-		//writer.startCityBlockIndex(POSTCODES_TYPE);
-		//ArrayList<City> posts = new ArrayList<City>(postcodes.values());
-		//for (City s : posts) {
-		//	refs.add(writer.writeCityHeader(s, -1));
-		//}
-		//for (int i = 0; i < posts.size(); i++) {
-		//	City postCode = posts.get(i);
-		//	BinaryFileReference ref = refs.get(i);
-		//	putNamedMapObject(namesIndex, postCode, ref.getStartPointer());
-		//	writer.writeCityIndex(postCode, new ArrayList<Street>(postCode.getStreets()), null, ref);
-		//}
-		//writer.endCityBlockIndex();
+		std::vector<std::shared_ptr<BinaryFileReference>> refs;
+		writer.startCityBlockIndex(2);
+		std::vector<CityObj> posts;
+		std::for_each(postcodes.begin(), postcodes.end(), [&posts] (std::pair<std::string, CityObj> itMap)
+		{
+			posts.push_back(itMap.second);
+		});
+		for (CityObj s : posts) {
+			refs.push_back(std::shared_ptr<BinaryFileReference>(writer.writeCityHeader(s, -1)));
+		}
+		for (int i = 0; i < posts.size(); i++) {
+			CityObj postCode = posts[i];
+			std::shared_ptr<BinaryFileReference> ref = refs[i];
+			putNamedMapObject(namesIndex, std::make_shared<MapObject>(postCode), ref->getStartPointer());
+			std::list<Street> streePost;
+			std::for_each(postCode.streets.begin(), postCode.streets.end(), [&streePost] (std::pair<std::string, Street> itMap)
+			{
+				streePost.push_back(itMap.second);
+			});
+			writer.writeCityIndex(postCode, streePost, std::unordered_map<Street, std::list<EntityNode>>(), ref.get());
+		}
+		writer.endCityBlockIndex();
 
 
 		//progress.finishTask();
 
-		//writer.writeAddressNameIndex(namesIndex);
+		writer.writeAddressNameIndex(namesIndex);
 		//writer.endWriteAddressIndex();
 		//writer.flush();
 		//streetstat.close();
@@ -1320,9 +1556,9 @@ std::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCitie
 		return cities;
 	}
 
-void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObject>>& namesIndex, MapObject o, __int64 fileOffset)
+void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex, std::shared_ptr<MapObject> o, __int64 fileOffset)
 {
-	std::string name = o.getName();
+	std::string name = o->getName();
 	
 	int prev = -1;
 	for (int i = 0; i <= name.length(); i++) 
@@ -1335,7 +1571,7 @@ void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObj
 				}
 				std::string val = boost::to_lower_copy(substr);
 				if(namesIndex.find(val) == namesIndex.end()){
-					namesIndex.insert(std::make_pair(val, std::list<MapObject>()));
+					namesIndex.insert(std::make_pair(val, std::list<std::shared_ptr<MapObject>>()));
 				}
 				namesIndex[val].push_back(o);
 				prev = -1;
@@ -1350,7 +1586,7 @@ void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<MapObj
 	if (fileOffset > INT_MAX) {
 		throw std::bad_exception("File offset > 2 GB.");
 	}
-	o.setFileOffset((int) fileOffset);
+	o->setFileOffset((int) fileOffset);
 }
 
 std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat)
@@ -1535,7 +1771,7 @@ std::list<Street> OBFAddresStreetDB::readStreetsBuildings(sqlite3_stmt* streetBu
 
 
 void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::string citytype, sqlite3_stmt* streetstat, sqlite3_stmt* waynodesStat,
-			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<MapObject>>& namesIndex)			
+			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex)			
 			 {
 		std::vector<BinaryFileReference*> refs;
 		// 1. write cities
@@ -1555,7 +1791,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			std::advance(cities.begin(), i);
 			CityObj city = *cit;
 			BinaryFileReference* ref = refs[i];
-			putNamedMapObject(namesIndex, city, ref->getStartPointer());
+			putNamedMapObject(namesIndex, std::make_shared<MapObject>(city), ref->getStartPointer());
 			std::unordered_map<Street, std::list<EntityNode>> streetNodes;
 			std::vector<CityObj> listSuburbs;
 			if (!suburbs.empty()) {
@@ -1575,7 +1811,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			int bCount = 0;
 			// register postcodes and name index
 			for (Street s : streets) {
-				putNamedMapObject(namesIndex, s, s.getFileOffset());
+				putNamedMapObject(namesIndex, std::make_shared<MapObject>(s), s.getFileOffset());
 				
 				for (Building b : s.getBuildings()) {
 					bCount++;

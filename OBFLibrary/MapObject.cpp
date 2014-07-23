@@ -143,3 +143,77 @@ Street CityObj::unregisterStreet(std::string name)
 
 	 return object;
  }
+
+ int POICategory::SPECIAL_CHAR = -1;
+ short POICategory::SHIFT_BITS_CATEGORY = 7;
+
+ void POICategory::addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags)
+{
+	for (std::pair<MapRulType , std::string> rvalue : addTags)
+	{
+		attributes.insert(rvalue.first);
+	}
+	if (categories.find(type) == categories.end())
+	{
+		categories.insert(std::make_pair(type,std::set<std::string>()));
+	}
+	if (std::find_if(addType.begin(), addType.end(), boost::is_any_of(std::string(",;"))) !=  addType.end())
+	{
+		std::vector<std::string> splits;
+		boost::split(splits, addType, boost::is_any_of(std::string(",;")), boost::token_compress_on);
+		for (std::string strTag : splits)
+			categories[type].insert(boost::trim_copy(strTag));
+	}
+	else
+	{
+		categories[type].insert(boost::trim_copy(addType));
+	}
+}
+
+ std::vector<int> POICategory::buildTypeIds(std::string category, std::string subcategory) {
+			singleThreadVarTypes.clear();
+			std::vector<int> types = singleThreadVarTypes;
+			internalBuildType(category, subcategory, types);
+			return types;
+}
+		
+void POICategory::internalBuildType(std::string category, std::string subcategory, std::vector<int>& types) {
+	int catInd = catIndexes.find(category) == catIndexes.end() ? -1 : catIndexes[category];
+			if (std::find_if(subcategory.begin(), subcategory.end(), boost::is_any_of(std::string(",;"))) !=  subcategory.end())
+			{
+				std::vector<std::string> splits;
+				boost::split(splits, subcategory, boost::is_any_of(std::string(",;")), boost::token_compress_on);
+				for (std::string sub : splits) {
+					int subcatInd = catSubIndexes.find(category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(sub)) == catSubIndexes.end() ? -1 : catSubIndexes[category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(sub)];
+					if (subcatInd == -1) {
+						throw new std::bad_exception("Should not be here");
+					}
+					types.push_back((subcatInd << SHIFT_BITS_CATEGORY) | catInd);
+				}
+			} else {
+				int subcatInd = catSubIndexes.find(category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(subcategory)) == catSubIndexes.end() ? -1 : catSubIndexes[category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(subcategory)];
+				if (subcatInd == -1) {
+					std::string msg = std::string("Unknown subcategory ") + subcategory + " category " + category;
+					throw new std::bad_exception(msg.c_str());
+				}
+				types.push_back((subcatInd << SHIFT_BITS_CATEGORY) | catInd);
+			}
+		}
+
+void POICategory::buildCategoriesToWrite(POICategory& globalCategories) {
+			cachedCategoriesIds.clear();
+			cachedAdditionalIds.clear();
+
+			for(auto cats : categories) {
+				for(std::string subcat : cats.second){
+					std::string cat = cats.first;
+					globalCategories.internalBuildType(cat, subcat, cachedCategoriesIds);
+				}
+			}
+			for(MapRulType rt : attributes){
+				if(rt.getTargetPoiId() == -1) {
+					throw new std::bad_exception("Map rule type is not registered for poi : ");
+				}
+				cachedAdditionalIds.push_back(rt.getTargetPoiId());
+			}
+		}

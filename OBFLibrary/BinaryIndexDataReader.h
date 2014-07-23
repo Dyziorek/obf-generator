@@ -27,6 +27,8 @@ private:
 	gio::CodedInputStream strmData;
 	
 	void ReadMapData(google::protobuf::io::CodedInputStream* cis);
+	void ReadAddresIndex(google::protobuf::io::CodedInputStream* cis);
 	BinaryMapDataReader reader;
+	BinaryAddressDataReader addresser;
 };
 

@@ -6,6 +6,73 @@
 class OBFpoiDB :
 	public OBFResultDB
 {
+public:
+	typedef boost::geometry::model::box<boost::geometry::model::point<int, 2, boost::geometry::cs::cartesian>> boxI;
+
+	//struct poiEqual;
+
+	
+private:
+	struct POITree
+	{
+		POIBox node;
+		std::list<std::shared_ptr<POITree>> subNodes;
+		void collectDataFromLevel(std::list<POIBox>& data, int level)
+		{
+			if (level == 0)
+			{
+				data.push_back(node);
+			}
+			if (level > 0)
+			{
+				if (!subNodes.empty())
+				{
+					for(std::shared_ptr<POITree> subNode : subNodes)
+					{
+						subNode->collectDataFromLevel(data, level - 1);
+					}
+				}
+			}
+		}
+
+		int getSubTreesOnLevel(int level) {
+			if (level == 0) {
+				if (subNodes.empty()) {
+					return 0;
+				} else {
+					return subNodes.size();
+				}
+			} else {
+				int sum = 0;
+				if (!subNodes.empty()) {
+					for (std::shared_ptr<POITree> t : subNodes) {
+						sum += t->getSubTreesOnLevel(level - 1);
+					}
+				}
+				return sum;
+			}
+		}
+		void extractChildrenFromLevel(int level) {
+			std::list<std::shared_ptr<POITree>> list;
+			collectChildrenFromLevel(list, level);
+			subNodes = list;
+		}
+
+		void collectChildrenFromLevel(std::list<std::shared_ptr<POITree>>& list, int level) {
+			if (level == 0) {
+				if (!subNodes.empty()) {
+					list.insert(list.begin(),subNodes.begin(), subNodes.end());
+				}
+			} else if (!subNodes.empty()) {
+				for (std::shared_ptr<POITree> sub : subNodes) {
+					sub->collectChildrenFromLevel(list, level - 1);
+				}
+
+			}
+
+		}
+	};
+
 	OBFRenderingTypes renderer;
 	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	std::list<Amenity> tempAmenityList;
@@ -15,7 +82,20 @@ public:
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& relItem, OBFResultDB& dbContext);
 	void insertAmenityIntoPoi(Amenity amenity, OBFResultDB& dbContext);
+	void writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbContext, std::string poiTableName);
+	void processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex);
+	void writePoiBoxes(BinaryMapDataWriter& writer, std::shared_ptr<POITree> tree, 
+			__int64 startFpPoiIndex, std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>>& fpToWriteSeeks,
+			POICategory& globalCategories);
+
+
+private:
+	void addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
+	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
+	void decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap);
 };
+
+
 
 
 class OBFtransportDB :
@@ -345,7 +425,7 @@ public:
 	std::string findNearestCityOrSuburb(std::shared_ptr<MultiPoly> greatestBoundary, LatLon location);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& baseItem, OBFResultDB& dbContext);
 	void writeAddresMapIndex(BinaryMapDataWriter& writer, std::string regionName, OBFResultDB& dbContext);
-	void putNamedMapObject(std::map<std::string, std::list<MapObject>>& namesIndex, MapObject o, __int64 fileOffset);
+	void putNamedMapObject(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex, std::shared_ptr<MapObject> o, __int64 fileOffset);
 	void readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuildingsStat, CityObj city,
 			sqlite3_stmt* waynodesStat, std::unordered_map<Street, std::list<EntityNode>>& streetNodes, std::unordered_map<__int64, Street>& visitedStreets,
 			std::unordered_map<std::string, std::vector<Street>>& uniqueNames);
@@ -354,6 +434,6 @@ public:
 			std::unordered_map<Street, std::list<EntityNode>>&  streetNodes, std::vector<CityObj> citySuburbs);
 	std::vector<EntityNode> loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat);
 	void writeCityBlockIndex(BinaryMapDataWriter& writer, std::string citytype, sqlite3_stmt* streetstat, sqlite3_stmt* waynodesStat,
-			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<MapObject>>& namesIndex);
+			std::list<CityObj>& suburbs, std::list<CityObj>& cities, std::map<std::string, CityObj>& postcodes, std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex);
 	std::unordered_map<std::string, std::list<CityObj>> readCities(OBFResultDB& dbContext);
 };

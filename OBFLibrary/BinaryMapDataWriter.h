@@ -170,6 +170,7 @@ public:
 	int writeInt32Size();
 	void writeRawVarint32(std::vector<uint8>& mapDataBuf,int toVarint32);
 
+	// Map Data Functions
 
 	obf::MapDataBlock* createWriteMapDataBlock(__int64 baseID);
 	obf::MapData writeMapData(__int64 diffId, int pleft, int ptop, sqlite3_stmt* selectData, std::vector<int> typeUse,
@@ -179,21 +180,39 @@ public:
 	void endWriteMapLevelIndex();
 	void endWriteMapIndex();
 	
+	// Addressing Data Functions
 	
 	bool startWriteAddressIndex(std::string name);
 	void endWriteAddressIndex();
 	
 	void startCityBlockIndex(int type);
 	void endCityBlockIndex();
-	void writeAddressNameIndex(std::unordered_map<std::string, std::list<std::shared_ptr<MapObject>>> namesIndex);
+	void writeAddressNameIndex(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex);
 	bool checkEnNameToWrite(MapObject& obj);
+
 	std::unordered_map<std::string, std::shared_ptr<BinaryFileReference>> writeIndexedTable(int tag, std::list<std::string> indexedTable);
 	BinaryFileReference* writeCityHeader(MapObject& city, int cityType);
 	obf::StreetIndex createStreetAndBuildings(Street street, int cx, int cy, std::string postcodeFilter, 
 			std::unordered_map<__int64,std::set<Street>>& mapNodeToStreet, std::unordered_map<Street, std::list<EntityNode>>& wayNodes);
 	void writeCityIndex(CityObj cityOrPostcode, std::list<Street>& streets, std::unordered_map<Street, std::list<EntityNode>>& wayNodes, 
 			BinaryFileReference* ref);
+	
+	// POI Data Functions
+	__int64 startWritePoiIndex(std::string name, int left31, int right31, int bottom31, int top31);
+	void endWritePoiBox();
+	void endWritePoiData();
+	void endWritePoiIndex();
+	void writePoiCategoriesTable(POICategory& cs);
+	 void writePoiCategories(POICategory& poiCats);
+	std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> writePoiNameIndex(std::unordered_map<std::string, std::unordered_set<POIBox>>& namesIndex, __int64 startPoiIndex);
+	void writePoiDataAtom(long id, int x24shift, int y24shift, 
+			std::string type, std::string subtype,  std::unordered_map<MapRulType, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
+			POICategory&  globalCategories);
+	void startWritePoiData(int zoom, int x, int y, std::vector<std::shared_ptr<BinaryFileReference>>& fpPoiBox);
+	std::shared_ptr<BinaryFileReference> startWritePoiBox(int zoom, int tileX, int tileY, __int64 startPoiIndex, bool end);
+
 	void close();
+
 
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
