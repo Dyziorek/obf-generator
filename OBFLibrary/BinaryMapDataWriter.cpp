@@ -723,6 +723,252 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		}
 	}
 
+	__int64 BinaryMapDataWriter::startWritePoiIndex(std::string name, int left31, int right31, int bottom31, int top31)
+	{
+		pushState(MAP_ROOT_LEVEL_INIT, POI_INDEX_INIT);
+		wfl::WireFormatLite::WriteTag(obf::OsmAndStructure::kPoiIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
+		stackBounds.push_front(Bounds(0,0,0,0));
+		preserveInt32Size();
+		__int64 fpp = getFilePointer();
+		if (name != "")
+		{
+			wfl::WireFormatLite::WriteString(obf::OsmAndPoiIndex::kNameFieldNumber, name, &dataOut);
+		}
+
+		obf::OsmAndTileBox box;
+		box.set_bottom(bottom31);
+		box.set_left(left31);
+		box.set_right(right31);
+		box.set_top(top31);
+		box.ByteSize();
+		wfl::WireFormatLite::WriteMessage(obf::OsmAndPoiIndex::kBoundariesFieldNumber, box, &dataOut);
+		return fpp;
+	}
+
+	void BinaryMapDataWriter::endWritePoiIndex(){
+		popState(POI_INDEX_INIT);
+		int len = writeInt32Size();
+		stackBounds.pop_front();
+		
+	}
+
+	void BinaryMapDataWriter::writePoiCategoriesTable(POICategory& cs){
+		int peeker[] = {POI_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+
+		int i = 0;
+		for (auto cat : cs.categories) {
+			obf::OsmAndCategoryTable builder;
+			builder.set_category(cat.first);
+			std::set<std::string> subcatSource = cs.categories[cat.first];
+			cs.catIndexes[cat.first] =  i;
+			int j = 0;
+			for (std::string s : subcatSource) {
+				cs.catSubIndexes[cat.first + char(-1) + s] = j;
+				builder.add_subcategories(s);
+				j++;
+			}
+			builder.ByteSize();
+			wfl::WireFormatLite::WriteMessage(obf::OsmAndPoiIndex::kCategoriesTableFieldNumber, builder, &dataOut);
+			i++;
+		}
+
+	}
+	
+	
+	void BinaryMapDataWriter::writePoiCategories(POICategory& poiCats){
+		int peeker[] = {POI_BOX};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		
+		obf::OsmAndPoiCategories builder;
+		int prev = -1;
+		std::sort(poiCats.cachedCategoriesIds.begin(), poiCats.cachedCategoriesIds.end(), std::less<int>());
+		for (std::vector<int>::iterator it = poiCats.cachedCategoriesIds.begin(); it != poiCats.cachedCategoriesIds.end(); it++) {
+			// avoid duplicates
+			if (it == poiCats.cachedCategoriesIds.begin() || prev != *it) {
+				builder.add_categories(*it);
+				prev = *it;
+			}
+		}
+		builder.ByteSize();
+		wfl::WireFormatLite::WriteMessage(obf::OsmAndPoiBox::kCategoriesFieldNumber, builder, &dataOut);
+	}
+
+	 std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> BinaryMapDataWriter::writePoiNameIndex(std::unordered_map<std::string, std::unordered_set<POIBox>>& namesIndex, __int64 startPoiIndex){
+		int peeker[] = {POI_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+
+		wfl::WireFormatLite::WriteTag(obf::OsmAndPoiIndex::kNameIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
+		preserveInt32Size();
+		
+		std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> fpToWriteSeeks;
+		std::list<std::string> names;
+		auto itMap = namesIndex.begin();
+		std::transform(namesIndex.begin(), namesIndex.end(), std::back_inserter(names), std::bind(&std::pair<std::string, std::unordered_set<POIBox>>::first, std::placeholders::_1));
+		std::unordered_map<std::string,  std::shared_ptr<BinaryFileReference>> indexedTable = writeIndexedTable(obf::OsmAndPoiNameIndex::kTableFieldNumber, names);
+		for(auto e : namesIndex) {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiNameIndex::kDataFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
+			std::shared_ptr<BinaryFileReference> nameTableRef = indexedTable[e.first];
+			nameTableRef->writeReference(*raf, getFilePointer());
+			
+			obf::OsmAndPoiNameIndex_OsmAndPoiNameIndexData builder;
+			std::unordered_set<POIBox>& tileBoxes = e.second;
+			std::list<std::pair<POIBox,int>> tileBoxSizes;
+			for(POIBox box : tileBoxes) {
+				obf::OsmAndPoiNameIndexDataAtom bs;
+				bs.set_x(box.x);
+				bs.set_y(box.y);
+				bs.set_zoom(box.zoom);
+				bs.set_shiftto(0);
+				bs.ByteSize();
+				builder.add_atoms()->MergeFrom(bs);
+				tileBoxSizes.push_back(std::make_pair(box, bs.ByteSize()));
+			}
+			
+			builder.ByteSize();
+			builder.SerializeToCodedStream(&dataOut);
+			long endPointer = getFilePointer();
+			
+			// first message
+			int accumulateSize = 4;
+			for (std::list<std::pair<POIBox,int>>::reverse_iterator i = tileBoxSizes.rbegin(); i != tileBoxSizes.rend(); i++) {
+				POIBox box =i->first;
+				if (fpToWriteSeeks.find(box) == fpToWriteSeeks.end()) {
+					fpToWriteSeeks.insert(std::make_pair(box, std::list<std::shared_ptr<BinaryFileReference>>()));
+				}
+				fpToWriteSeeks[box].push_back(std::shared_ptr<BinaryFileReference>(BinaryFileReference::createShiftReference(endPointer - accumulateSize, startPoiIndex)));
+				int tagSize = wfl::WireFormatLite::TagSize(obf::OsmAndPoiNameIndex_OsmAndPoiNameIndexData::kAtomsFieldNumber, wfl::WireFormatLite::FieldType::TYPE_INT32);
+				accumulateSize += tagSize + i->second;
+
+			}
+		}
+		
+		writeInt32Size();
+		
+		
+		return fpToWriteSeeks;
+	}
+
+	
+
+	 void BinaryMapDataWriter::writePoiDataAtom(long id, int x24shift, int y24shift, 
+			std::string type, std::string subtype,  std::unordered_map<MapRulType, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
+			POICategory&  globalCategories){
+		int peeker[] = {POI_DATA};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		std::vector<int> types = globalCategories.cachedCategoriesIds;
+		obf::OsmAndPoiBoxDataAtom builder;
+		builder.set_dx(x24shift);
+		builder.set_dy(y24shift);
+		for (int i = 0; i < types.size(); i++) {
+			int j = types[i];
+			builder.add_categories(j);
+		}
+		
+		builder.set_id(id);
+
+		if (/*USE_DEPRECATED_POI_NAME_STRUCTURE*/ true) {
+			std::string name = additionalNames[(*rtypes.nameRule)];
+			additionalNames.erase(*rtypes.nameRule);
+			if (name != "") {
+				builder.set_name(name);
+			}
+			std::string nameEn = additionalNames[(*rtypes.nameEnRule)];
+			additionalNames.erase(*rtypes.nameEnRule);
+			if (nameEn != "") {
+				builder.set_nameen(nameEn);
+			}	
+		}
+		
+		if (/*USE_DEPRECATED_POI_NAME_ADD_INFO_STRUCTURE*/ true ) {
+			std::string openingHours = additionalNames[*rtypes.getRuleType("opening_hours", "", true)];
+			additionalNames.erase(*rtypes.getRuleType("opening_hours", "", true));
+			std::string site = additionalNames[*(rtypes.getRuleType("website", "", true))];
+			additionalNames.erase(*(rtypes.getRuleType("website", "", true)));
+			std::string phone = additionalNames[*(rtypes.getRuleType("phone", "", true))];
+			additionalNames.erase(*(rtypes.getRuleType("phone", "", true)));
+			std::string description = additionalNames[*(rtypes.getRuleType("description", "", true))];
+			additionalNames.erase(*(rtypes.getRuleType("description", "", true)));
+
+			if (openingHours != "") {
+				builder.set_openinghours(openingHours);
+			}
+			if (site != "") {
+				builder.set_site(site);
+			}
+			if (phone!="") {
+				builder.set_phone(phone);
+			}
+			if (description!="") {
+				builder.set_note(description);
+			}
+		}
+		builder.ByteSize();
+
+		wfl::WireFormatLite::WriteMessage(obf::OsmAndPoiBoxData::kPoiDataFieldNumber, builder, &dataOut);
+
+	}
+
+	 void BinaryMapDataWriter::startWritePoiData(int zoom, int x, int y, std::vector<std::shared_ptr<BinaryFileReference>>& fpPoiBox){
+		pushState(POI_DATA, POI_INDEX_INIT);
+		wfl::WireFormatLite::WriteTag(obf::OsmAndPoiIndex::kPoiDataFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		__int64 pointer = getFilePointer();
+		preserveInt32Size();
+		// write shift to that data
+		for (int i = 0; i < fpPoiBox.size(); i++) {
+			fpPoiBox[i]->writeReference(*raf, pointer);
+		}
+
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndPoiBoxData::kZoomFieldNumber, zoom, &dataOut);
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndPoiBoxData::kXFieldNumber, x, &dataOut);
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndPoiBoxData::kYFieldNumber, y, &dataOut);
+
+	}
+
+	 void BinaryMapDataWriter::endWritePoiData(){
+		popState(POI_DATA);
+		writeInt32Size();
+	}
+
+	 std::shared_ptr<BinaryFileReference> BinaryMapDataWriter::startWritePoiBox(int zoom, int tileX, int tileY, __int64 startPoiIndex, bool end)
+	{
+		int peeker[] = {POI_INDEX_INIT, POI_BOX};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		if (states.front() == POI_INDEX_INIT) {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiIndex::kBoxesFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		} else {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiBox::kSubBoxesFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		}
+		states.push_front(POI_BOX);
+		preserveInt32Size();
+
+		Bounds bounds = stackBounds.front();
+		int parentZoom = bounds.right;
+		int parentTileX = bounds.left;
+		int parentTileY = bounds.top;
+
+		int pTileX = parentTileX << (zoom - parentZoom);
+		int pTileY = parentTileY << (zoom - parentZoom);
+		wfl::WireFormatLite::WriteUInt32(obf::OsmAndPoiBox::kZoomFieldNumber, (zoom - parentZoom), &dataOut);
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndPoiBox::kLeftFieldNumber, tileX - pTileX, &dataOut);
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndPoiBox::kTopFieldNumber, tileY - pTileY, &dataOut);
+		stackBounds.push_front(Bounds(tileX, zoom, tileY, 0));
+
+		if (end) {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiBox::kShiftToDataFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+			std::shared_ptr<BinaryFileReference> shift(BinaryFileReference::createShiftReference(getFilePointer(), startPoiIndex));
+			wfl::WireFormatLite::WriteFixed32NoTag(0, &dataOut);
+			return shift;
+		}
+		return std::shared_ptr<BinaryFileReference>();
+	}
+
+	 void BinaryMapDataWriter::endWritePoiBox(){
+		popState(POI_BOX);
+		writeInt32Size();
+		stackBounds.pop_front();
+	}
+
 
 	void BinaryMapDataWriter::close()
 	{

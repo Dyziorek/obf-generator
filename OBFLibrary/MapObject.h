@@ -163,3 +163,65 @@ namespace std
 		}
 	};
 }
+
+
+
+struct POIData
+{
+	int x, y;
+	__int64 id;
+	std::string type;
+	std::string subType;
+	std::unordered_map<MapRulType, std::string> additionalTags;
+};
+
+struct POICategory
+{
+	std::map<std::string, std::set<std::string>> categories;
+	std::set<MapRulType> attributes;
+	std::unordered_map<std::string, int> catIndexes;
+	std::unordered_map<std::string, int> catSubIndexes;
+	std::vector<int> cachedCategoriesIds;
+	std::vector<int> cachedAdditionalIds;
+	std::vector<int> singleThreadVarTypes;
+
+	void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags);
+	std::vector<int> buildTypeIds(std::string category, std::string subcategory);
+	void internalBuildType(std::string category, std::string subcategory, std::vector<int>& types);
+	void buildCategoriesToWrite(POICategory& globalCategories) ;
+	static int SPECIAL_CHAR;
+	static short SHIFT_BITS_CATEGORY;
+};
+
+
+struct POIBox
+{
+	int x;
+	int y;
+	int zoom;
+	std::list<POIData> values;
+	POICategory category;
+	bool operator==(const POIBox& op2) const
+	{
+		return x == op2.x 
+			&& y == op2.y 
+			&& zoom == op2.zoom 
+			&& values.size() == op2.values.size() 
+			&& category.attributes.size() == op2.category.attributes.size();
+	}
+};
+
+template<>
+	struct std::hash<POIBox>
+		: public std::unary_function<POIBox, size_t>
+	{	
+		size_t operator()(const POIBox& argValue) const
+		{
+			size_t xaHashData = 16777619U;
+			xaHashData *= argValue.x;
+			xaHashData *= argValue.y;
+			xaHashData *= argValue.zoom;
+			xaHashData *= argValue.values.size();
+			return xaHashData;
+		}
+	};	

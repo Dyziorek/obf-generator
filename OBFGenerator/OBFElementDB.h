@@ -6,46 +6,13 @@
 class OBFpoiDB :
 	public OBFResultDB
 {
+public:
 	typedef boost::geometry::model::box<boost::geometry::model::point<int, 2, boost::geometry::cs::cartesian>> boxI;
 
 	//struct poiEqual;
 
-	struct POIData
-	{
-		int x, y;
-		__int64 id;
-		std::string type;
-		std::string subType;
-		std::unordered_map<MapRulType, std::string> additionalTags;
-	};
-
-	struct POICategory
-	{
-		std::map<std::string, std::set<std::string>> categories;
-		std::set<MapRulType> attributes;
-		void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags);
-	};
-
-public:
-	struct POIBox
-	{
-		int x;
-		int y;
-		int zoom;
-		std::list<POIData> values;
-		POICategory category;
-		bool operator==(const POIBox& op2) const
-		{
-			return x == op2.x 
-				&& y == op2.y 
-				&& zoom == op2.zoom 
-				&& values.size() == op2.values.size() 
-				&& category.attributes.size() == op2.category.attributes.size();
-		}
-	};
-
 	
-
+private:
 	struct POITree
 	{
 		POIBox node;
@@ -68,6 +35,42 @@ public:
 			}
 		}
 
+		int getSubTreesOnLevel(int level) {
+			if (level == 0) {
+				if (subNodes.empty()) {
+					return 0;
+				} else {
+					return subNodes.size();
+				}
+			} else {
+				int sum = 0;
+				if (!subNodes.empty()) {
+					for (std::shared_ptr<POITree> t : subNodes) {
+						sum += t->getSubTreesOnLevel(level - 1);
+					}
+				}
+				return sum;
+			}
+		}
+		void extractChildrenFromLevel(int level) {
+			std::list<std::shared_ptr<POITree>> list;
+			collectChildrenFromLevel(list, level);
+			subNodes = list;
+		}
+
+		void collectChildrenFromLevel(std::list<std::shared_ptr<POITree>>& list, int level) {
+			if (level == 0) {
+				if (!subNodes.empty()) {
+					list.insert(list.begin(),subNodes.begin(), subNodes.end());
+				}
+			} else if (!subNodes.empty()) {
+				for (std::shared_ptr<POITree> sub : subNodes) {
+					sub->collectChildrenFromLevel(list, level - 1);
+				}
+
+			}
+
+		}
 	};
 
 	OBFRenderingTypes renderer;
@@ -81,29 +84,18 @@ public:
 	void insertAmenityIntoPoi(Amenity amenity, OBFResultDB& dbContext);
 	void writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbContext, std::string poiTableName);
 	void processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex);
+	void writePoiBoxes(BinaryMapDataWriter& writer, std::shared_ptr<POITree> tree, 
+			__int64 startFpPoiIndex, std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>>& fpToWriteSeeks,
+			POICategory& globalCategories);
 
 
 private:
-	void addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
+	void addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
 	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
 	void decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap);
 };
 
 
-template<>
-	struct std::hash<OBFpoiDB::POIBox>
-		: public std::unary_function<OBFpoiDB::POIBox, size_t>
-	{	
-		size_t operator()(const OBFpoiDB::POIBox& argValue) const
-		{
-			size_t xaHashData = 16777619U;
-			xaHashData *= argValue.x;
-			xaHashData *= argValue.y;
-			xaHashData *= argValue.zoom;
-			xaHashData *= argValue.values.size();
-			return xaHashData;
-		}
-	};	
 
 
 class OBFtransportDB :

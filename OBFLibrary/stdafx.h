@@ -43,6 +43,7 @@
 
 #include "EntityBase.h"
 #include "EntityNode.h"
+#include "OBFRenderingTypes.h"
 #include "MapObject.h"
 #include "MapUtils.h"
 #include "OSMTags.h"

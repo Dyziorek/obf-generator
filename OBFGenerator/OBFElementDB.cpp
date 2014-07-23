@@ -117,32 +117,85 @@ void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx
 	POITree treeData;
 	std::unordered_map<std::string, std::unordered_set<POIBox>> namesIndex;
 	boxI bbox;
-	processPOIIntoTree(dbCtx, treeData, 6, bbox, namesIndex);
+	int zoomStart = 6;
+	processPOIIntoTree(dbCtx, treeData, zoomStart, bbox, namesIndex);
 
+	__int64 fileP = writer.startWritePoiIndex("POIDATA", bbox.min_corner().get<0>(), bbox.max_corner().get<0>(), bbox.min_corner().get<1>(), bbox.max_corner().get<1>());
+
+	writer.writePoiCategoriesTable(treeData.node.category);
+
+	std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> poiDataIdx = writer.writePoiNameIndex(namesIndex, fileP);
+
+	int level = 0;
+		for (; level < (16 - zoomStart); level++) {
+			int subtrees = treeData.getSubTreesOnLevel(level);
+			if (subtrees > 8) {
+				level--;
+				break;
+			}
+		}
+		if (level > 0) {
+			treeData.extractChildrenFromLevel(level);
+			zoomStart = zoomStart + level;
+		}
+		for (std::shared_ptr<POITree> subs : treeData.subNodes) {
+			writePoiBoxes(writer, subs, fileP, poiDataIdx, treeData.node.category);
+		}
+
+		for (auto entry : poiDataIdx) {
+			int z = entry.first.zoom;
+			int x = entry.first.x;
+			int y = entry.first.y;
+			std::vector<std::shared_ptr<BinaryFileReference>> vecDD;
+			vecDD.reserve(entry.second.size());
+			std::copy(entry.second.begin(), entry.second.end(), vecDD.begin());
+			writer.startWritePoiData(z, x, y, vecDD);
+
+			{
+				std::list<POIData> poiData = entry.first.values;
+				
+				for(POIData poi : poiData){
+					int x31 = poi.x;
+					int y31 = poi.y;
+					std::string type = poi.type;
+					std::string subtype = poi.subType;
+					int x24shift = (x31 >> 7) - (x << (24 - z));
+					int y24shift = (y31 >> 7) - (y << (24 - z));
+					writer.writePoiDataAtom(poi.id, x24shift, y24shift, type, subtype, poi.additionalTags, renderer, 
+							treeData.node.category);	
+				}
+				
+			} 
+		}
 }
 
-void OBFpoiDB::POICategory::addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags)
-{
-	for (std::pair<MapRulType , std::string> rvalue : addTags)
-	{
-		attributes.insert(rvalue.first);
+void OBFpoiDB::writePoiBoxes(BinaryMapDataWriter& writer, std::shared_ptr<POITree> tree, 
+			__int64 startFpPoiIndex, std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>>& fpToWriteSeeks,
+			POICategory& globalCategories) {
+				int x = tree->node.x;
+		int y = tree->node.y;
+		int zoom = tree->node.zoom;
+		boolean end = zoom == 16;
+		std::shared_ptr<BinaryFileReference> fileRef = writer.startWritePoiBox(zoom, x, y, startFpPoiIndex, end);
+		if(fileRef){
+			if(fpToWriteSeeks.find(tree->node) == fpToWriteSeeks.end()) {
+				fpToWriteSeeks.insert(std::make_pair(tree->node, std::list<std::shared_ptr<BinaryFileReference>>()));
+			}
+			fpToWriteSeeks[tree->node].push_back(fileRef);
+		}
+		if(zoom >= 12 && zoom <= 16){
+			POICategory& boxCats = tree->node.category;
+			boxCats.buildCategoriesToWrite(globalCategories);
+			writer.writePoiCategories(boxCats);
+		}
+		
+		if (!end) {
+			for (std::shared_ptr<POITree> subTree : tree->subNodes) {
+				writePoiBoxes(writer, subTree, startFpPoiIndex, fpToWriteSeeks, globalCategories);
+			}
+		}
+		writer.endWritePoiBox();
 	}
-	if (categories.find(type) == categories.end())
-	{
-		categories.insert(std::make_pair(type,std::set<std::string>()));
-	}
-	if (std::find_if(addType.begin(), addType.end(), boost::is_any_of(std::string(",;"))) !=  addType.end())
-	{
-		std::vector<std::string> splits;
-		boost::split(splits, addType, boost::is_any_of(std::string(",;")), boost::token_compress_on);
-		for (std::string strTag : splits)
-			categories[type].insert(boost::trim_copy(strTag));
-	}
-	else
-	{
-		categories[type].insert(boost::trim_copy(addType));
-	}
-}
 
 void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoomLevel, boxI& bbox, std::unordered_map<std::string, std::unordered_set<POIBox>>& nameIndex)
 {
@@ -202,7 +255,9 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 				oldTree = subtree.get();
 				subtree.reset();
 			}
-		addNamePrefix(typeMap.at(*nameRuleMap), typeMap.at(*nameEnRuleMap), oldTree->node, nameIndex);
+		std::unordered_map<MapRulType, std::string>::iterator lookup;
+		
+		addNamePrefix(typeMap.find(*nameRuleMap), typeMap.find(*nameEnRuleMap), oldTree->node, nameIndex);
 
 		POIData poiData;
 		poiData.x = x;
@@ -218,16 +273,16 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 
 }
 
-void OBFpoiDB::addNamePrefix(std::string name, std::string nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
+void OBFpoiDB::addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
 {
-		if (name != "") {
-			parsePrefix(name, data, poiData);
-			if (nameEn != "") {
+	if (name._Ptr != nullptr) {
+		parsePrefix(name->second, data, poiData);
+		if (nameEn._Ptr != nullptr) {
 				iconverter ic("UTF-8", "ASCII");
-				nameEn = ic.convert(name);
+				nameEn->second = ic.convert(name->second);
 			}
-			if (!boost::iequals(nameEn, name)) {
-				parsePrefix(nameEn, data, poiData);
+		if (!boost::iequals(nameEn->second, name->second)) {
+				parsePrefix(nameEn->second, data, poiData);
 			}
 		}
 }
@@ -265,7 +320,7 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unord
 		return;
 	}
 	std::string addTypes((const char*)addTypeChar);
-	int i =0, p = 0;
+	int i = 0, p = 0;
 
 	while (addTypes.size() > 0)
 	{
@@ -275,7 +330,7 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unord
 		typeMap.insert(std::make_pair(rType, rText.substr(1)));
 		if (rType.isAdditional() && rType.getValue() == "")
 		{
-			throw std::bad_exception("Map ryle type is wrong");
+			throw std::bad_exception("Map rule type is wrong");
 		}
 		if (p == -1)
 			break;
