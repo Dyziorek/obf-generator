@@ -211,12 +211,24 @@ public:
 	void startWritePoiData(int zoom, int x, int y, std::vector<std::shared_ptr<BinaryFileReference>>& fpPoiBox);
 	std::shared_ptr<BinaryFileReference> startWritePoiBox(int zoom, int tileX, int tileY, __int64 startPoiIndex, bool end);
 
+	// Route Data fctns
+	void startWriteRouteIndex(std::string name);
+	void endWriteRouteIndex();
+	void endRouteTreeElement();
+	void writeRouteEncodingRules(std::list<MapRouteType> routeEncode);
+	std::unique_ptr<BinaryFileReference> startRouteTreeElement(int leftX, int rightX, int topY, int bottomY, bool containsObjects, bool basemap);
+	obf::RouteData writeRouteData(int diffId, int pleft, int ptop, std::vector<int> types, std::vector<std::tuple<int, int, int, std::vector<int>>>  points, 
+		std::unordered_map<MapRouteType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
+			bool allowCoordinateSimplification, bool writePointId);
+
 	void close();
 
 
 	google::protobuf::io::CodedOutputStream dataOut;
 	std::stringstream dataStream;
 	std::vector<uint8> mapDataBuf;
+	std::vector<uint8> typesDataBuf;
+	std::vector<uint8> typesAddDataBuf;
 
 	private:
 	boost::container::slist<int> states;

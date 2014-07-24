@@ -115,6 +115,232 @@ private:
 };
 
 template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
+class saveRouteMessage
+    : public rtree::visitor<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag, true>::type
+{
+public:
+    typedef typename rtree::node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type node;
+    typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
+    typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
+
+    saveRouteMessage(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFRouteDB& work, Box* rootBounds , MapZooms::MapZoomPair level)
+        : m_archive(archive), m_bounds(bounds), m_work(work), parentBox(rootBounds), m_level(level)
+    {}
+
+    inline void operator()(internal_node const& n)
+    {
+        typedef typename rtree::elements_type<internal_node>::type elements_type;
+        elements_type const& elements = rtree::elements(n);
+		
+        // change to elements_type::size_type or size_type?
+        size_t s = elements.size();
+		//bool isLeafNode;
+		//for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+  //      {
+		//	boost::geometry::index::detail::utilities::dispatch::check_leaf(it->first, *it->second, isLeafNode);
+		//}
+		
+        for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+        {
+            //serialization_save(it->first, "b", m_archive);
+			this->parentBox = (Box*)&it->first;
+            rtree::apply_visitor(*this, *it->second);
+        }
+		
+    }
+
+    inline void operator()(leaf const& l)
+    {
+        typedef typename rtree::elements_type<leaf>::type elements_type;
+        typedef typename elements_type::size_type elements_size;
+        elements_type const& elements = rtree::elements(l);
+
+        // change to elements_type::size_type or size_type?
+        size_t s = elements.size();
+        //m_archive << boost::serialization::make_nvp("s", s);
+		obf::OsmAndRoutingIndex_RouteDataBlock* dataBlock = nullptr;
+		__int64 baseId = 0;
+		std::vector<__int64> wayMapIds;
+		std::vector<__int64> pointMapIds;
+		std::unordered_map<std::string, int> tempStringTable;
+		std::map<MapRouteType, std::string> tempNames;
+		__int64 ptrBox = (__int64)parentBox;
+		std::unique_ptr<BinaryFileReference> ref = std::move(m_bounds[ptrBox]);
+        for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+        {
+            __int64 callID = it->second.first;
+			sqlite3_bind_int64(m_work.selectData, 1, callID);
+			int dbResult = sqlite3_step(m_work.selectData);
+			if (dbResult == SQLITE_ROW)
+			{
+				__int64 cid = m_work.convertGeneratedIdToObfWrite(callID);
+				if (dataBlock == nullptr)
+				{
+					baseId = cid;
+					dataBlock = m_archive.createWriteMapDataBlock(baseId);
+					wayMapIds.clear();
+					pointMapIds.clear();
+				}
+				int cid = 0;
+				{
+					bool found = false;
+					for (int i = 0; i < wayMapIds.size(); i++) {
+						if (wayMapIds[i] == id) {
+							found = true;
+							cid = i;
+						}
+					}
+					if (!found)
+					{
+						wayMapIds.add(id);
+						cid = wayMapIds.size() - 1;
+					}
+				}
+				tempStringTable.clear();
+				const unsigned char* columnTextData = sqlite3_column_text(m_work.selectData, 5);
+				if (columnTextData != nullptr && columnTextData[0] != 0)
+				{
+					std::string name(reinterpret_cast<const char*>(sqlite3_column_text(m_work.selectData, 5)));
+					m_work.decodeNames(name, tempNames);
+				}
+				const void* plData = sqlite3_column_blob(m_work.selectData, 3);
+				int bloblSize = sqlite3_column_bytes(m_work.selectData, 3);
+				std::vector<int> typeUse(bloblSize / 2);
+				for (int j = 0; j < bloblSize; j += 2) {
+					int ids = parseSmallIntFromBytes(plData, j);
+					typeUse[j / 2] = m_work.renderEncoder.getTypeByInternalId(ids).getTargetId();
+				}
+				plData = sqlite3_column_blob(m_work.selectData, 4);
+				bloblSize = sqlite3_column_bytes(m_work.selectData, 4);
+				std::vector<int> addtypeUse;
+				if (bloblSize != 0) {
+					addtypeUse.resize(bloblSize / 2);
+					for (int j = 0; j < bloblSize; j += 2) {
+						int ids = parseSmallIntFromBytes(plData, j);
+						addtypeUse[j / 2] = m_work.renderEncoder.getTypeByInternalId(ids).getTargetId();
+					}
+				}
+					
+				obf::MapData mapData = m_archive.writeMapData(cid - baseId, parentBox->min_corner().get<0>(), parentBox->min_corner().get<1>(), m_work.selectData,
+						typeUse, addtypeUse, tempNames, tempStringTable, dataBlock, m_level.getMaxZoom() > 15);
+				if(mapData.IsInitialized()) {
+					obf::MapData* mapDataToAdd = dataBlock->add_dataobjects();
+					mapDataToAdd->MergeFrom(mapData);
+				}
+
+			}
+			sqlite3_reset(m_work.selectData);
+        }
+		if (dataBlock != nullptr)
+		{
+			m_archive.writeMapDataBlock(dataBlock, tempStringTable, *ref);
+		}
+    }
+
+private:
+    BinaryMapDataWriter & m_archive;
+	Box* parentBox;
+	OBFRouteDB& m_work;
+	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& m_bounds;
+	MapZooms::MapZoomPair m_level;
+};
+
+template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
+class saveRouteMessageTree
+    : public rtree::visitor<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag, true>::type
+{
+public:
+    typedef typename rtree::node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type node;
+    typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
+    typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
+
+    saveRouteMessageTree(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, Box* rootBounds. baseMap )
+        : m_archive(archive), m_bounds(bounds), parentBox(rootBounds), isBaseMap(baseMap)
+    {}
+
+    inline void operator()(internal_node const& n)
+    {
+        typedef typename rtree::elements_type<internal_node>::type elements_type;
+        elements_type const& elements = rtree::elements(n);
+		
+        // change to elements_type::size_type or size_type?
+        size_t s = elements.size();
+		bool isLeafNode = false;
+		for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+        {
+			boost::geometry::index::detail::utilities::dispatch::check_leaf(it->first, *it->second, isLeafNode);
+			if (isLeafNode)
+				break;
+		}
+		std::unique_ptr<BinaryFileReference> ref = m_archive.startRouteTreeElement(parentBox->min_corner().get<0>(),parentBox->max_corner().get<0>(), parentBox->min_corner().get<1>(), parentBox->max_corner().get<1>(), isLeafNode, isBaseMap);
+		if (ref)
+		{
+			__int64 boxVal = (__int64)&n;
+			ref->l = parentBox->min_corner().get<0>();
+			ref->r = parentBox->max_corner().get<0>();
+			ref->t = parentBox->min_corner().get<1>();
+			ref->b = parentBox->max_corner().get<1>();
+			if (m_bounds.find(boxVal) == m_bounds.end())
+			{
+				m_bounds.insert(std::make_pair(boxVal, std::move(ref)));
+			}
+			else
+			{
+				m_bounds[boxVal].swap(ref);
+			}
+			
+		}
+        for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+        {
+            //serialization_save(it->first, "b", m_archive);
+			this->parentBox = (Box*)&it->first;
+            rtree::apply_visitor(*this, *it->second);
+        }
+		m_archive.endWriteMapTreeElement();
+    }
+
+    inline void operator()(leaf const& l)
+    {
+        typedef typename rtree::elements_type<leaf>::type elements_type;
+        typedef typename elements_type::size_type elements_size;
+        elements_type const& elements = rtree::elements(l);
+
+        // change to elements_type::size_type or size_type?
+        size_t s = elements.size();
+        //m_archive << boost::serialization::make_nvp("s", s);
+		std::unique_ptr<BinaryFileReference> ref = m_archive.startRouteTreeElement(parentBox->min_corner().get<0>(),parentBox->max_corner().get<0>(), parentBox->min_corner().get<1>(), parentBox->max_corner().get<1>(), true, 0);
+        //for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
+        //{
+            //serialization_save(*it, "v", m_archive);
+        //}
+		if (ref)
+		{
+			__int64 boxVal = (__int64)parentBox;
+			ref->l = parentBox->min_corner().get<0>();
+			ref->r = parentBox->max_corner().get<0>();
+			ref->t = parentBox->min_corner().get<1>();
+			ref->b = parentBox->max_corner().get<1>();
+			if (m_bounds.find(boxVal) == m_bounds.end())
+			{
+				m_bounds.insert(std::make_pair(boxVal, std::move(ref)));
+			}
+			else
+			{
+				m_bounds[boxVal].swap(ref);
+			}
+			
+		}
+		m_archive.endRouteTreeElement();
+    }
+
+private:
+    BinaryMapDataWriter & m_archive;
+	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& m_bounds;
+	Box* parentBox;
+	bool isBaseMap;
+};
+
+template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
 class saveMessage
     : public rtree::visitor<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag, true>::type
 {
@@ -226,6 +452,7 @@ private:
 	MapZooms::MapZoomPair m_level;
 };
 
+
 }}}}}} // boost::geometry::index::detail::rtree::visitors
 
 // TODO - move to index/detail/rtree/load.hpp
@@ -326,7 +553,7 @@ private:
 namespace boost { namespace serializationOBF {
 
 template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
-void saveOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFMapDB& work, B* rootBounds, MapZooms::MapZoomPair level)
+void saveMapOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFMapDB& work, B* rootBounds, MapZooms::MapZoomPair level)
 {
     namespace detail = boost::geometry::index::detail;
 
@@ -350,6 +577,36 @@ void saveOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& r
         detail::rtree::visitors::saveMessageTree<value_type, options_type, translator_type, box_type, allocators_type> save_vT(ar, bounds, rootBounds );
         detail::rtree::apply_visitor(save_vT, *tree.members().root);
         detail::rtree::visitors::saveMessage<value_type, options_type, translator_type, box_type, allocators_type> save_vM(ar, bounds, work, rootBounds, level);
+        detail::rtree::apply_visitor(save_vM, *tree.members().root);
+
+    }
+}
+
+template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
+void saveRouteOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFMapDB& work, B* rootBounds, MapZooms::MapZoomPair level)
+{
+    namespace detail = boost::geometry::index::detail;
+
+    typedef boost::geometry::index::rtree<V, P, I, E, A> rtree;
+    typedef detail::rtree::const_private_view<rtree> view;
+    typedef typename view::translator_type translator_type;
+    typedef typename view::value_type value_type;
+    typedef typename view::options_type options_type;
+    typedef typename view::box_type box_type;
+    typedef typename view::allocators_type allocators_type;
+
+    view tree(rt);
+	
+	size_t valueTree = tree.members().values_count;
+	size_t leafLevel = tree.members().leafs_level;
+	
+    if ( tree.members().values_count )
+    {
+        BOOST_GEOMETRY_INDEX_ASSERT(tree.members().root, "root shouldn't be null_ptr");
+
+        detail::rtree::visitors::saveRouteMessageTree<value_type, options_type, translator_type, box_type, allocators_type> save_vT(ar, bounds, rootBounds );
+        detail::rtree::apply_visitor(save_vT, *tree.members().root);
+        detail::rtree::visitors::saveRouteMessage<value_type, options_type, translator_type, box_type, allocators_type> save_vM(ar, bounds, work, rootBounds, level);
         detail::rtree::apply_visitor(save_vM, *tree.members().root);
 
     }

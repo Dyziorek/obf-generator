@@ -1099,7 +1099,7 @@ void OBFMapDB::writeBinaryMapIndex(BinaryMapDataWriter& writer, std::string regi
 			writer.startWriteMapLevelIndex(mapZooms.getLevel(i).getMinZoom(), mapZooms.getLevel(i).getMaxZoom(),
 				rootBounds.min_corner().get<0>(), rootBounds.max_corner().get<0>(), rootBounds.min_corner().get<1>(), rootBounds.max_corner().get<1>());
 
-			boost::serializationOBF::saveOBF<BinaryMapDataWriter, RTreeValued::SI::value_type, RTreeValued::SI::parameters_type, RTreeValued::SI::indexable_getter, RTreeValued::SI::value_equal, RTreeValued::SI::allocator_type>(writer, rtree.spaceTree ,bouncer, *this,&rootBounds, mapZooms.getLevel(i));
+			boost::serializationOBF::saveMapOBF<BinaryMapDataWriter, RTreeValued::SI::value_type, RTreeValued::SI::parameters_type, RTreeValued::SI::indexable_getter, RTreeValued::SI::value_equal, RTreeValued::SI::allocator_type>(writer, rtree.spaceTree ,bouncer, *this,&rootBounds, mapZooms.getLevel(i));
 			//writeBinaryMapTree(rtree, rootBounds, writer, treeHeaders);
 					
 			//writeBinaryMapBlock(rtree,  rootBounds,  writer, pSelector, treeHeaders, std::unordered_map<std::string, int>(), std::map<MapRulType, std::string>(), mapZooms.getLevel(i));

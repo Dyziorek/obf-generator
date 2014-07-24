@@ -116,7 +116,9 @@ private:
 	static long SHIFT_INSERT_AT;
 	static long SHIFT_ORIGINAL;
 	static long SHIFT_ID;
-
+	static int CLUSTER_ZOOM;
+	static std::string CONFLICT_NAME;
+	static float DOUGLAS_PEUKER_DISTANCE;
 	static __int64 getBaseId(int x31, int y31) {
 		__int64 x = x31;
 		__int64 y = y31;
@@ -351,6 +353,7 @@ public:
 	void indexRelations(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
 	void iterateMainEntity(std::shared_ptr<EntityBase>& item, OBFResultDB& dbContext);
 	void processLowLevelWays(OBFResultDB& dbContext);
+	int countAdjacentRoads(GeneralizedCluster& gcluster, GeneralizedWay& gw, int i);
 	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTreeValued& rTree,  bool base);
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
 	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
@@ -358,9 +361,29 @@ public:
 	std::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
 	std::unordered_map<__int64, __int64> basemapRemovedNodes;
 	std::unordered_map<__int64, RouteMissingPoints> basemapNodesToReinsert;
+	std::unordered_map<__int64, GeneralizedCluster> generalClusters;
 	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	OBFRenderingTypes renderer;
 	MapRoutingTypes routingTypes;
+
+	void processRoundabouts(std::vector<GeneralizedCluster>& clusters);
+	void removeWayAndSubstituteWithPoint(GeneralizedWay& gw, GeneralizedCluster& gcluster);
+	GeneralizedCluster getCluster(GeneralizedWay& gw, int ind, GeneralizedCluster& helper);
+	double orthogonalDistance(GeneralizedWay& gn, int st, int end, int px, int py, bool returnNanIfNoProjection);
+	void douglasPeukerSimplificationStep(std::vector<GeneralizedCluster>& clusters);
+	void simplifyDouglasPeucker(GeneralizedWay& gw, float epsilon, std::set<int>& ints, int start, int end);
+	void removeGeneratedWay(GeneralizedWay& gw, GeneralizedCluster& gcluster);
+	void attachWays(GeneralizedWay& gw, bool first);
+	void mergeAddTypes(GeneralizedWay& from, GeneralizedWay& to);
+	void mergeName(MapRouteType rt, GeneralizedWay& from, GeneralizedWay& to);
+	std::unique_ptr<GeneralizedWay> selectBestWay(GeneralizedCluster& cluster, GeneralizedWay& gw, int ind);
+	void replacePointWithAnotherPoint(GeneralizedCluster& gcluster, GeneralizedWay& gw, int pxc, int pyc, int i, GeneralizedWay& next);
+	void writeBinaryRouteIndex(BinaryMapDataWriter& writer, std::string regionName);
+	std::unordered_map<__int64, BinaryFileReference>  writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
+			RTreeValued& rte, bool basemap);
+	void writeBinaryRouteTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer,
+			std::unordered_map<__int64, BinaryFileReference>& bounds, bool basemap);
+	bool compareRefs(GeneralizedWay& gw, GeneralizedWay& gn);
 
 };
 

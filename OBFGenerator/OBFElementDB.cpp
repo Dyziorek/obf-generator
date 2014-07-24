@@ -548,6 +548,9 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
   long OBFrouteDB::SHIFT_INSERT_AT = 12;
   long OBFrouteDB::SHIFT_ORIGINAL = 16;
   long OBFrouteDB::SHIFT_ID = 64 - (SHIFT_INSERT_AT + SHIFT_ORIGINAL);
+  int OBFrouteDB::CLUSTER_ZOOM = 15;
+  float OBFrouteDB::DOUGLAS_PEUKER_DISTANCE = 15;
+  std::string OBFrouteDB::CONFLICT_NAME = "#CONFLICT";
 
  void OBFrouteDB::registerBaseIntersectionPoint(long long pointLoc, bool registerId,long long wayId, int insertAt, int originalInd) {
 		
@@ -605,9 +608,441 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		return  strm.str();
 	}
 
- void OBFrouteDB::processLowLevelWays(OBFResultDB& dbContext){
+ void decodeNames(std::string name, std::map<MapRouteType, std::string>& tempNames) {
+	 int i = name.find("~");
+		while (i != std::string::npos) {
+			int n = name.find("~", i + 2);
+			int ch = (short) name[i + 1);
+			MapRouteType rt = routeTypes.getTypeByInternalId(ch);
+			if (n == -1) {
+				tempNames.put(rt, name.substring(i + 2));
+			} else {
+				tempNames.put(rt, name.substring(i + 2, n));
+			}
+			i = n;
+		}
+	}
 
+ void OBFrouteDB::processRoundabouts(std::vector<GeneralizedCluster>& clusters) {
+		for(GeneralizedCluster cluster : clusters) {
+			std::vector<GeneralizedWay> copy;
+			copy.reserve(cluster.ways.size());
+			std::copy(cluster.ways.begin(), cluster.ways.end(), copy.begin());
+			for (GeneralizedWay gw : copy) {
+				// roundabout
+				GeneralizedCluster gcluster = cluster;
+				if (gw.getLocation(gw.size() - 1) == gw.getLocation(0) && cluster.ways.find(gw) != cluster.ways.end()) {
+					removeWayAndSubstituteWithPoint(gw, gcluster);
+				}
+			}
+		}
+	}
+
+ void OBFrouteDB::removeWayAndSubstituteWithPoint(GeneralizedWay& gw, GeneralizedCluster& gcluster) {
+		// calculate center location
+		long pxc = 0;
+		long pyc = 0;
+		for (int i = 0; i < gw.size(); i++) {
+			pxc += gw.px[i];
+			pyc += gw.py[i];
+		}
+		pxc /= gw.size();
+		pyc /= gw.size();
+
+		// attach additional point to other roads
+		for (int i = 0; i < gw.size(); i++) {
+			gcluster = getCluster(gw, i, gcluster);
+			boost::container::list<GeneralizedWay> o = gcluster.map[gw.getLocation(i)];
+			// something attachedpxc
+			if (o.size() > 1) {
+				boost::container::list<GeneralizedWay>::iterator it = o.begin();
+				while(it != o.end()) {
+					GeneralizedWay next = *it;
+					replacePointWithAnotherPoint(gcluster, gw, (int) pxc, (int) pyc, i, next);
+					it++;
+				}
+			} else {
+				replacePointWithAnotherPoint(gcluster, gw, (int) pxc, (int) pyc, i, o.front());
+			}
+		}
+		// remove roundabout
+		removeGeneratedWay(gw, gcluster);
+	}
+
+  void OBFrouteDB::removeGeneratedWay(GeneralizedWay& gw, GeneralizedCluster& gcluster) {
+		for (int i = 0; i < gw.size(); i++) {
+			gcluster = getCluster(gw, i, gcluster);
+			gcluster.removeWayFromLocation(gw, i, true);
+		}
+	}
+
+ void OBFrouteDB::replacePointWithAnotherPoint(GeneralizedCluster& gcluster, GeneralizedWay& gw, int pxc, int pyc, int i, GeneralizedWay& next) {
+		if (next.id != gw.id) {
+			for (int j = 0; j < next.size(); j++) {
+				if (next.getLocation(j) == gw.getLocation(i)) {
+					if (j == next.size() - 1) {
+						next.px.push_back(pxc);
+						next.py.push_back(pyc);
+						gcluster = getCluster(next, next.size() - 1, gcluster);
+						gcluster.addWayFromLocation(next, next.size() - 1);
+					} else {
+						next.px.insert(j, pxc);
+						next.py.insert(j, pyc);
+						gcluster = getCluster(next, j, gcluster);
+						gcluster.addWayFromLocation(next, j);
+					}
+					break;
+				}
+			}
+		}
+	}
+
+ OBFrouteDB::GeneralizedCluster OBFrouteDB::getCluster(GeneralizedWay& gw, int ind, GeneralizedCluster& helper) {
+		int x31 = gw.px[ind];
+		int y31 = gw.py[ind];
+		int xc = x31 >> (31 - CLUSTER_ZOOM);
+		int yc = y31 >> (31 - CLUSTER_ZOOM);
+		if(helper.x == xc  &&
+				helper.y == yc) {
+			return helper;
+		}
+		long l = (((long)xc) << (CLUSTER_ZOOM+1)) + yc;
+		if(generalClusters.find(l) == generalClusters.end()) {
+			generalClusters.insert(std::make_pair(l, GeneralizedCluster(xc, yc, CLUSTER_ZOOM)));
+		}
+		return generalClusters[l];
+	}
+
+ double OBFrouteDB::orthogonalDistance(GeneralizedWay& gn, int st, int end, int px, int py, bool returnNanIfNoProjection){
+		float fromy31 = gn.py[st];
+		float fromx31 = gn.px[st];
+		float toy31 = gn.py[end];
+		float tox31 = gn.px[end];
+		float mDist = (fromy31 - toy31) * (fromy31 - toy31) + (fromx31 - tox31) * (fromx31 - tox31);
+		
+		float projection = (float) ((toy31 - fromy31) * (py - fromy31) + (tox31- fromx31) * (px -fromx31));
+		if (returnNanIfNoProjection && (projection < 0 || projection > mDist)) {
+			return std::numeric_limits<double>::quiet_NaN();
+		}
+//		float projy31 = fromy31 + (toy31 - fromy31) * (projection / mDist);
+//		float projx31 = fromx31 + (tox31 - fromx31) * (projection / mDist);
+		double A = MapUtils::convert31XToMeters(px, fromx31);
+		double B = MapUtils::convert31YToMeters(py, fromy31);
+		double C = MapUtils::convert31XToMeters(tox31, fromx31);
+		double D = MapUtils::convert31YToMeters(toy31, fromy31);
+		return abs(A * D - C * B) / sqrt(C * C + D * D);
+		
+	}
+
+ void OBFrouteDB::simplifyDouglasPeucker(GeneralizedWay& gw, float epsilon, std::set<int>& ints, int start, int end){
+		double dmax = -1;
+		int index = -1;
+		for (int i = start + 1; i <= end - 1; i++) {
+			double d = orthogonalDistance(gw, start, end, gw.px[i],  gw.py[i], false);
+			if (d > dmax) {
+				dmax = d;
+				index = i;
+			}
+		}
+		if(dmax >= epsilon){
+			simplifyDouglasPeucker(gw, epsilon, ints, start, index);
+			simplifyDouglasPeucker(gw, epsilon, ints, index, end);
+		} else {
+			ints.insert(end);
+		}
+	}
+
+ int OBFrouteDB::countAdjacentRoads(GeneralizedCluster& gcluster, GeneralizedWay& gw, int i){
+		gcluster = getCluster(gw, i, gcluster);
+		boost::container::list<GeneralizedWay> o = gcluster.map[gw.getLocation(i)];
+		if (o.size() > 1) {
+			
+			boost::container::list<GeneralizedWay>::iterator it = o.begin();
+			int cnt = 0;
+			while (it != o.end()) {
+				GeneralizedWay next = (GeneralizedWay) *it;
+				if (next.id != gw.id ) {
+					cnt++;
+				}
+				it++;
+			}
+			return cnt;
+		} else if(o.size()==1) {
+			if(gw.id != o.front().id){
+				return 1;
+			}
+		}
+		return 0;
+	}
+
+ void OBFrouteDB::douglasPeukerSimplificationStep(std::vector<GeneralizedCluster>& clusters){
+		for(GeneralizedCluster cluster : clusters) {
+			std::vector<GeneralizedWay> copy;
+			copy.reserve(cluster.ways.size());
+			std::copy(cluster.ways.begin(), cluster.ways.end(), copy.begin());
+			for(GeneralizedWay gw : copy) {
+				std::set<int> res;
+				simplifyDouglasPeucker(gw, DOUGLAS_PEUKER_DISTANCE, res, 0, gw.size() - 1);
+				
+				int ind = 1;
+				int len = gw.size() - 1;
+				for(int j = 1; j < len; j++) {
+					if(res.find(j) == res.end() && countAdjacentRoads(cluster, gw, ind) == 0) {
+						GeneralizedCluster gcluster = getCluster(gw, ind, cluster);
+						gcluster.removeWayFromLocation(gw, ind);
+						gw.px.erase(gw.px.begin()+ind);
+						gw.py.erase(gw.px.begin()+ind);
+					} else {
+						ind++;
+					}
+				}
+			}
+		}
+	}
+
+ void OBFrouteDB::processLowLevelWays(OBFResultDB& dbContext){
+	 pointTypes.clear();
+	 std::vector<GeneralizedCluster> clusters;
+	 clusters.reserve(generalClusters.size());
+	 std::transform(generalClusters.begin(), generalClusters.end(), std::back_inserter(clusters), std::bind(&std::pair<__int64, GeneralizedCluster>::second, std::placeholders::_1));
+
+	 // 1. roundabouts 
+		 processRoundabouts(clusters);
+		
+		// 2. way combination based 
+		for(GeneralizedCluster cluster : clusters) {
+			std::vector<GeneralizedWay> copy;
+			copy.reserve(cluster.ways.size());
+			std::copy(cluster.ways.begin(), cluster.ways.end(), copy.begin());
+			for(GeneralizedWay gw : copy) {
+				// already deleted
+				if(cluster.ways.find(gw) == cluster.ways.end()){
+					continue;
+				}
+				attachWays(gw, true);
+				attachWays(gw, false);
+			}
+		}
+		
+		
+		// 3. Douglas peuker simplifications
+		douglasPeukerSimplificationStep(clusters);
+		
+		
+		// 5. write to db
+		std::unordered_set<__int64> ids;
+		for (GeneralizedCluster cluster : clusters) {
+			for (GeneralizedWay gw : cluster.ways) {
+				if(ids.find(gw.id) != ids.end()) {
+					continue;
+				}
+				ids.insert(gw.id);
+				names.clear();
+				auto its = gw.names.begin();
+				while (its != gw.names.end()) {
+					auto e = *its;
+					if (e.second != "" && !(e.second == CONFLICT_NAME)) {
+						names.insert(std::make_pair(e.first, e.second));
+					}
+					its++;
+				}
+				std::vector<std::shared_ptr<EntityNode>> nodes;
+				if(gw.size() == 0) {
+					//System.err.println(gw.id + " empty ? ");
+					continue;
+				}
+				__int64 prev = 0;
+				for (int i = 0; i < gw.size(); i++) {
+					__int64 loc = gw.getLocation(i);
+					if(loc != prev) {
+						
+						long x = loc >> 31;
+						long y = loc - (x << 31);
+						std::shared_ptr<EntityNode> c(new EntityNode(MapUtils::get31LatitudeY((int) y), 
+								MapUtils::get31LongitudeX((int) x), -1));
+						
+						
+						prev = loc;
+						nodes.push_back(c);
+					}
+				}
+				outTypes.clear();
+				outTypes.push_back(gw.mainType);
+				outTypes.insert(outTypes.end(), gw.addtypes.begin(), gw.addtypes.end());
+				
+
+				addWayToIndex(gw.id, nodes, dbContext, baserouteTree, true);
+				
+			}
+		}
  }
+
+ void OBFrouteDB::mergeAddTypes(GeneralizedWay& from, GeneralizedWay& to){
+		auto it = to.addtypes.begin();
+		while(it != to.addtypes.end()) {
+			int n = *it;
+			// maxspeed could be merged better
+			if(from.addtypes.find(n) == from.addtypes.end()) {
+				auto itRemove = it;
+				it++;
+				to.addtypes.erase(itRemove);
+			}
+		}
+	}
+
+ void OBFrouteDB::mergeName(MapRouteType rt, GeneralizedWay& from, GeneralizedWay& to){
+		std::string rfFrom = from.names[rt];
+		std::string rfTo = to.names[rt];
+		if (rfFrom != "") {
+			if (!boost::iequals(rfFrom,rfTo) && rfTo!="") {
+				to.names.insert(std::make_pair(rt, CONFLICT_NAME));
+			} else {
+				to.names.insert(std::make_pair(rt, from.names[rt]));
+			}
+		}
+	}
+
+ void OBFrouteDB::attachWays(GeneralizedWay& gw, bool first) {
+		GeneralizedCluster cluster(0,0,0);
+		while(true) {
+			int ind = first? 0 : gw.size() - 1;
+			cluster = getCluster(gw, ind, cluster);
+			std::unique_ptr<OBFrouteDB::GeneralizedWay> prev = selectBestWay(cluster, gw, ind);
+			if(!prev) {
+				break;
+			}
+			for (int i = 0; i < prev->size(); i++) {
+				cluster = getCluster(*prev, i, cluster);
+				cluster.replaceWayFromLocation(*prev, i, gw);
+			}
+			mergeAddTypes(*prev, gw);
+			std::vector<MapRouteType> rtData;
+			std::transform(gw.names.begin(), gw.names.end(), std::back_inserter(rtData), std::bind(&std::pair<MapRouteType,std::string>::first, std::placeholders::_1));
+			for(MapRouteType rt : rtData) {
+				mergeName(rt, *prev, gw);	
+			}
+			for(MapRouteType rt : rtData) {
+				if(gw.names.find(rt) == gw.names.end()){
+					mergeName(rt, *prev, gw);
+				}
+			}
+			
+			std::vector<int> ax = first? prev->px : gw.px;
+			std::vector<int> ay = first? prev->py : gw.py;
+			std::vector<int> bx = !first? prev->px : gw.px;
+			std::vector<int> by = !first? prev->py : gw.py;
+			if(first) {
+				if(gw.getLocation(0) == prev->getLocation(0)) {
+					std::reverse(ax.begin(), ax.end());
+					std::reverse(ay.begin(), ay.end());
+				}
+			} else {
+				if(gw.getLocation(ind) == prev->getLocation(prev->size() - 1)) {
+					std::reverse(bx.begin(), bx.end());
+					std::reverse(by.begin(), by.end());
+				}
+			}
+			bx.erase(bx.begin());
+			by.erase(by.begin());
+			ax.insert(ax.end(), bx.begin(), bx.end());
+			ay.insert(ax.end(), by.begin(), by.end());
+			gw.px = ax;
+			gw.py = ay;
+		}
+	}
+
+ bool OBFrouteDB::compareRefs(GeneralizedWay& gw, GeneralizedWay& gn){
+		std::string ref1 = gw.names[routingTypes.getRefRuleType()];
+		std::string ref2 = gn.names[routingTypes.getRefRuleType()];
+		std::string name1 = gw.names[routingTypes.getNameRuleType()];
+		std::string name2 = gn.names[routingTypes.getNameRuleType()];
+		return ref1==ref2 &&  name1==name2;
+	}
+
+ #define M_PILOC       3.14159265358979323846
+
+ std::unique_ptr<OBFrouteDB::GeneralizedWay> OBFrouteDB::selectBestWay(GeneralizedCluster& cluster, GeneralizedWay& gw, int ind) {
+		long loc = gw.getLocation(ind);
+		boost::container::list<GeneralizedWay> o = cluster.map[loc];
+		std::unique_ptr<OBFrouteDB::GeneralizedWay> res;
+		if (o.size() == 1) {
+			if (!(o.front() == gw)) {
+				std::unique_ptr<OBFrouteDB::GeneralizedWay> m(new GeneralizedWay((GeneralizedWay) o.front()));
+				if (m->id != gw.id && m->mainType == gw.mainType && compareRefs(gw, m)) {
+					return m;
+				}
+				
+			}
+		} else if (o.size() > 1) {
+			boost::container::list<GeneralizedWay> l = o;
+			double bestDiff = M_PILOC / 2;
+			for (GeneralizedWay m : l) {
+				if (m.id != gw.id && m.mainType == gw.mainType && compareRefs(gw, m)) {
+					double init = gw.directionRoute(ind, ind == 0);
+					double dir;
+					if (m.getLocation(0) == loc) {
+						dir = m.directionRoute(0, true);
+					} else if (m.getLocation(m.size() - 1) == loc) {
+						dir = m.directionRoute(m.size() - 1, false);
+					} else {
+						return std::unique_ptr<OBFrouteDB::GeneralizedWay>();
+					}
+					double angleDiff = abs(MapUtils::alignAngleDifference(M_PILOC + dir - init));
+					if (angleDiff < bestDiff) {
+						bestDiff = angleDiff;
+						res = std::unique_ptr<OBFrouteDB::GeneralizedWay>(new GeneralizedWay(m));
+					}
+				}
+			}
+		}
+		return res;
+	}
+
+ void OBFrouteDB::writeBinaryRouteIndex(BinaryMapDataWriter& writer, std::string regionName) {
+		
+			writer.startWriteRouteIndex(regionName);
+			// write map encoding rules
+
+			writer.writeRouteEncodingRules(routingTypes.getEncodingRuleTypes());
+			std::unordered_map<__int64, BinaryFileReference> route = writeBinaryRouteIndexHeader(writer, 
+					routeTree, false);
+			std::unordered_map<__int64, BinaryFileReference> base = writeBinaryRouteIndexHeader(writer,  
+					baserouteTree, true);
+			writeBinaryRouteIndexBlocks(writer, routeTree, false, route);
+			writeBinaryRouteIndexBlocks(writer, baserouteTree, true, base);
+			
+			writer.endWriteRouteIndex();
+			writer.flush();
+	}
+
+ std::unordered_map<__int64, BinaryFileReference>  OBFrouteDB::writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
+			RTreeValued& rte, bool basemap){
+		// write map levels and map index
+		std::unordered_map<__int64, BinaryFileReference> treeHeader;
+		auto rootBounds = rte.calculateBounds();
+		if (boost::geometry::area(rootBounds) > 10) {
+			writeBinaryRouteTree(root, rootBounds, rte, writer, treeHeader, basemap);
+		}
+		return treeHeader;
+	}	
+
+ void OBFrouteDB::writeBinaryRouteTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer,
+			std::unordered_map<__int64, BinaryFileReference>& bounds, bool basemap)
+			 {
+		
+				 BinaryFileReference ref = writer.startRouteTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), true,
+				basemap);
+		if (ref != null) {
+			bounds.put(parent.getNodeIndex(), ref);
+		}
+		for (int i = 0; i < parent.getTotalElements(); i++) {
+			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+				rtree.Node chNode = r.getReadNode(e[i].getPtr());
+				writeBinaryRouteTree(chNode, e[i].getRect(), r, writer, bounds, basemap);
+			}
+		}
+		writer.endRouteTreeElement();
+	}
 
 OBFAddresStreetDB::OBFAddresStreetDB(void)
 {
