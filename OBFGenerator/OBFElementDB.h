@@ -124,6 +124,7 @@ private:
 		__int64 y = y31;
 		return (x << 31) + y;
 	}
+public:
 	 class GeneralizedWay {
 	 public:
 		 __int64 id;
@@ -347,6 +348,7 @@ public:
 	std::map<__int64, std::vector<int>> pointTypes;
 	RTreeValued routeTree;
 	RTreeValued baserouteTree;
+	sqlite3_stmt* selectData;
 	OBFrouteDB(void);
 	virtual ~OBFrouteDB(void);
 	void indexHighwayRestrictions(std::shared_ptr<EntityRelation> entry, OBFResultDB& dbContext);
@@ -378,13 +380,14 @@ public:
 	void mergeName(MapRouteType rt, GeneralizedWay& from, GeneralizedWay& to);
 	std::unique_ptr<GeneralizedWay> selectBestWay(GeneralizedCluster& cluster, GeneralizedWay& gw, int ind);
 	void replacePointWithAnotherPoint(GeneralizedCluster& gcluster, GeneralizedWay& gw, int pxc, int pyc, int i, GeneralizedWay& next);
-	void writeBinaryRouteIndex(BinaryMapDataWriter& writer, std::string regionName);
-	std::unordered_map<__int64, BinaryFileReference>  writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
+	void writeBinaryRouteIndex(BinaryMapDataWriter& writer, OBFResultDB& ctx, std::string regionName);
+	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>  writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
 			RTreeValued& rte, bool basemap);
 	void writeBinaryRouteTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer,
-			std::unordered_map<__int64, BinaryFileReference>& bounds, bool basemap);
+			std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, bool basemap);
+	void writeBinaryRouteIndexBlocks(BinaryMapDataWriter& writer, RTreeValued& tree, bool isbase, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds);
 	bool compareRefs(GeneralizedWay& gw, GeneralizedWay& gn);
-
+	int registerID(std::vector<__int64> listID, __int64 id);
 };
 
 class OBFAddresStreetDB :

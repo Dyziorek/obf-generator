@@ -123,8 +123,8 @@ public:
     typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    saveRouteMessage(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFRouteDB& work, Box* rootBounds , MapZooms::MapZoomPair level)
-        : m_archive(archive), m_bounds(bounds), m_work(work), parentBox(rootBounds), m_level(level)
+    saveRouteMessage(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFRouteDB& work,bool base)
+        : m_archive(archive), m_bounds(bounds), m_work(work),  m_base(base)
     {}
 
     inline void operator()(internal_node const& n)
@@ -181,37 +181,65 @@ public:
 					wayMapIds.clear();
 					pointMapIds.clear();
 				}
-				int cid = 0;
-				{
-					bool found = false;
-					for (int i = 0; i < wayMapIds.size(); i++) {
-						if (wayMapIds[i] == id) {
-							found = true;
-							cid = i;
-						}
-					}
-					if (!found)
-					{
-						wayMapIds.add(id);
-						cid = wayMapIds.size() - 1;
-					}
-				}
+				int cid = m_work.registerID(wayMapIds, callID);
 				tempStringTable.clear();
 				const unsigned char* columnTextData = sqlite3_column_text(m_work.selectData, 5);
 				if (columnTextData != nullptr && columnTextData[0] != 0)
 				{
 					std::string name(reinterpret_cast<const char*>(sqlite3_column_text(m_work.selectData, 5)));
 					m_work.decodeNames(name, tempNames);
-				}
-				const void* plData = sqlite3_column_blob(m_work.selectData, 3);
-				int bloblSize = sqlite3_column_bytes(m_work.selectData, 3);
+				
+				const void* plData = sqlite3_column_blob(m_work.selectData, 0);
+				int bloblSize = sqlite3_column_bytes(m_work.selectData, 0);
 				std::vector<int> typeUse(bloblSize / 2);
 				for (int j = 0; j < bloblSize; j += 2) {
 					int ids = parseSmallIntFromBytes(plData, j);
-					typeUse[j / 2] = m_work.renderEncoder.getTypeByInternalId(ids).getTargetId();
+					typeUse[j / 2] = m_work.routingTypes.getTypeByInternalId(ids).getTargetId();
 				}
-				plData = sqlite3_column_blob(m_work.selectData, 4);
-				bloblSize = sqlite3_column_bytes(m_work.selectData, 4);
+				std::list<__int64> restIDs = m_work.highwayRestrictions[callID];
+				if(!m_base && restIDs.size() != 0)
+				{
+					for(int i = 0; i < restIDs.size(); i++)
+					{
+						obf::RestrictionData restData;
+						restData.set_from(cid);
+						int tid = m_work.registerID(wayMapIds, restIDs[i] >> 3);
+						restData.set_to(tid);
+						restData.set_type(restIDs[i] & 07);
+						dataBlock->add_restrictions()->MergeFrom(restData);
+					}
+				}
+				plData = sqlite3_column_blob(m_work.selectData, 3);
+				bloblSize = sqlite3_column_bytes(m_work.selectData, 3);
+
+				int pointList = bloblSize / 8;
+
+				OBFrouteDB::RouteMissingPoints missPoints;
+				if (m_base && m_work.basemapNodesToReinsert.find(callID) != m_work.basemapNodesToReinsert.end())
+				{
+					missPoints = m_work.basemapNodesToReinsert[callID];
+					missPoints.buildPointsToInsert(pointList);
+				}
+
+				 std::vector<std::tuple<int, int, int, std::vector<int>>> points;
+				 for (int ip = 0; ip < pointList; ip++)
+				 {
+					 if (missPoints.pointsMap.size() > 0 && missPoints.pointsXToInsert[ip])
+					 {
+						 for(int k = 0; k < missPoints.pointsXToInsert[ip]->size(); k++) {
+
+								std::tuple<int, int, int, std::vector<int>> point;
+								points.push_back(point);
+								std::set<1>(point) = missingPoints.pointsXToInsert[ip]->[k];
+								std::set<2>(point) = missingPoints.pointsYToInsert[ip]->[k];
+							}
+					 }
+					 std::tuple<int, int, int, std::vector<int>> pt;
+					 points.push_back(pt);
+					 std::set<1>(pt) = parseIntFromBytes(ip * 8);
+					 std::set<2>(pt) = parseIntFromBytes(ip * 8 + 4);
+				 }
+
 				std::vector<int> addtypeUse;
 				if (bloblSize != 0) {
 					addtypeUse.resize(bloblSize / 2);
@@ -242,7 +270,7 @@ private:
 	Box* parentBox;
 	OBFRouteDB& m_work;
 	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& m_bounds;
-	MapZooms::MapZoomPair m_level;
+	bool m_base;
 };
 
 template <typename Value, typename Options, typename Translator, typename Box, typename Allocators>
@@ -254,7 +282,7 @@ public:
     typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    saveRouteMessageTree(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, Box* rootBounds. baseMap )
+    saveRouteMessageTree(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, Box* rootBounds,bool baseMap )
         : m_archive(archive), m_bounds(bounds), parentBox(rootBounds), isBaseMap(baseMap)
     {}
 
@@ -296,7 +324,7 @@ public:
 			this->parentBox = (Box*)&it->first;
             rtree::apply_visitor(*this, *it->second);
         }
-		m_archive.endWriteMapTreeElement();
+		m_archive.endRouteTreeElement();
     }
 
     inline void operator()(leaf const& l)
@@ -583,7 +611,7 @@ void saveMapOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const
 }
 
 template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
-void saveRouteOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFMapDB& work, B* rootBounds, MapZooms::MapZoomPair level)
+void saveRouteOBFTree(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,B* rootBounds, bool basemap)
 {
     namespace detail = boost::geometry::index::detail;
 
@@ -604,11 +632,36 @@ void saveRouteOBF(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> con
     {
         BOOST_GEOMETRY_INDEX_ASSERT(tree.members().root, "root shouldn't be null_ptr");
 
-        detail::rtree::visitors::saveRouteMessageTree<value_type, options_type, translator_type, box_type, allocators_type> save_vT(ar, bounds, rootBounds );
+		detail::rtree::visitors::saveRouteMessageTree<value_type, options_type, translator_type, box_type, allocators_type> save_vT(ar, bounds, rootBounds, basemap );
         detail::rtree::apply_visitor(save_vT, *tree.members().root);
-        detail::rtree::visitors::saveRouteMessage<value_type, options_type, translator_type, box_type, allocators_type> save_vM(ar, bounds, work, rootBounds, level);
-        detail::rtree::apply_visitor(save_vM, *tree.members().root);
 
+    }
+}
+
+template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
+void saveRouteOBFData(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFrouteDB& work,  bool base)
+{
+    namespace detail = boost::geometry::index::detail;
+
+    typedef boost::geometry::index::rtree<V, P, I, E, A> rtree;
+    typedef detail::rtree::const_private_view<rtree> view;
+    typedef typename view::translator_type translator_type;
+    typedef typename view::value_type value_type;
+    typedef typename view::options_type options_type;
+    typedef typename view::box_type box_type;
+    typedef typename view::allocators_type allocators_type;
+
+    view tree(rt);
+	
+	size_t valueTree = tree.members().values_count;
+	size_t leafLevel = tree.members().leafs_level;
+	
+    if ( tree.members().values_count )
+    {
+        BOOST_GEOMETRY_INDEX_ASSERT(tree.members().root, "root shouldn't be null_ptr");
+
+        detail::rtree::visitors::saveRouteMessage<value_type, options_type, translator_type, box_type, allocators_type> save_vM(ar, bounds, work, base);
+        detail::rtree::apply_visitor(save_vM, *tree.members().root);
     }
 }
 

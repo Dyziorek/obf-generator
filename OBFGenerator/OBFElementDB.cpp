@@ -26,6 +26,7 @@
 #include "iconv.h"
 #include "ArchiveIO.h"
 
+#include "Rtree_Serialization.h"
 
 OBFpoiDB::OBFpoiDB(void)
 {
@@ -998,51 +999,82 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		return res;
 	}
 
- void OBFrouteDB::writeBinaryRouteIndex(BinaryMapDataWriter& writer, std::string regionName) {
+ void OBFrouteDB::writeBinaryRouteIndex(BinaryMapDataWriter& writer, OBFResultDB& dbx, std::string regionName) {
 		
 			writer.startWriteRouteIndex(regionName);
 			// write map encoding rules
+			sqlite3_stmt* routeStmt;
+			sqlite3_stmt* baseRouteStmt;
+			sqlite3_prepare_v2(dbx.dbRouteCtx, "SELECT types, pointTypes, pointIds, pointCoordinates, name FROM route_objects WHERE id = ?1", sizeof("SELECT types, pointTypes, pointIds, pointCoordinates, name FROM route_objects WHERE id = ?1"), &routeStmt, NULL);
+			sqlite3_prepare_v2(dbx.dbRouteCtx, "SELECT types, pointTypes, pointIds, pointCoordinates, name FROM baseroute_objects WHERE id = ?1", sizeof("SELECT types, pointTypes, pointIds, pointCoordinates, name FROM baseroute_objects WHERE id = ?1"), &baseRouteStmt, NULL);
+			//"SELECT types, pointTypes, pointIds, pointCoordinates, name FROM " +route_objects+" WHERE id = ?";
+			//"SELECT types, pointTypes, pointIds, pointCoordinates, name FROM "+baseroute_objects+" WHERE id = ?";
 
+			//"SELECT types, pointTypes, pointIds, pointCoordinates, name FROM route_objects WHERE id = ?1"
 			writer.writeRouteEncodingRules(routingTypes.getEncodingRuleTypes());
-			std::unordered_map<__int64, BinaryFileReference> route = writeBinaryRouteIndexHeader(writer, 
+			std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> route = writeBinaryRouteIndexHeader(writer, 
 					routeTree, false);
-			std::unordered_map<__int64, BinaryFileReference> base = writeBinaryRouteIndexHeader(writer,  
+			std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> base = writeBinaryRouteIndexHeader(writer,  
 					baserouteTree, true);
+			selectData = routeStmt;
 			writeBinaryRouteIndexBlocks(writer, routeTree, false, route);
+			sqlite3_finalize(routeStmt);
+			selectData = baseRouteStmt;
 			writeBinaryRouteIndexBlocks(writer, baserouteTree, true, base);
-			
+			sqlite3_finalize(baseRouteStmt);
 			writer.endWriteRouteIndex();
 			writer.flush();
 	}
 
- std::unordered_map<__int64, BinaryFileReference>  OBFrouteDB::writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
+ std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>  OBFrouteDB::writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
 			RTreeValued& rte, bool basemap){
 		// write map levels and map index
-		std::unordered_map<__int64, BinaryFileReference> treeHeader;
+		std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> treeHeader;
 		auto rootBounds = rte.calculateBounds();
 		if (boost::geometry::area(rootBounds) > 10) {
-			writeBinaryRouteTree(root, rootBounds, rte, writer, treeHeader, basemap);
+			writeBinaryRouteTree(rte, rootBounds, writer, treeHeader, basemap);
 		}
 		return treeHeader;
 	}	
 
  void OBFrouteDB::writeBinaryRouteTree(RTreeValued& parent, RTreeValued::box& re, BinaryMapDataWriter& writer,
-			std::unordered_map<__int64, BinaryFileReference>& bounds, bool basemap)
+			std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds, bool basemap)
 			 {
+				 
 		
-				 BinaryFileReference ref = writer.startRouteTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), true,
-				basemap);
-		if (ref != null) {
-			bounds.put(parent.getNodeIndex(), ref);
-		}
-		for (int i = 0; i < parent.getTotalElements(); i++) {
-			if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
-				rtree.Node chNode = r.getReadNode(e[i].getPtr());
-				writeBinaryRouteTree(chNode, e[i].getRect(), r, writer, bounds, basemap);
-			}
-		}
-		writer.endRouteTreeElement();
+				 boost::serializationOBF::saveRouteOBFTree(writer, parent, bounds,  &re , basemap );
+
+				 
+
+		//		 std::unique_ptr<BinaryFileReference> ref = writer.startRouteTreeElement(re.min_corner().get<0>(), re.max_corner().get<0>(), re.min_corner().get<1>(), re.max_corner().get<1>(), true,
+		//		basemap);
+		//if (ref != null) {
+		//	bounds.put(, ref);
+		//}
+		//for (int i = 0; i < parent.getTotalElements(); i++) {
+		//	if (e[i].getElementType() != rtree.Node.LEAF_NODE) {
+		//		rtree.Node chNode = r.getReadNode(e[i].getPtr());
+		//		writeBinaryRouteTree(chNode, e[i].getRect(), r, writer, bounds, basemap);
+		//	}
+		//}
+		//writer.endRouteTreeElement();
 	}
+
+ void OBFrouteDB::writeBinaryRouteIndexBlocks(BinaryMapDataWriter& writer, RTreeValued& tree, bool isbase, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
+ {
+	  boost::serializationOBF::saveRouteOBFData(writer, tree, bounds, *this, isbase );
+ }
+
+ int OBFrouteDB::registerID(std::vector<__int64> listID, __int64 id)
+ {
+	 for (int i = 0; i < listID.size(); i++) {
+		if (listID[i] == id) {
+			return i;
+		}
+	}
+	 listID.push_back(id);
+	return listID.size() - 1;
+}
 
 OBFAddresStreetDB::OBFAddresStreetDB(void)
 {
