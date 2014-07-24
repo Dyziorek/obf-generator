@@ -19,6 +19,7 @@
 // Windows Header Files:
 #include <windows.h>
 
+#include "MapRoutingTypes.h"
 #include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
 #include "ArchiveIO.h"
@@ -970,6 +971,155 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	}
 
 
+	 void BinaryMapDataWriter::startWriteRouteIndex(std::string name) {
+		pushState(ROUTE_INDEX_INIT, OSMAND_STRUCTURE_INIT);
+		wfl::WireFormatLite::WriteTag(obf::OsmAndStructure::kRoutingIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		preserveInt32Size();
+		
+		if (name != "") {
+			wfl::WireFormatLite::WriteString(obf::OsmAndRoutingIndex::kNameFieldNumber, name, &dataOut);
+		}
+	}
+	
+	
+	void BinaryMapDataWriter::endWriteRouteIndex(){
+		popState(ROUTE_INDEX_INIT);
+		int len = writeInt32Size();
+	}
+
+	void BinaryMapDataWriter::writeRouteEncodingRules(std::list<MapRouteType> types)  {
+		int peeker[] = {ROUTE_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+
+		std::vector<MapRouteType> out;
+		out.insert(out.end(), types.begin(), types.end());
+		// 2. sort by frequency and assign ids
+		std::sort(out.begin(), out.end());
+
+		for (int i = 0; i < out.size(); i++) {
+			obf::OsmAndRoutingIndex_RouteEncodingRule builder;
+			MapRouteType rule = out[i];
+			rule.setTargetId(i + 1);
+
+			builder.set_tag(rule.getTag());
+			if (rule.getValue() != "") {
+				builder.set_value(rule.getValue());
+			} else {
+				builder.set_value("");
+			}
+			
+			wfl::WireFormatLite::WriteMessage(obf::OsmAndRoutingIndex::kRulesFieldNumber, builder, &dataOut);
+		}
+	}
+
+	std::unique_ptr<BinaryFileReference> BinaryMapDataWriter::startRouteTreeElement(int leftX, int rightX, int topY, int bottomY, bool containsObjects, bool basemap) 
+	{
+		int peeker[] = {ROUTE_TREE, ROUTE_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		if (states.front() == ROUTE_INDEX_INIT) {
+			if(basemap) {
+				wfl::WireFormatLite::WriteTag(obf::OsmAndRoutingIndex::kBasemapBoxesFieldNumber,  wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+			} else {
+				wfl::WireFormatLite::WriteTag(obf::OsmAndRoutingIndex::kRootBoxesFieldNumber,  wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+			}
+		} else {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndRoutingIndex_RouteDataBox::kBoxesFieldNumber,  wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+		}
+		states.push_front(ROUTE_TREE);
+		preserveInt32Size();
+		__int64 fp = getFilePointer();
+
+		
+		
+		Bounds bounds(0, 0, 0, 0); 
+		if(!stackBounds.empty()) {
+			bounds = stackBounds.front(); 
+		}
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndRoutingIndex_RouteDataBox::kLeftFieldNumber, leftX - bounds.left, &dataOut);
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndRoutingIndex_RouteDataBox::kRightFieldNumber, rightX - bounds.right, &dataOut);
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndRoutingIndex_RouteDataBox::kTopFieldNumber, topY - bounds.top, &dataOut);
+		wfl::WireFormatLite::WriteSInt32(obf::OsmAndRoutingIndex_RouteDataBox::kBottomFieldNumber, bottomY - bounds.bottom, &dataOut);
+		stackBounds.push_front(Bounds(leftX, rightX, topY, bottomY));
+		std::unique_ptr<BinaryFileReference> ref;
+		if (containsObjects) {
+			wfl::WireFormatLite::WriteTag(obf::OsmAndRoutingIndex_RouteDataBox::kShiftToDataFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
+			ref = std::unique_ptr<BinaryFileReference>(BinaryFileReference::createShiftReference(getFilePointer(), fp));
+			wfl::WireFormatLite::WriteFixed32NoTag(0, &dataOut);
+		}
+		return ref;
+	}
+
+	void BinaryMapDataWriter::endRouteTreeElement(){
+		popState(ROUTE_TREE);
+		stackBounds.pop_front();
+		writeInt32Size();
+	}
+
+	obf::RouteData BinaryMapDataWriter::writeRouteData(int diffId, int pleft, int ptop, std::vector<int> types, std::vector<std::tuple<int, int, int, std::vector<int>>>  points, 
+		std::unordered_map<MapRouteType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
+			bool allowCoordinateSimplification, bool writePointId)
+			 {
+		obf::RouteData builder;
+		builder.set_routeid(diffId);
+
+		// types
+		mapDataBuf.clear();
+		for (int i = 0; i < types.size(); i++) {
+			writeRawVarint32(mapDataBuf, types[i]);
+		}
+		builder.set_types(mapDataBuf.data(), mapDataBuf.size());
+		// coordinates and point types
+		int pcalcx = pleft >> ROUTE_SHIFT_COORDINATES;
+		int pcalcy = ptop >> ROUTE_SHIFT_COORDINATES;
+		mapDataBuf.clear();
+		typesDataBuf.clear();
+		for(int k=0; k<points.size(); k++) {
+			//ROUTE_COORDINATES_COUNT++;
+			
+			int tx = (points[k].x >> ROUTE_SHIFT_COORDINATES) - pcalcx;
+			int ty = (points[k].y >> ROUTE_SHIFT_COORDINATES) - pcalcy;
+			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(tx));
+			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(ty));
+			pcalcx = pcalcx + tx ;
+			pcalcy = pcalcy + ty ;
+			if(std::get<3>(points[k]).size() >0) {
+				typesAddDataBuf.clear();
+				for(int ij =0; ij < std::get<3>(points[k]).size(); ij++){
+					writeRawVarint32(typesAddDataBuf, std::get<3>(points[k])[ij]);
+				}
+				writeRawVarint32(typesDataBuf, k);
+				writeRawVarint32(typesDataBuf, typesAddDataBuf.size());
+				typesDataBuf.insert(typesDataBuf.end(), typesAddDataBuf.begin(), typesAddDataBuf.end());
+			}
+		}
+		builder.set_points(mapDataBuf.data(), mapDataBuf.size());
+
+		builder.set_pointtypes(typesDataBuf.data(), typesDataBuf.size());
+
+		if (names.size() > 0) {
+			mapDataBuf.clear();
+			
+				for (std::pair<MapRouteType, std::string> s : names) {
+					writeRawVarint32(mapDataBuf, s.first.getTargetId());
+					int ls = 0;
+					if (stringTable.find(s.second) == stringTable.end()) {
+						ls = stringTable.size();
+						stringTable.insert(std::make_pair(s.second, ls));
+					}
+					else
+					{
+						ls = stringTable[s.second];
+					}
+					writeRawVarint32(mapDataBuf, ls);
+				}
+			
+			
+				builder.set_stringnames(mapDataBuf.data(), mapDataBuf.size());
+		}
+		
+		return builder;
+	}
+
 	void BinaryMapDataWriter::close()
 	{
 		int peeker[] = {OSMAND_STRUCTURE_INIT};
@@ -979,3 +1129,5 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		int buffercount = dataOut.ByteCount();
 		int streamCount = raf->ByteCount();
 	}
+
+
