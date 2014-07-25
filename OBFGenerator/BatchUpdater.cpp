@@ -286,7 +286,9 @@ std::string BatchUpdater::encodeAdditionalInfo(std::unordered_map<std::string, s
 				if(rulType->isAdditional() && rulType->getValue() == "") {
 					
 				}
-				b.push_back((char)(rulType->getInternalId()) );
+				short ruleId = (short)rulType->getInternalId();
+				b.push_back((char)(ruleId & 0xFF) );
+				b.push_back((char)(ruleId >> 8) );
 				b.append(e.second);
 			}
 		}

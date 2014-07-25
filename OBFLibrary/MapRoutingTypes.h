@@ -5,6 +5,8 @@
 
 namespace fa = boost::algorithm;
 
+
+
 class MapRouteType {
 public: 
 		int freq;
@@ -50,6 +52,11 @@ public:
 		{
 			return id < op2.id;
 		}
+
+		 bool operator==(MapRouteType const& op2) const
+		 {
+			 return id == op2.id && freq == op2.freq && targetId == op2.targetId;
+		 }
 };
 
 
@@ -120,4 +127,26 @@ public:
 	std::list<MapRouteType> getEncodingRuleTypes() ;
 	
 	
+};
+
+struct hashMapRoute : std::unary_function<MapRouteType, size_t>
+{
+	template<typename hasherWay>
+	size_t operator()(hasherWay const &hashVal) const
+	{
+	size_t seed = 0;
+	boost::hash_combine(seed, hashVal.id);
+	boost::hash_combine(seed, hashVal.freq);
+	boost::hash_combine(seed, hashVal.targetId);
+	return seed;
+	}
+};
+
+struct equalMapRoute : std::binary_function<MapRouteType, MapRouteType, bool>
+{
+	template<typename Gen1, typename Gen2>
+	bool operator()(Gen1 const &op1, Gen2 const &op2) const
+	{
+		return op1 == op2;
+	}
 };

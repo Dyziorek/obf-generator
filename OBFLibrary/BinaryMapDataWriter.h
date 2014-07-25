@@ -218,9 +218,9 @@ public:
 	void writeRouteEncodingRules(std::list<MapRouteType> routeEncode);
 	std::unique_ptr<BinaryFileReference> startRouteTreeElement(int leftX, int rightX, int topY, int bottomY, bool containsObjects, bool basemap);
 	obf::RouteData writeRouteData(int diffId, int pleft, int ptop, std::vector<int> types, std::vector<std::tuple<int, int, int, std::vector<int>>>  points, 
-		std::unordered_map<MapRouteType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
+		std::unordered_map<MapRouteType, std::string, hashMapRoute, equalMapRoute>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
 			bool allowCoordinateSimplification, bool writePointId);
-
+	void writeRouteDataBlock(obf::OsmAndRoutingIndex_RouteDataBlock& builder, std::unordered_map<std::string, int>& stringTable , BinaryFileReference& ref);
 	void close();
 
 

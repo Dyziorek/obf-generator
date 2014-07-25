@@ -123,7 +123,7 @@ public:
     typedef typename rtree::internal_node<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, typename Options::parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    saveRouteMessage(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFRouteDB& work,bool base)
+    saveRouteMessage(BinaryMapDataWriter & archive, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFrouteDB& work,bool base)
         : m_archive(archive), m_bounds(bounds), m_work(work),  m_base(base)
     {}
 
@@ -159,11 +159,10 @@ public:
         size_t s = elements.size();
         //m_archive << boost::serialization::make_nvp("s", s);
 		obf::OsmAndRoutingIndex_RouteDataBlock* dataBlock = nullptr;
-		__int64 baseId = 0;
 		std::vector<__int64> wayMapIds;
 		std::vector<__int64> pointMapIds;
 		std::unordered_map<std::string, int> tempStringTable;
-		std::map<MapRouteType, std::string> tempNames;
+		std::unordered_map<MapRouteType, std::string, hashMapRoute, equalMapRoute> tempNames;
 		__int64 ptrBox = (__int64)parentBox;
 		std::unique_ptr<BinaryFileReference> ref = std::move(m_bounds[ptrBox]);
         for (typename elements_type::const_iterator it = elements.begin() ; it != elements.end() ; ++it)
@@ -173,22 +172,21 @@ public:
 			int dbResult = sqlite3_step(m_work.selectData);
 			if (dbResult == SQLITE_ROW)
 			{
-				__int64 cid = m_work.convertGeneratedIdToObfWrite(callID);
 				if (dataBlock == nullptr)
 				{
-					baseId = cid;
-					dataBlock = m_archive.createWriteMapDataBlock(baseId);
+					dataBlock = new obf::OsmAndRoutingIndex_RouteDataBlock;
 					wayMapIds.clear();
+					tempStringTable.clear();
 					pointMapIds.clear();
 				}
 				int cid = m_work.registerID(wayMapIds, callID);
-				tempStringTable.clear();
+
 				const unsigned char* columnTextData = sqlite3_column_text(m_work.selectData, 5);
 				if (columnTextData != nullptr && columnTextData[0] != 0)
 				{
 					std::string name(reinterpret_cast<const char*>(sqlite3_column_text(m_work.selectData, 5)));
 					m_work.decodeNames(name, tempNames);
-				
+				}
 				const void* plData = sqlite3_column_blob(m_work.selectData, 0);
 				int bloblSize = sqlite3_column_bytes(m_work.selectData, 0);
 				std::vector<int> typeUse(bloblSize / 2);
@@ -199,13 +197,13 @@ public:
 				std::list<__int64> restIDs = m_work.highwayRestrictions[callID];
 				if(!m_base && restIDs.size() != 0)
 				{
-					for(int i = 0; i < restIDs.size(); i++)
+					for(std::list<__int64>::iterator i = restIDs.begin(); i != restIDs.end(); i++)
 					{
 						obf::RestrictionData restData;
 						restData.set_from(cid);
-						int tid = m_work.registerID(wayMapIds, restIDs[i] >> 3);
+						int tid = m_work.registerID(wayMapIds, *i >> 3);
 						restData.set_to(tid);
-						restData.set_type(restIDs[i] & 07);
+						restData.set_type(*i & 07);
 						dataBlock->add_restrictions()->MergeFrom(restData);
 					}
 				}
@@ -221,39 +219,51 @@ public:
 					missPoints.buildPointsToInsert(pointList);
 				}
 
-				 std::vector<std::tuple<int, int, int, std::vector<int>>> points;
+				 std::vector<std::tuple<int, int, int, std::vector<int>>> TPpoints;
 				 for (int ip = 0; ip < pointList; ip++)
 				 {
-					 if (missPoints.pointsMap.size() > 0 && missPoints.pointsXToInsert[ip])
+					 auto data = missPoints.pointsXToInsert[ip];
+					 auto pointMap = missPoints.pointsMap.size();
+					 if (pointMap > 0 && data.get() != nullptr)
 					 {
 						 for(int k = 0; k < missPoints.pointsXToInsert[ip]->size(); k++) {
 
-								std::tuple<int, int, int, std::vector<int>> point;
-								points.push_back(point);
-								std::set<1>(point) = missingPoints.pointsXToInsert[ip]->[k];
-								std::set<2>(point) = missingPoints.pointsYToInsert[ip]->[k];
+								std::tuple<int, int, int, std::vector<int>> TPpoint;
+								TPpoints.push_back(TPpoint);
+
+								std::get<1>(TPpoint) = data->operator[](k);
+								std::get<2>(TPpoint) = missPoints.pointsYToInsert[ip]->operator[](k);
 							}
 					 }
 					 std::tuple<int, int, int, std::vector<int>> pt;
-					 points.push_back(pt);
-					 std::set<1>(pt) = parseIntFromBytes(ip * 8);
-					 std::set<2>(pt) = parseIntFromBytes(ip * 8 + 4);
-				 }
+					 TPpoints.push_back(pt);
+					 std::get<1>(pt) = parseIntFromBytes(plData,ip * 8);
+					 std::get<2>(pt) = parseIntFromBytes(plData, ip * 8 + 4);
 
-				std::vector<int> addtypeUse;
-				if (bloblSize != 0) {
-					addtypeUse.resize(bloblSize / 2);
-					for (int j = 0; j < bloblSize; j += 2) {
-						int ids = parseSmallIntFromBytes(plData, j);
-						addtypeUse[j / 2] = m_work.renderEncoder.getTypeByInternalId(ids).getTargetId();
+					 // pointTypes
+					plData = sqlite3_column_blob(m_work.selectData, 1);
+					bloblSize = sqlite3_column_bytes(m_work.selectData, 1);
+					int pointTypeVal = 0;
+					if (bloblSize != 0) {
+						for (int j = 0; j < bloblSize; j += 2) {
+							pointTypeVal = parseSmallIntFromBytes(plData, j);
+							if (pointTypeVal != 0)
+							{
+								std::get<3>(pt).push_back(m_work.routingTypes.getTypeByInternalId(pointTypeVal).getTargetId());
+							}
+							else
+							{
+								break;
+							}
+						}
 					}
-				}
+				 }
+				
 					
-				obf::MapData mapData = m_archive.writeMapData(cid - baseId, parentBox->min_corner().get<0>(), parentBox->min_corner().get<1>(), m_work.selectData,
-						typeUse, addtypeUse, tempNames, tempStringTable, dataBlock, m_level.getMaxZoom() > 15);
-				if(mapData.IsInitialized()) {
-					obf::MapData* mapDataToAdd = dataBlock->add_dataobjects();
-					mapDataToAdd->MergeFrom(mapData);
+				obf::RouteData routeData = m_archive.writeRouteData(cid, parentBox->min_corner().get<0>(), parentBox->min_corner().get<1>(), 
+						typeUse, TPpoints, tempNames, tempStringTable, *dataBlock, true, false);
+				if(routeData.IsInitialized()) {
+					dataBlock->add_dataobjects()->MergeFrom(routeData);
 				}
 
 			}
@@ -261,14 +271,22 @@ public:
         }
 		if (dataBlock != nullptr)
 		{
-			m_archive.writeMapDataBlock(dataBlock, tempStringTable, *ref);
+			obf::IdTable idTable;
+			__int64 prev = 0;
+			for (int i = 0; i < wayMapIds.size(); i++) {
+				idTable.add_routeid(wayMapIds[i] - prev);
+				prev = wayMapIds[i];
+			}
+			dataBlock->mutable_idtable()->MergeFrom(idTable);
+			m_archive.writeRouteDataBlock(*dataBlock, tempStringTable, *ref);
+			delete dataBlock;
 		}
     }
 
 private:
     BinaryMapDataWriter & m_archive;
 	Box* parentBox;
-	OBFRouteDB& m_work;
+	OBFrouteDB& m_work;
 	std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& m_bounds;
 	bool m_base;
 };
@@ -638,7 +656,7 @@ void saveRouteOBFTree(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A>
     }
 }
 
-template<class Archive, typename V, typename P, typename I, typename E, typename A, typename B>
+template<class Archive, typename V, typename P, typename I, typename E, typename A>
 void saveRouteOBFData(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> const& rt, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds,OBFrouteDB& work,  bool base)
 {
     namespace detail = boost::geometry::index::detail;

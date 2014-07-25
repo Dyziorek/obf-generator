@@ -184,14 +184,15 @@ void POICategory::internalBuildType(std::string category, std::string subcategor
 				std::vector<std::string> splits;
 				boost::split(splits, subcategory, boost::is_any_of(std::string(",;")), boost::token_compress_on);
 				for (std::string sub : splits) {
-					int subcatInd = catSubIndexes.find(category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(sub)) == catSubIndexes.end() ? -1 : catSubIndexes[category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(sub)];
+					int subcatInd = catSubIndexes.find(category + (char)SPECIAL_CHAR + boost::trim_copy(sub)) == catSubIndexes.end() ? -1 : catSubIndexes[category + (char)SPECIAL_CHAR + boost::trim_copy(sub)];
 					if (subcatInd == -1) {
 						throw new std::bad_exception("Should not be here");
 					}
 					types.push_back((subcatInd << SHIFT_BITS_CATEGORY) | catInd);
 				}
 			} else {
-				int subcatInd = catSubIndexes.find(category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(subcategory)) == catSubIndexes.end() ? -1 : catSubIndexes[category + boost::lexical_cast<std::string>(SPECIAL_CHAR) + boost::trim_copy(subcategory)];
+				
+				int subcatInd = catSubIndexes.find(category + (char)SPECIAL_CHAR + boost::trim_copy(subcategory)) == catSubIndexes.end() ? -1 : catSubIndexes[category + (char)SPECIAL_CHAR + boost::trim_copy(subcategory)];
 				if (subcatInd == -1) {
 					std::string msg = std::string("Unknown subcategory ") + subcategory + " category " + category;
 					throw new std::bad_exception(msg.c_str());

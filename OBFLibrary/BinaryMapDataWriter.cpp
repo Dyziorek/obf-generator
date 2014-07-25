@@ -726,7 +726,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 
 	__int64 BinaryMapDataWriter::startWritePoiIndex(std::string name, int left31, int right31, int bottom31, int top31)
 	{
-		pushState(MAP_ROOT_LEVEL_INIT, POI_INDEX_INIT);
+		pushState(POI_INDEX_INIT, OSMAND_STRUCTURE_INIT);
 		wfl::WireFormatLite::WriteTag(obf::OsmAndStructure::kPoiIndexFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED, &dataOut);
 		stackBounds.push_front(Bounds(0,0,0,0));
 		preserveInt32Size();
@@ -805,7 +805,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> fpToWriteSeeks;
 		std::list<std::string> names;
 		auto itMap = namesIndex.begin();
-		std::transform(namesIndex.begin(), namesIndex.end(), std::back_inserter(names), std::bind(&std::pair<std::string, std::unordered_set<POIBox>>::first, std::placeholders::_1));
+		std::transform(namesIndex.begin(), namesIndex.end(), std::back_inserter(names), std::bind(&std::unordered_map<std::string, std::unordered_set<POIBox>>::value_type::first, std::placeholders::_1));
 		std::unordered_map<std::string,  std::shared_ptr<BinaryFileReference>> indexedTable = writeIndexedTable(obf::OsmAndPoiNameIndex::kTableFieldNumber, names);
 		for(auto e : namesIndex) {
 			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiNameIndex::kDataFieldNumber, wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE), &dataOut);
@@ -1056,7 +1056,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	}
 
 	obf::RouteData BinaryMapDataWriter::writeRouteData(int diffId, int pleft, int ptop, std::vector<int> types, std::vector<std::tuple<int, int, int, std::vector<int>>>  points, 
-		std::unordered_map<MapRouteType, std::string>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
+		std::unordered_map<MapRouteType, std::string, hashMapRoute, equalMapRoute>& names, std::unordered_map<std::string, int>& stringTable, obf::OsmAndRoutingIndex_RouteDataBlock& dataBlock,
 			bool allowCoordinateSimplification, bool writePointId)
 			 {
 		obf::RouteData builder;
@@ -1076,8 +1076,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		for(int k=0; k<points.size(); k++) {
 			//ROUTE_COORDINATES_COUNT++;
 			
-			int tx = (points[k].x >> ROUTE_SHIFT_COORDINATES) - pcalcx;
-			int ty = (points[k].y >> ROUTE_SHIFT_COORDINATES) - pcalcy;
+			int tx = (std::get<1>(points[k]) >> ROUTE_SHIFT_COORDINATES) - pcalcx;
+			int ty = (std::get<2>(points[k]) >> ROUTE_SHIFT_COORDINATES) - pcalcy;
 			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(tx));
 			writeRawVarint32(mapDataBuf, wfl::WireFormatLite::ZigZagEncode32(ty));
 			pcalcx = pcalcx + tx ;
@@ -1112,12 +1112,43 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 					}
 					writeRawVarint32(mapDataBuf, ls);
 				}
-			
-			
+
 				builder.set_stringnames(mapDataBuf.data(), mapDataBuf.size());
 		}
 		
 		return builder;
+	}
+
+	void BinaryMapDataWriter::writeRouteDataBlock(obf::OsmAndRoutingIndex_RouteDataBlock& builder, std::unordered_map<std::string, int>& stringTable , BinaryFileReference& ref)
+	{
+		int peeker[] = {ROUTE_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		
+		obf::StringTable bs;
+		if (!stringTable.empty()) {
+			std::list<std::pair<std::string, int>> sortList;
+			for (std::pair<std::string,int> s : stringTable) {
+				sortList.push_back(s);
+			}
+
+			sortList.sort([](std::pair<std::string, int> elemSort1, std::pair<std::string, int> elem2)
+			{
+				return elemSort1.second < elem2.second;
+			});
+
+			for (std::pair<std::string,int> s : sortList) {
+				bs.add_s(s.first);
+			}
+			builder.mutable_stringtable()->MergeFrom(bs);
+		}
+		
+
+		wfl::WireFormatLite::WriteTag(obf::OsmAndMapIndex_MapRootLevel::kBlocksFieldNumber,  wfl::WireFormatLite::WireTypeForFieldType(wfl::WireFormatLite::FieldType::TYPE_MESSAGE),&dataOut);
+		
+		ref.writeReference(*raf, getFilePointer());
+		dataOut.WriteVarint32(builder.ByteSize());
+		builder.SerializeToCodedStream(&dataOut);
+
 	}
 
 	void BinaryMapDataWriter::close()

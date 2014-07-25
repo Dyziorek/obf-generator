@@ -25,6 +25,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "OBFElementDB.h"
 #include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
 #include "OBFMapDB.h"

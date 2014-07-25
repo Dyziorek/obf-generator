@@ -3,6 +3,9 @@
 #include "MapRoutingTypes.h"
 #include "RTree.h"
 
+class BinaryMapDataWriter;
+class BinaryFileReference;
+
 class OBFpoiDB :
 	public OBFResultDB
 {
@@ -90,9 +93,9 @@ public:
 
 
 private:
-	void addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
+	void addNamePrefix(std::string& name, std::string& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
 	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
-	void decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap);
+	void decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType, std::string>&  typeMap);
 };
 
 
@@ -201,6 +204,7 @@ public:
 			size_t seed = 0;
 			boost::hash_combine(seed, hashVal.id);
 			boost::hash_combine(seed, hashVal.mainType);
+			return seed;
 		 }
 	 };
 
@@ -219,6 +223,13 @@ public:
 		  int y;
 		  int zoom;
 		
+		 GeneralizedCluster()
+		{
+			x = 0;
+			y = 0;
+			zoom = 0;
+		}
+
 		GeneralizedCluster(int x, int y, int z){
 			this->x = x;
 			this->y = y;
@@ -358,7 +369,8 @@ public:
 	int countAdjacentRoads(GeneralizedCluster& gcluster, GeneralizedWay& gw, int i);
 	void addWayToIndex(long long id, std::vector<std::shared_ptr<EntityNode>>& nodes, OBFResultDB& dbContext, RTreeValued& rTree,  bool base);
 	void registerBaseIntersectionPoint(long long pointLoc, bool registerId, long long wayId, int insertAt, int originalInd);
-	std::string encodeNames(std::map<MapRouteType, std::string> tempNames);
+	std::string encodeNames(std::map<MapRouteType, std::string>& tempNames);
+	void decodeNames(std::string name, std::unordered_map<MapRouteType, std::string, hashMapRoute, equalMapRoute>& tempNames);
 	void putIntersection(long long  point, long long wayNodeId);
 	std::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
 	std::unordered_map<__int64, __int64> basemapRemovedNodes;

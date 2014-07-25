@@ -15,9 +15,9 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include "..\..\..\..\core\protos\OBF.pb.h"
+#include "OBFElementDB.h"
 #include "RandomAccessFileWriter.h"
 #include "BinaryMapDataWriter.h"
-#include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
 #include "Amenity.h"
 #include "Building.h"
@@ -25,7 +25,7 @@
 #include "DBAStreet.h"
 #include "iconv.h"
 #include "ArchiveIO.h"
-
+#include "OBFMapDB.h"
 #include "Rtree_Serialization.h"
 
 OBFpoiDB::OBFpoiDB(void)
@@ -216,16 +216,17 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 	sqlRes = sqlite3_step(poiSelect);
 	while (sqlRes == SQLITE_ROW)
 	{
-		int x = sqlite3_column_int(poiSelect, 1);
-		int y = sqlite3_column_int(poiSelect, 2);
+		int x = sqlite3_column_int(poiSelect, 0);
+		int y = sqlite3_column_int(poiSelect, 1);
 		bbox.min_corner().set<0>(min(x, bbox.min_corner().get<0>()));
 		bbox.min_corner().set<1>(min(y, bbox.min_corner().get<1>()));
 		bbox.max_corner().set<0>(max(x, bbox.max_corner().get<0>()));
 		bbox.max_corner().set<1>(max(y, bbox.max_corner().get<1>()));
-		const unsigned char* typeChar = sqlite3_column_text(poiSelect, 3);
-		const unsigned char* subTypeChar = sqlite3_column_text(poiSelect, 4);
-		const unsigned char* addTypeChar = sqlite3_column_text(poiSelect, 6);
-		decodeAdditionalType(addTypeChar,  typeMap);
+		const unsigned char* typeChar = sqlite3_column_text(poiSelect, 2);
+		const unsigned char* subTypeChar = sqlite3_column_text(poiSelect, 3);
+		const unsigned char* addTypeChar = sqlite3_column_text(poiSelect, 5);
+		int colSize = sqlite3_column_bytes(poiSelect, 5);
+		decodeAdditionalType(addTypeChar, colSize, typeMap);
 		POITree* oldTree = &treeData;
 		std::string sType = typeChar == nullptr ? "" : std::string((const char*)typeChar);
 		std::string subType = subTypeChar == nullptr ? "" : std::string((const char*)subTypeChar);
@@ -244,11 +245,10 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 				if (!subtree) {
 					subtree = std::make_shared<POITree>(POITree());
 					POIBox poiBox;
-					subtree->node = poiBox;
 					poiBox.x = xs;
 					poiBox.y = ys;
 					poiBox.zoom = i;
-
+					subtree->node = poiBox;
 					oldTree->subNodes.push_back(subtree);
 				}
 				subtree->node.category.addCategory(sType, subType, typeMap);
@@ -258,7 +258,16 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 			}
 		std::unordered_map<MapRulType, std::string>::iterator lookup;
 		
-		addNamePrefix(typeMap.find(*nameRuleMap), typeMap.find(*nameEnRuleMap), oldTree->node, nameIndex);
+		if (typeMap.find(*nameRuleMap) != typeMap.end())
+		{
+			std::string name = typeMap[*nameRuleMap];
+			std::string nameEn = "";
+			if (typeMap.find(*nameEnRuleMap) != typeMap.end())
+			{
+				nameEn = typeMap[*nameEnRuleMap];
+			}
+			addNamePrefix(name, nameEn, oldTree->node, nameIndex);
+		}
 
 		POIData poiData;
 		poiData.x = x;
@@ -266,7 +275,7 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 		poiData.additionalTags = typeMap;
 		poiData.subType = subType;
 		poiData.type = sType;
-
+		poiData.id = sqlite3_column_int64(poiSelect, 4);
 		oldTree->node.values.push_back(poiData);
 
 		sqlRes = sqlite3_step(poiSelect);
@@ -274,16 +283,20 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 
 }
 
-void OBFpoiDB::addNamePrefix(std::unordered_map<MapRulType, std::string>::iterator& name, std::unordered_map<MapRulType, std::string>::iterator& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
+void OBFpoiDB::addNamePrefix(std::string& name, std::string& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData) 
 {
-	if (name._Ptr != nullptr) {
-		parsePrefix(name->second, data, poiData);
-		if (nameEn._Ptr != nullptr) {
+	{
+		if (name != "") {
 				iconverter ic("UTF-8", "ASCII");
-				nameEn->second = ic.convert(name->second);
+				name = ic.convert(name);
 			}
-		if (!boost::iequals(nameEn->second, name->second)) {
-				parsePrefix(nameEn->second, data, poiData);
+		parsePrefix(name, data, poiData);
+		if (nameEn != "") {
+				iconverter ic("UTF-8", "ASCII");
+				nameEn = ic.convert(name);
+			}
+		if (!boost::iequals(nameEn, name)) {
+				parsePrefix(nameEn, data, poiData);
 			}
 		}
 }
@@ -313,27 +326,30 @@ void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std
 		
 	}
 
-void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, std::unordered_map<MapRulType, std::string>&  typeMap)
+void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType, std::string>&  typeMap)
 {
 	typeMap.clear();
 	if (addTypeChar == nullptr)
 	{
 		return;
 	}
-	std::string addTypes((const char*)addTypeChar);
+	std::string addTypes((const char*)addTypeChar, colSize);;
+	
 	int i = 0, p = 0;
 
 	while (addTypes.size() > 0)
 	{
 		p = addTypes.find_first_of(-1, i);
 		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
-		MapRulType rType = renderer.getTypeByInternalId((int)rText[0]);
-		typeMap.insert(std::make_pair(rType, rText.substr(1)));
+		short ruleID = (short) (rText[1] << 8 + rText[0]);
+
+		MapRulType rType = renderer.getTypeByInternalId(ruleID);
+		typeMap.insert(std::make_pair(rType, rText.substr(2)));
 		if (rType.isAdditional() && rType.getValue() == "")
 		{
 			throw std::bad_exception("Map rule type is wrong");
 		}
-		if (p == -1)
+		if (p == std::string::npos)
 			break;
 		i = p+1;
 	}
@@ -597,7 +613,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		
 	}
 
- std::string OBFrouteDB::encodeNames(std::map<MapRouteType, std::string> tempNames) {
+ std::string OBFrouteDB::encodeNames(std::map<MapRouteType, std::string>& tempNames) {
 		std::stringstream strm;
 		for (std::pair<MapRouteType, std::string> e : tempNames) {
 			if (e.second.size()) {
@@ -609,16 +625,16 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		return  strm.str();
 	}
 
- void decodeNames(std::string name, std::map<MapRouteType, std::string>& tempNames) {
+ void OBFrouteDB::decodeNames(std::string name, std::unordered_map<MapRouteType, std::string, hashMapRoute, equalMapRoute>& tempNames) {
 	 int i = name.find("~");
 		while (i != std::string::npos) {
 			int n = name.find("~", i + 2);
-			int ch = (short) name[i + 1);
-			MapRouteType rt = routeTypes.getTypeByInternalId(ch);
+			int ch = (short) name[i + 1];
+			MapRouteType rt = routingTypes.getTypeByInternalId(ch);
 			if (n == -1) {
-				tempNames.put(rt, name.substring(i + 2));
+				tempNames.insert(std::make_pair(rt, name.substr(i + 2)));
 			} else {
-				tempNames.put(rt, name.substring(i + 2, n));
+				tempNames.insert(std::make_pair(rt, name.substr(i + 2, n)));
 			}
 			i = n;
 		}
@@ -687,8 +703,8 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 						gcluster = getCluster(next, next.size() - 1, gcluster);
 						gcluster.addWayFromLocation(next, next.size() - 1);
 					} else {
-						next.px.insert(j, pxc);
-						next.py.insert(j, pyc);
+						next.px[j] = pxc;
+						next.py[j] = pyc;
 						gcluster = getCluster(next, j, gcluster);
 						gcluster.addWayFromLocation(next, j);
 					}
@@ -969,7 +985,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		if (o.size() == 1) {
 			if (!(o.front() == gw)) {
 				std::unique_ptr<OBFrouteDB::GeneralizedWay> m(new GeneralizedWay((GeneralizedWay) o.front()));
-				if (m->id != gw.id && m->mainType == gw.mainType && compareRefs(gw, m)) {
+				if (m->id != gw.id && m->mainType == gw.mainType && compareRefs(gw, *m)) {
 					return m;
 				}
 				
@@ -1023,7 +1039,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 			writeBinaryRouteIndexBlocks(writer, baserouteTree, true, base);
 			sqlite3_finalize(baseRouteStmt);
 			writer.endWriteRouteIndex();
-			writer.flush();
+			
 	}
 
  std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>  OBFrouteDB::writeBinaryRouteIndexHeader(BinaryMapDataWriter& writer,  
@@ -1042,7 +1058,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 			 {
 				 
 		
-				 boost::serializationOBF::saveRouteOBFTree(writer, parent, bounds,  &re , basemap );
+				 boost::serializationOBF::saveRouteOBFTree(writer, parent.spaceTree, bounds,  &re , basemap );
 
 				 
 
@@ -1062,7 +1078,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 
  void OBFrouteDB::writeBinaryRouteIndexBlocks(BinaryMapDataWriter& writer, RTreeValued& tree, bool isbase, std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>>& bounds)
  {
-	  boost::serializationOBF::saveRouteOBFData(writer, tree, bounds, *this, isbase );
+	 boost::serializationOBF::saveRouteOBFData(writer, tree.spaceTree, bounds, *this, isbase );
  }
 
  int OBFrouteDB::registerID(std::vector<__int64> listID, __int64 id)

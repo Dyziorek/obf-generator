@@ -5,6 +5,7 @@
 #include "MapObject.h"
 #include "Amenity.h"
 #include "BatchUpdater.h"
+#include "MapRoutingTypes.h"
 #include "OBFResultDB.h"
 #include "MapUtils.h"
 #pragma push_macro("realloc")
