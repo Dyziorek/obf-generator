@@ -613,9 +613,9 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 			int ind = (int) (wayNodeId & ((1 << SHIFT) - 1));
 			long long wayId = wayNodeId >> SHIFT;
 			if(basemapNodesToReinsert.find(wayId) == basemapNodesToReinsert.end()) {
-				basemapNodesToReinsert.insert(std::make_pair(wayId, std::unique_ptr<RouteMissingPoints>(new RouteMissingPoints()));
+				basemapNodesToReinsert.insert(std::make_pair(wayId, std::shared_ptr<RouteMissingPoints>(new RouteMissingPoints())));
 			}
-			std::unique_ptr<RouteMissingPoints> mp = basemapNodesToReinsert.at(wayId);
+			std::shared_ptr<RouteMissingPoints> mp = basemapNodesToReinsert.at(wayId);
 			mp->pointsMap.insert(std::make_pair(ind, point));
 		}
 		
@@ -1055,9 +1055,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 		// write map levels and map index
 		std::unordered_map<__int64, std::unique_ptr<BinaryFileReference>> treeHeader;
 		auto rootBounds = rte.calculateBounds();
-		if (boost::geometry::area(rootBounds) > 10) {
-			writeBinaryRouteTree(rte, rootBounds, writer, treeHeader, basemap);
-		}
+		writeBinaryRouteTree(rte, rootBounds, writer, treeHeader, basemap);
 		return treeHeader;
 	}	
 

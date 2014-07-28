@@ -340,9 +340,11 @@ public:
 		std::vector<std::shared_ptr<std::vector<int>>> pointsYToInsert;
 		
 		void buildPointsToInsert(int targetLength){
+			pointsXToInsert.resize(targetLength);
+			pointsYToInsert.resize(targetLength);
 			for(auto p : pointsMap) {
 				int insertAfter = p.first & ((1 << SHIFT_INSERT_AT) -1);
-				if(pointsXToInsert[insertAfter]) {
+				if(!pointsXToInsert[insertAfter]) {
 					pointsXToInsert[insertAfter].swap(std::shared_ptr<std::vector<int>>(new std::vector<int>()));
 					pointsYToInsert[insertAfter].swap(std::shared_ptr<std::vector<int>>(new std::vector<int>()));
 				}
@@ -374,7 +376,7 @@ public:
 	void putIntersection(long long  point, long long wayNodeId);
 	std::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
 	std::unordered_map<__int64, __int64> basemapRemovedNodes;
-	std::unordered_map<__int64, std::unique_ptr<RouteMissingPoints>> basemapNodesToReinsert;
+	std::unordered_map<__int64, std::shared_ptr<RouteMissingPoints>> basemapNodesToReinsert;
 	std::unordered_map<__int64, GeneralizedCluster> generalClusters;
 	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	OBFRenderingTypes renderer;

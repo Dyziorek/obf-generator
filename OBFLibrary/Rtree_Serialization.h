@@ -212,7 +212,7 @@ public:
 
 				int pointList = bloblSize / 8;
 
-				std::unique_ptr<OBFrouteDB::RouteMissingPoints> missPoints;
+				std::shared_ptr<OBFrouteDB::RouteMissingPoints> missPoints;
 				if (m_base && m_work.basemapNodesToReinsert.find(callID) != m_work.basemapNodesToReinsert.end())
 				{
 					missPoints = m_work.basemapNodesToReinsert[callID];
@@ -222,24 +222,24 @@ public:
 				 std::vector<std::tuple<int, int, int, std::vector<int>>> TPpoints;
 				 for (int ip = 0; ip < pointList; ip++)
 				 {
-					 auto data = missPoints.pointsXToInsert[ip];
-					 auto pointMap = missPoints.pointsMap.size();
-					 if (pointMap > 0 && data.get() != nullptr)
+					 if (missPoints)
 					 {
-						 for(int k = 0; k < missPoints.pointsXToInsert[ip]->size(); k++) {
+						 auto data = missPoints->pointsXToInsert[ip];
+						 auto pointMap = missPoints->pointsMap.size();
+						 if (pointMap > 0 && data.get() != nullptr)
+						 {
+							 for(int k = 0; k < missPoints->pointsXToInsert[ip]->size(); k++) {
 
-								std::tuple<int, int, int, std::vector<int>> TPpoint;
-								TPpoints.push_back(TPpoint);
-
-								std::get<1>(TPpoint) = data->operator[](k);
-								std::get<2>(TPpoint) = missPoints.pointsYToInsert[ip]->operator[](k);
-							}
+									std::tuple<int, int, int, std::vector<int>> TPpoint;
+									std::get<1>(TPpoint) = data->operator[](k);
+									std::get<2>(TPpoint) = missPoints->pointsYToInsert[ip]->operator[](k);
+									TPpoints.push_back(TPpoint);
+								}
+						 }
 					 }
 					 std::tuple<int, int, int, std::vector<int>> pt;
-					 TPpoints.push_back(pt);
 					 std::get<1>(pt) = parseIntFromBytes(plData,ip * 8);
 					 std::get<2>(pt) = parseIntFromBytes(plData, ip * 8 + 4);
-
 					 // pointTypes
 					plData = sqlite3_column_blob(m_work.selectData, 1);
 					bloblSize = sqlite3_column_bytes(m_work.selectData, 1);
@@ -257,8 +257,9 @@ public:
 							}
 						}
 					}
+					TPpoints.push_back(pt);
 				 }
-				
+				 				
 					
 				obf::RouteData routeData = m_archive.writeRouteData(cid, parentBox->min_corner().get<0>(), parentBox->min_corner().get<1>(), 
 						typeUse, TPpoints, tempNames, tempStringTable, *dataBlock, true, false);
