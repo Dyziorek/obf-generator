@@ -212,11 +212,11 @@ public:
 
 				int pointList = bloblSize / 8;
 
-				OBFrouteDB::RouteMissingPoints missPoints;
+				std::unique_ptr<OBFrouteDB::RouteMissingPoints> missPoints;
 				if (m_base && m_work.basemapNodesToReinsert.find(callID) != m_work.basemapNodesToReinsert.end())
 				{
 					missPoints = m_work.basemapNodesToReinsert[callID];
-					missPoints.buildPointsToInsert(pointList);
+					missPoints->buildPointsToInsert(pointList);
 				}
 
 				 std::vector<std::tuple<int, int, int, std::vector<int>>> TPpoints;

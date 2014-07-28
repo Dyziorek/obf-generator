@@ -172,20 +172,20 @@ struct POIData
 	__int64 id;
 	std::string type;
 	std::string subType;
-	std::unordered_map<MapRulType, std::string> additionalTags;
+	std::unordered_map<MapRulType*, std::string> additionalTags;
 };
 
 struct POICategory
 {
 	std::map<std::string, std::set<std::string>> categories;
-	std::set<MapRulType> attributes;
+	std::set<MapRulType*> attributes;
 	std::unordered_map<std::string, int> catIndexes;
 	std::unordered_map<std::string, int> catSubIndexes;
 	std::vector<int> cachedCategoriesIds;
 	std::vector<int> cachedAdditionalIds;
 	std::vector<int> singleThreadVarTypes;
 
-	void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags);
+	void addCategory(std::string type, std::string addType, std::unordered_map<MapRulType*, std::string>& addTags);
 	std::vector<int> buildTypeIds(std::string category, std::string subcategory);
 	void internalBuildType(std::string category, std::string subcategory, std::vector<int>& types);
 	void buildCategoriesToWrite(POICategory& globalCategories) ;

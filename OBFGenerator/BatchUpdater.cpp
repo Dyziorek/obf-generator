@@ -284,7 +284,10 @@ std::string BatchUpdater::encodeAdditionalInfo(std::unordered_map<std::string, s
 					b.push_back(-1);
 				}
 				if(rulType->isAdditional() && rulType->getValue() == "") {
-					
+					std::stringstream strStr;
+					strStr << "Invalid rule (empty) adding to db";
+					strStr << " tag ID:" << rulType->getTag() << std::endl;
+					throw new std::bad_exception(strStr.str().c_str());
 				}
 				short ruleId = (short)rulType->getInternalId();
 				b.push_back((char)(ruleId & 0xFF) );

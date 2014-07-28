@@ -124,6 +124,7 @@ void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx
 	__int64 fileP = writer.startWritePoiIndex("POIDATA", bbox.min_corner().get<0>(), bbox.max_corner().get<0>(), bbox.min_corner().get<1>(), bbox.max_corner().get<1>());
 
 	writer.writePoiCategoriesTable(treeData.node.category);
+	writer.writePoiSubtypesTable(treeData.node.category);
 
 	std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> poiDataIdx = writer.writePoiNameIndex(namesIndex, fileP);
 
@@ -149,7 +150,7 @@ void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx
 			int y = entry.first.y;
 			std::vector<std::shared_ptr<BinaryFileReference>> vecDD;
 			vecDD.reserve(entry.second.size());
-			std::copy(entry.second.begin(), entry.second.end(), vecDD.begin());
+			vecDD.insert(vecDD.begin(), entry.second.begin(), entry.second.end());
 			writer.startWritePoiData(z, x, y, vecDD);
 
 			{
@@ -166,8 +167,11 @@ void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx
 							treeData.node.category);	
 				}
 				
-			} 
+			}
+			writer.endWritePoiData();
 		}
+
+		writer.endWritePoiIndex();
 }
 
 void OBFpoiDB::writePoiBoxes(BinaryMapDataWriter& writer, std::shared_ptr<POITree> tree, 
@@ -212,7 +216,7 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 	{
 		return;
 	}
-	std::unordered_map<MapRulType, std::string> typeMap;
+	std::unordered_map<MapRulType*, std::string> typeMap;
 	sqlRes = sqlite3_step(poiSelect);
 	while (sqlRes == SQLITE_ROW)
 	{
@@ -256,15 +260,15 @@ void OBFpoiDB::processPOIIntoTree(OBFResultDB& dbCtx, POITree& treeData, int zoo
 				oldTree = subtree.get();
 				subtree.reset();
 			}
-		std::unordered_map<MapRulType, std::string>::iterator lookup;
+		std::unordered_map<MapRulType*, std::string>::iterator lookup;
 		
-		if (typeMap.find(*nameRuleMap) != typeMap.end())
+		if (typeMap.find(nameRuleMap) != typeMap.end())
 		{
-			std::string name = typeMap[*nameRuleMap];
+			std::string name = typeMap[nameRuleMap];
 			std::string nameEn = "";
-			if (typeMap.find(*nameEnRuleMap) != typeMap.end())
+			if (typeMap.find(nameEnRuleMap) != typeMap.end())
 			{
-				nameEn = typeMap[*nameEnRuleMap];
+				nameEn = typeMap[nameEnRuleMap];
 			}
 			addNamePrefix(name, nameEn, oldTree->node, nameIndex);
 		}
@@ -326,7 +330,7 @@ void OBFpoiDB::parsePrefix(std::string name, POIBox data, std::unordered_map<std
 		
 	}
 
-void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType, std::string>&  typeMap)
+void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType*, std::string>&  typeMap)
 {
 	typeMap.clear();
 	if (addTypeChar == nullptr)
@@ -341,11 +345,15 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSiz
 	{
 		p = addTypes.find_first_of(-1, i);
 		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
-		short ruleID = (short) (rText[1] << 8 + rText[0]);
+		short ruleHi = rText[1];
+		ruleHi = ruleHi << 8;
+		short ruleID =  ruleHi + (unsigned char)rText[0];
 
-		MapRulType rType = renderer.getTypeByInternalId(ruleID);
+		MapRulType* rType = renderer.getTypeByInternalIdPtr(ruleID);
+		/*std::shared_ptr<MapRulType> ptrRule();
+		ptrRule.reset(&rType);*/
 		typeMap.insert(std::make_pair(rType, rText.substr(2)));
-		if (rType.isAdditional() && rType.getValue() == "")
+		if (rType->isAdditional() && rType->getValue() == "")
 		{
 			throw std::bad_exception("Map rule type is wrong");
 		}
@@ -605,10 +613,10 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 			int ind = (int) (wayNodeId & ((1 << SHIFT) - 1));
 			long long wayId = wayNodeId >> SHIFT;
 			if(basemapNodesToReinsert.find(wayId) == basemapNodesToReinsert.end()) {
-				basemapNodesToReinsert.insert(std::make_pair(wayId, RouteMissingPoints()));
+				basemapNodesToReinsert.insert(std::make_pair(wayId, std::unique_ptr<RouteMissingPoints>(new RouteMissingPoints()));
 			}
-			RouteMissingPoints mp = basemapNodesToReinsert.at(wayId);
-			mp.pointsMap.insert(std::make_pair(ind, point));
+			std::unique_ptr<RouteMissingPoints> mp = basemapNodesToReinsert.at(wayId);
+			mp->pointsMap.insert(std::make_pair(ind, point));
 		}
 		
 	}

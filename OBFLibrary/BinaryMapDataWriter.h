@@ -204,9 +204,10 @@ public:
 	void endWritePoiIndex();
 	void writePoiCategoriesTable(POICategory& cs);
 	 void writePoiCategories(POICategory& poiCats);
+	 void writePoiSubtypesTable(POICategory& cs);
 	std::unordered_map<POIBox,  std::list<std::shared_ptr<BinaryFileReference>>> writePoiNameIndex(std::unordered_map<std::string, std::unordered_set<POIBox>>& namesIndex, __int64 startPoiIndex);
 	void writePoiDataAtom(long id, int x24shift, int y24shift, 
-			std::string type, std::string subtype,  std::unordered_map<MapRulType, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
+			std::string type, std::string subtype,  std::unordered_map<MapRulType*, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
 			POICategory&  globalCategories);
 	void startWritePoiData(int zoom, int x, int y, std::vector<std::shared_ptr<BinaryFileReference>>& fpPoiBox);
 	std::shared_ptr<BinaryFileReference> startWritePoiBox(int zoom, int tileX, int tileY, __int64 startPoiIndex, bool end);

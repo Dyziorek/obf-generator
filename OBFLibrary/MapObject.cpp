@@ -147,10 +147,14 @@ Street CityObj::unregisterStreet(std::string name)
  int POICategory::SPECIAL_CHAR = -1;
  short POICategory::SHIFT_BITS_CATEGORY = 7;
 
- void POICategory::addCategory(std::string type, std::string addType, std::unordered_map<MapRulType, std::string>& addTags)
+ void POICategory::addCategory(std::string type, std::string addType, std::unordered_map<MapRulType*, std::string>& addTags)
 {
-	for (std::pair<MapRulType , std::string> rvalue : addTags)
+	for (std::pair<MapRulType* , std::string> rvalue : addTags)
 	{
+		if (rvalue.first->isAdditional() && rvalue.first->getValue() == "")
+		{
+			throw std::bad_exception("Empty value for additional tags");
+		}
 		attributes.insert(rvalue.first);
 	}
 	if (categories.find(type) == categories.end())
@@ -211,10 +215,10 @@ void POICategory::buildCategoriesToWrite(POICategory& globalCategories) {
 					globalCategories.internalBuildType(cat, subcat, cachedCategoriesIds);
 				}
 			}
-			for(MapRulType rt : attributes){
-				if(rt.getTargetPoiId() == -1) {
+			for(MapRulType* rt : attributes){
+				if(rt->getTargetPoiId() == -1) {
 					throw new std::bad_exception("Map rule type is not registered for poi : ");
 				}
-				cachedAdditionalIds.push_back(rt.getTargetPoiId());
+				cachedAdditionalIds.push_back(rt->getTargetPoiId());
 			}
 		}

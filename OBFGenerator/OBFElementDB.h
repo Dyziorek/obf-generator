@@ -95,7 +95,7 @@ public:
 private:
 	void addNamePrefix(std::string& name, std::string& nameEn, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
 	void parsePrefix(std::string name, POIBox data, std::unordered_map<std::string, std::unordered_set<POIBox>>& poiData);
-	void decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType, std::string>&  typeMap);
+	void decodeAdditionalType(const unsigned char* addTypeChar, int colSize, std::unordered_map<MapRulType*, std::string>&  typeMap);
 };
 
 
@@ -374,7 +374,7 @@ public:
 	void putIntersection(long long  point, long long wayNodeId);
 	std::unordered_map<__int64, std::list<__int64>> highwayRestrictions;
 	std::unordered_map<__int64, __int64> basemapRemovedNodes;
-	std::unordered_map<__int64, RouteMissingPoints> basemapNodesToReinsert;
+	std::unordered_map<__int64, std::unique_ptr<RouteMissingPoints>> basemapNodesToReinsert;
 	std::unordered_map<__int64, GeneralizedCluster> generalClusters;
 	std::map<long long, std::unordered_map<std::string, std::string>> propagatedTags;
 	OBFRenderingTypes renderer;

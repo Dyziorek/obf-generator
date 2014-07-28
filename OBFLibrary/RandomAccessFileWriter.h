@@ -132,6 +132,7 @@ public:
 		this->pointerToCalculateShiftTo = pointerToCalculateShifTo;
 		__int64 currentPosition = raf.getFilePointer();
 		int val = -1;
+		int retValue = -1;
 		if (currentPosition < pointerToWrite)
 		{
 			// cannot seek back to file, still in the buffer before write
@@ -140,6 +141,7 @@ public:
 			{
 				// it should be that if not this is error
 				val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+				retValue = val;
 				#ifndef BOOST_BIG_ENDIAN
 					reverse_bytes(sizeof(val),(char*)&val);
 				#endif
@@ -156,10 +158,14 @@ public:
 			// it is in the written part
 			raf.seek(pointerToWrite);
 			val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
+			retValue = val;
+			#ifndef BOOST_BIG_ENDIAN
+					reverse_bytes(sizeof(val),(char*)&val);
+			#endif
 			raf.writeInt(val);
 			raf.seek(currentPosition);
 		}
-		return val;
+		return retValue;
 	}
 
 	

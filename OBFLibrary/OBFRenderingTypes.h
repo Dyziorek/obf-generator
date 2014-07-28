@@ -487,6 +487,9 @@ public:
 	MapRulType  getTypeByInternalId(int id) {
 		return OBFRenderingTypes::rules[id];
 	}
+	MapRulType*  getTypeByInternalIdPtr(int id) {
+		return *(OBFRenderingTypes::rules.c_array() + id);
+	}
 	void addOSMCSymbolsSpecialTags(std::map<MapRulType,std::string> propogated, std::pair<std::string,std::string> ev);
 	static std::list<std::unordered_map<std::string, std::string>> splitTagsIntoDifferentObjects(const std::unordered_map<std::string, std::string>& tags);
 	boost::ptr_map<std::string, MapRulType>& getRuleTypes()

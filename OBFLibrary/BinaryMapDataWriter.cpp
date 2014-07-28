@@ -776,6 +776,34 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 
 	}
 	
+	void BinaryMapDataWriter::writePoiSubtypesTable(POICategory& cs) {
+		int peeker[] = {POI_INDEX_INIT};
+		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+
+		int subcatId = 0;
+		
+		std::unordered_map<std::string, std::vector<MapRulType*>> groupAdditionalByTagName;
+		for(MapRulType* rt : cs.attributes) {
+			if(rt->isAdditional()) {
+				if(groupAdditionalByTagName.find(rt->getTag()) == groupAdditionalByTagName.end()) {
+					groupAdditionalByTagName.insert(std::make_pair(rt->getTag(), std::vector<MapRulType*>()));
+				}
+				groupAdditionalByTagName[rt->getTag()].push_back(rt);
+			} else {
+				rt->setTargetPoiId(subcatId++, 0);
+			}
+		}
+		
+		for(auto addTag : groupAdditionalByTagName) {
+			int cInd = subcatId++;
+			std::vector<MapRulType*> list = addTag.second;
+			
+			int subcInd = 0;
+			for(MapRulType* subtypeVal :  list){
+				subtypeVal->setTargetPoiId(cInd, subcInd++);
+			}
+		}
+	}
 	
 	void BinaryMapDataWriter::writePoiCategories(POICategory& poiCats){
 		int peeker[] = {POI_BOX};
@@ -853,7 +881,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	
 
 	 void BinaryMapDataWriter::writePoiDataAtom(long id, int x24shift, int y24shift, 
-			std::string type, std::string subtype,  std::unordered_map<MapRulType, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
+			std::string type, std::string subtype,  std::unordered_map<MapRulType*, std::string>& additionalNames, OBFRenderingTypes& rtypes, 
 			POICategory&  globalCategories){
 		int peeker[] = {POI_DATA};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
@@ -869,28 +897,86 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		builder.set_id(id);
 
 		if (/*USE_DEPRECATED_POI_NAME_STRUCTURE*/ true) {
-			std::string name = additionalNames[(*rtypes.nameRule)];
-			additionalNames.erase(*rtypes.nameRule);
+			std::string name = "";
+			for(auto addName : additionalNames)
+			{
+				if (addName.first->getInternalId() == rtypes.nameRule->getInternalId())
+				{
+					std::string name = addName.second;
+					additionalNames.erase(addName.first);
+					break;
+				}
+			}
 			if (name != "") {
 				builder.set_name(name);
 			}
-			std::string nameEn = additionalNames[(*rtypes.nameEnRule)];
-			additionalNames.erase(*rtypes.nameEnRule);
+
+			std::string nameEn = "";
+			for(auto addName : additionalNames)
+			{
+				if (addName.first->getInternalId() == rtypes.nameEnRule->getInternalId())
+				{
+					std::string name = addName.second;
+					additionalNames.erase(addName.first);
+					break;
+				}
+			}
+
 			if (nameEn != "") {
 				builder.set_nameen(nameEn);
 			}	
 		}
 		
 		if (/*USE_DEPRECATED_POI_NAME_ADD_INFO_STRUCTURE*/ true ) {
-			std::string openingHours = additionalNames[*rtypes.getRuleType("opening_hours", "", true)];
-			additionalNames.erase(*rtypes.getRuleType("opening_hours", "", true));
-			std::string site = additionalNames[*(rtypes.getRuleType("website", "", true))];
-			additionalNames.erase(*(rtypes.getRuleType("website", "", true)));
-			std::string phone = additionalNames[*(rtypes.getRuleType("phone", "", true))];
-			additionalNames.erase(*(rtypes.getRuleType("phone", "", true)));
-			std::string description = additionalNames[*(rtypes.getRuleType("description", "", true))];
-			additionalNames.erase(*(rtypes.getRuleType("description", "", true)));
+			std::string openingHours = "";
+			std::string site =  "";
+			std::string phone =  "";
+			std::string description =  "";
 
+
+			for(auto addName = additionalNames.begin(); addName != additionalNames.end(); addName++)
+			{
+				if (addName->first->getInternalId() == rtypes.getRuleType("opening_hours", "", true)->getInternalId())
+				{
+					openingHours = addName->second;
+					addName = additionalNames.erase(addName);
+					if (addName == additionalNames.end())
+					{
+						// erased last item go away
+						break;
+					}
+				}
+				if (addName->first->getInternalId() == rtypes.getRuleType("website", "", true)->getInternalId())
+				{
+					site = addName->second;
+					addName = additionalNames.erase(addName);
+					if (addName == additionalNames.end())
+					{
+						// erased last item go away
+						break;
+					}
+				}
+				if (addName->first->getInternalId() == rtypes.getRuleType("phone", "", true)->getInternalId())
+				{
+					phone = addName->second;
+					addName = additionalNames.erase(addName);
+					if (addName == additionalNames.end())
+					{
+						// erased last item go away
+						break;
+					}
+				}
+				if (addName->first->getInternalId() == rtypes.getRuleType("description", "", true)->getInternalId())
+				{
+					description = addName->second;
+					addName = additionalNames.erase(addName);
+				}
+				if (addName == additionalNames.end())
+				{
+					// erased last item go away
+					break;
+				}
+			}
 			if (openingHours != "") {
 				builder.set_openinghours(openingHours);
 			}
@@ -940,7 +1026,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		} else {
 			wfl::WireFormatLite::WriteTag(obf::OsmAndPoiBox::kSubBoxesFieldNumber, wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
 		}
-		states.push_front(POI_BOX);
+		pushState(POI_BOX);
 		preserveInt32Size();
 
 		Bounds bounds = stackBounds.front();
@@ -1025,7 +1111,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 		} else {
 			wfl::WireFormatLite::WriteTag(obf::OsmAndRoutingIndex_RouteDataBox::kBoxesFieldNumber,  wfl::WireFormatLite::WireType::WIRETYPE_FIXED32_LENGTH_DELIMITED,&dataOut);
 		}
-		states.push_front(ROUTE_TREE);
+		pushState(ROUTE_TREE);
 		preserveInt32Size();
 		__int64 fp = getFilePointer();
 
