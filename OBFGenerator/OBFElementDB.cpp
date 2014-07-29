@@ -343,14 +343,17 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSiz
 	std::string addTypes((const char*)addTypeChar, colSize);;
 	
 	int i = 0, p = 0;
+	std::string pattern;
+	pattern.push_back(-1);
+	pattern.push_back(-1);
 
 	while (addTypes.size() > 0)
 	{
-		p = addTypes.find_first_of(-1, i);
+		p = addTypes.find(pattern, i);
 		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
-		short ruleHi = rText[2];
+		short ruleHi = rText[1];
 		ruleHi = ruleHi << 8;
-		short ruleID =  ruleHi + (unsigned char)rText[1];
+		short ruleID =  ruleHi + (unsigned char)rText[0];
 
 		MapRulType* rType = renderer.getTypeByInternalIdPtr(ruleID);
 		/*std::shared_ptr<MapRulType> ptrRule();
@@ -362,10 +365,7 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSiz
 		}
 		if (p == std::string::npos)
 			break;
-		if (rText[1] != -1)
-			i = p+1;
-		else
-			i = p+2;
+		i = p+2;
 	}
 }
 

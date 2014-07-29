@@ -282,6 +282,7 @@ std::string BatchUpdater::encodeAdditionalInfo(std::unordered_map<std::string, s
 			if(!rulType->isText() ||  !(e.second == "")) {
 				if(b.length() > 0){
 					b.push_back(-1);
+					b.push_back(-1);
 				}
 				if(rulType->isAdditional() && rulType->getValue() == "") {
 					std::stringstream strStr;
