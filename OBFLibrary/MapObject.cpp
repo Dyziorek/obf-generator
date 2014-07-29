@@ -129,7 +129,10 @@ Street CityObj::unregisterStreet(std::string name)
 {
 	if (streets.find(name) != streets.end())
 	{
-		return streets.erase(streets.find(name))->second;
+		auto strRemove = streets.find(name);
+		Street removeStreet = strRemove->second;
+		streets.erase(strRemove);
+		return removeStreet;
 	}
 }
 

@@ -113,17 +113,17 @@ public:
 	{
 		if (states.front() == lastState)
 		{
-			states.pop_front();
 #ifdef _DEBUG
-		std::wstringstream strm;
-		strm << L"States on stack:";
-		for (int isState : states)
-		{
-			strm << " " << isState;
-		}
-		strm << std::endl << L"popping state:" << lastState << std::endl;
-		OutputDebugString(strm.str().c_str());
+			std::wstringstream strm;
+			strm << L"States on stack:";
+			for (int isState : states)
+			{
+				strm << " " << isState;
+			}
+			strm << std::endl << L"popping state:" << lastState << std::endl;
+			OutputDebugString(strm.str().c_str());
 #endif
+			states.pop_front();
 			return true;
 		}
 #ifdef _DEBUG

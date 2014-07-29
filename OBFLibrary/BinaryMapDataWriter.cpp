@@ -716,9 +716,8 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 			cityInd.add_streets()->MergeFrom(streetInd);
 			
 		}
-		obf::CityBlockIndex block;
-		int size = wfl::WireFormatLite::UInt32Size(wfl::WireFormatLite::MessageSize(block));
-		block.SerializeToCodedStream(&dataOut);
+		int size = wfl::WireFormatLite::UInt32Size(wfl::WireFormatLite::MessageSize(cityInd));
+		cityInd.SerializeToCodedStream(&dataOut);
 		for (Street s : streets) {
 			s.setFileOffset(s.getFileOffset() + size);
 		}
@@ -1241,6 +1240,7 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 	{
 		int peeker[] = {OSMAND_STRUCTURE_INIT};
 		checkPeek(peeker, sizeof(peeker)/sizeof(int));
+		popState(OSMAND_STRUCTURE_INIT);
 		wfl::WireFormatLite::WriteUInt32(obf::OsmAndStructure::kVersionConfirmFieldNumber, 2, &dataOut);
 
 		int buffercount = dataOut.ByteCount();

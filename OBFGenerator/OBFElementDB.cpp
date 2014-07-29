@@ -28,6 +28,9 @@
 #include "OBFMapDB.h"
 #include "Rtree_Serialization.h"
 
+#include <cvt/wstring>
+#include <codecvt>
+
 OBFpoiDB::OBFpoiDB(void)
 {
 }
@@ -345,9 +348,9 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSiz
 	{
 		p = addTypes.find_first_of(-1, i);
 		std::string rText = p == std::string::npos ? addTypes.substr(i) : addTypes.substr(i, p);
-		short ruleHi = rText[1];
+		short ruleHi = rText[2];
 		ruleHi = ruleHi << 8;
-		short ruleID =  ruleHi + (unsigned char)rText[0];
+		short ruleID =  ruleHi + (unsigned char)rText[1];
 
 		MapRulType* rType = renderer.getTypeByInternalIdPtr(ruleID);
 		/*std::shared_ptr<MapRulType> ptrRule();
@@ -359,7 +362,10 @@ void OBFpoiDB::decodeAdditionalType(const unsigned char* addTypeChar, int colSiz
 		}
 		if (p == std::string::npos)
 			break;
-		i = p+1;
+		if (rText[1] != -1)
+			i = p+1;
+		else
+			i = p+2;
 	}
 }
 
@@ -2048,7 +2054,9 @@ std::unordered_map<std::string, std::list<CityObj>> OBFAddresStreetDB::readCitie
 void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<std::shared_ptr<MapObject>>>& namesIndex, std::shared_ptr<MapObject> o, __int64 fileOffset)
 {
 	std::string name = o->getName();
-	
+	iconverter ic("UTF-8", "ASCII");
+	name = ic.convert(name);
+
 	int prev = -1;
 	for (int i = 0; i <= name.length(); i++) 
 	{
@@ -2331,7 +2339,9 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 			if (millisf > 500) {
 				std::wstringstream wstrm;
 				std::wstring wname;
-				wname.assign(city.getName().begin(), city.getName().end());
+				stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+				 wname = converter.from_bytes(city.getName());
+				//wname.assign(city.getName().begin(), city.getName().end());
 				wstrm << L"!" << wname <<  L" ! " << millisf << " ms " << streets.size() << L" streets " << bCount << L" Buildings" << std::endl;
 				OutputDebugString(wstrm.str().c_str());
 			}
