@@ -1245,6 +1245,11 @@ obf::MapData BinaryMapDataWriter::writeMapData(__int64 diffId, int pleft, int pt
 
 		int buffercount = dataOut.ByteCount();
 		int streamCount = raf->ByteCount();
+#ifdef _DEBUG
+		std::wstringstream strm;
+		strm << L"Whole binary file size is:" << buffercount << L" bytes on disk, or:" << streamCount << L" buffered bytes so far"<< std::endl;
+		OutputDebugString(strm.str().c_str());
+#endif
 	}
 
 

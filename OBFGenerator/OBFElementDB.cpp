@@ -2280,12 +2280,11 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 		{
 			writer.startCityBlockIndex(3);
 		}
-		for (CityObj c : cities) {
-			refs.push_back(writer.writeCityHeader(c, c.getRadius()));
+		for (std::list<CityObj>::iterator cit = cities.begin(); cit != cities.end(); cit++) {
+			refs.push_back(writer.writeCityHeader(*cit, cit->getRadius()));
 		}
-		for (int i = 0; i < cities.size(); i++) {
-			std::list<CityObj>::iterator cit = cities.begin();
-			std::advance(cities.begin(), i);
+		int i = 0;
+		for (std::list<CityObj>::iterator cit = cities.begin(); cit != cities.end(); cit++, i++) {
 			CityObj city = *cit;
 			BinaryFileReference* ref = refs[i];
 			putNamedMapObject(namesIndex, std::make_shared<MapObject>(city), ref->getStartPointer());
