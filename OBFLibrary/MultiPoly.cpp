@@ -7,11 +7,26 @@
 #include "SkGraphics.h"
 #include "MultiPoly.h"
 
+#include "RTree.h"
 //SkAutoGraphics ag;
 long MultiPoly::numberCalls = 0;
 
 void Ring::generateImage(SkCanvas* painter, SkColor color, double scale,  double offsetX, double offsetY)
 {
+	//typedef boost::geometry::model::polygon<boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>> polyD;
+	//typedef boost::geometry::model::ring<boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>> ringD;
+	//typedef boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian> ptD;
+	//ptD pt;
+	//pt.set<0>(10.0);
+	//pt.set<1>(10.0);
+	//ringD inn;
+	//inn.push_back(pt);
+	//polyD polyData;
+
+	//polyData.inners().push_back(inn);
+
+	
+
 	SkRect limits;
 	painter->getClipBounds(&limits);
 	SkPaint paint;
@@ -137,6 +152,8 @@ bool MultiPoly::operator==(const MultiPoly &other) const
 
 void MultiPoly::build()
 {
+	
+
 	std::list<std::shared_ptr<Ring>> innerRings = combineRings(inWays);
 	if (innerRings.size() > 0)
 	{
@@ -149,6 +166,8 @@ void MultiPoly::build()
 		outRing.reserve(outRings.size());
 		outRing.insert(outRing.begin(), outRings.begin(), outRings.end());
 	}
+
+	updateRings();
 
 	if (false)
 	{
@@ -347,7 +366,7 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			}
 		}
 
-		if (containedInInner) return true;
+		if (!containedInInner) return true;
 		if (outRing.size() == 1) {
 			// return immediately false 
 			return false;

@@ -591,6 +591,11 @@ void OBFResultDB::loadNodesOnRelation(EntityRelation* relItem)
 	if (relItem == nullptr)
 		return;
 
+	if (relItem->relations.size() > 0)
+	{
+		return;
+	}
+
 	for(auto relIDMember : relItem->entityIDs)
 	{
 		int  dbRet = SQLITE_OK;
@@ -662,6 +667,14 @@ void OBFResultDB::SaverCityNode(EntityBase* nn, TileManager<CityObj>& manager)
 	CityObj objCity;
 	
 	MapObject::parseMapObject(&objCity, nn);
+	if (nn->getTag("is_in") != "")
+	{
+		objCity.setIsin(boost::to_lower_copy(nn->getTag("is_in")));
+	}
+	if (nn->getTag("place") != "")
+	{
+		objCity.setType(boost::to_upper_copy(nn->getTag("place")));
+	}
 	
 	manager.registerObject(objCity.getLatLon().first, objCity.getLatLon().second, objCity);
 

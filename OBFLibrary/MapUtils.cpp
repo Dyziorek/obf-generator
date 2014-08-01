@@ -503,11 +503,11 @@ MapUtils::~MapUtils(void)
 		if (nodes.empty()) {
 			return std::make_pair(-1000,-1000);
 		}
-		double longitude = 0;
 		double latitude = 0;
+		double longitude = 0;
 		for (std::pair<double, double> n : nodes) {
-			longitude += n.first;
-			latitude += n.second;
+			latitude += n.first;
+			longitude += n.second;
 		}
 		return std::make_pair(latitude / nodes.size(), longitude / nodes.size());
 	}

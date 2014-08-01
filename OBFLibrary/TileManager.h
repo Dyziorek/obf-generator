@@ -3,7 +3,7 @@
 template <class TObject> class TileManager
 {
 private:
-	std::map<__int64, std::vector<TObject>> longObjectMap;
+	std::unordered_map<__int64, std::vector<TObject>> longObjectMap;
 	int zoom;
 
 private:
@@ -130,6 +130,9 @@ public:
 		int tileY = (int) MapUtils::getTileNumberY((float)zoom, latitude);
 		std::vector<TObject> result;
 		
+		__int64 tileID = evaluateTile(latitude, longitude);
+		__int64 evTileID = evTile(tileX, tileY);
+
 		if(startDepth <= 0){
 			putObjects(tileX, tileY, result);
 			startDepth = 1;
@@ -166,8 +169,8 @@ public:
 #pragma  warning (push)
 #pragma  warning (disable: 4244)
 	 __int64 evaluateTile(double latitude, double longitude){
-		int tileX = (int) MapUtils::getTileNumberX(zoom, longitude);
-		int tileY = (int) MapUtils::getTileNumberY(zoom, latitude);
+		int tileX = (int) MapUtils::getTileNumberX((float)zoom, longitude);
+		int tileY = (int) MapUtils::getTileNumberY((float)zoom, latitude);
 		return evTile(tileX, tileY);
 	}
 
@@ -194,7 +197,9 @@ public:
 	}
 	
 	 __int64 registerObject(double latitude, double longitude, TObject object){
-		__int64 tile = evaluateTile(latitude, longitude);
+		int tileX = (int) MapUtils::getTileNumberX((float)zoom, longitude);
+		int tileY = (int) MapUtils::getTileNumberY((float)zoom, latitude);
+		__int64 tile = evTile(tileX, tileY);
 		return addObject(object, tile);
 	}
 

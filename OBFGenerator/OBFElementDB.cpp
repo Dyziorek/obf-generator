@@ -1104,7 +1104,7 @@ void OBFrouteDB::addWayToIndex(long long id, std::vector<std::shared_ptr<EntityN
 	return listID.size() - 1;
 }
 
-OBFAddresStreetDB::OBFAddresStreetDB(void)
+OBFAddresStreetDB::OBFAddresStreetDB(void) : cityManager(10), townManager(13)
 {
 }
 
@@ -1334,7 +1334,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 		if(boundary->centerID != -1) {
 				for (CityObj c : citiesToLookup) {
 					if (c.getID() == boundary->centerID) {
-						foundCity.reset(&c);
+						foundCity.reset(new CityObj(c));
 						break;
 					}
 				}
@@ -1343,8 +1343,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 				for (CityObj c : citiesToLookup) {
 					if (( boost::iequals(boundaryName,c.getName()) || boost::iequals(altBoundaryName,c.getName())) 
 						&& boundary->containsPoint(c.getLatLon())) {
-						foundCity.release();
-						foundCity.reset(&c);
+						foundCity.reset(new CityObj(c));
 						break;
 					}
 				}
@@ -1357,8 +1356,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 					std::string lower = boost::to_lower_copy(c.getName());
 					if (boost::contains(boundaryName, lower) || boost::contains(altBoundaryName, lower)) {
 						if (boundary->containsPoint(c.getLatLon())) {
-							foundCity.release();
-							foundCity.reset(&c);
+							foundCity.reset(new CityObj(c));
 							break;
 						}
 					}
@@ -1380,7 +1378,11 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 						dbContext.loadNodesOnRelation(relItem.get());
 					}
 				}
-				foundCity.reset(&createMissingCity(baseItem, boundary->polyType));
+				CityObj missedCity = createMissingCity(baseItem, boundary->polyType, dbContext);
+				if (missedCity.getLatLon().first != -1000)
+				{
+					foundCity.reset(new CityObj(missedCity));
+				}
 				boundary->centerID = foundCity->getID();
 			}
 			if (foundCity) {
@@ -1393,7 +1395,7 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 			
 
 			std::list<CityObj> list(0);
-			for (auto c : cities) {
+			for (auto c : citiesNodes) {
 				if (boundary->containsPoint(c.second.getLatLon())) {
 					list.push_back(c.second);
 				}
@@ -1402,17 +1404,17 @@ void OBFAddresStreetDB::indexBoundary(std::shared_ptr<EntityBase>& baseItem, OBF
 				boundaryToContainingCities[boundary] = list;
 			}
 			
-			if (foundCity)
-			{
-				foundCity.release();
-			}
+			//if (foundCity)
+			//{
+			//	foundCity.release();
+			//}
 	}
 }
 
 void OBFAddresStreetDB::tryToAssignBoundaryToFreeCities()
 {
 	int smallestAdminLevel = 7; //start at level 8 for now...
-		for (auto c : cities) {
+		for (auto c : citiesNodes) {
 
 			std::shared_ptr<MultiPoly> cityB = cityBoundaries[c.second];
 			if (!cityB && (c.second.getType() == "city" || c.second.getType() == "town")) {
@@ -1518,7 +1520,7 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 	BOOL administrative = (baseItem->getTag("boundary") == "administrative");
 	if (administrative  || baseItem->getTag("place") != "")
 	{
-		if (wayItem.get() != nullptr)
+		if (wayItem)
 		{
 			if (visitedBoundaryWays.find(wayItem->id) != visitedBoundaryWays.end())
 				return std::shared_ptr<MultiPoly>();
@@ -1538,48 +1540,34 @@ std::shared_ptr<MultiPoly> OBFAddresStreetDB::extractBoundary(std::shared_ptr<En
 		{
 			for(auto entityItem : relItem->relations)
 			{
-				if (std::get<0>(entityItem.second) == 2)
+				if (std::get<0>(entityItem.second) == 0)
 				{
-					std::shared_ptr<EntityRelation> relSubItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(std::get<1>(entityItem.second));
-					if (relSubItem->entityIDs.size() > 0)
+					if (std::get<2>(entityItem.second) == "admin_centre" || std::get<2>(entityItem.second) == "admin_center")
 					{
-						dbContext.loadNodesOnRelation(relSubItem.get());
-						for(auto innerEntityItem : relSubItem->relations)
-						{
-							if ( std::get<0>(innerEntityItem.second) == 1)
-							{
-								bool inner = std::get<2>(innerEntityItem.second) == "inner";
-								std::shared_ptr<EntityWay> wayPtr = std::dynamic_pointer_cast<EntityWay>(std::get<1>(innerEntityItem.second));
-								if (inner)
-								{
-									polyline->inWays.push_back(wayPtr);
-								}
-								else
-								{
-									polyline->outWays.push_back(wayPtr);
-									if (wayPtr->getTag("name") == boundName)
-									{
-										visitedBoundaryWays.insert(wayPtr->id);
-									}
-								}
-							}
-							else if (std::get<0>(innerEntityItem.second) == 0)
-							{
-								if (std::get<2>(innerEntityItem.second) == "admin_centre" || std::get<2>(innerEntityItem.second) == "admin_center")
-								{
-									centrID = std::get<1>(innerEntityItem.second)->id;
-								}
-								else if (std::get<2>(innerEntityItem.second) == "label")
-								{
-									centrID = std::get<1>(innerEntityItem.second)->id;
-								}
-							}
-						}
+						centrID = std::get<1>(entityItem.second)->id;
+					}
+					else if (std::get<2>(entityItem.second) == "label")
+					{
+						centrID = std::get<1>(entityItem.second)->id;
 					}
 				}
 				else if (std::get<0>(entityItem.second) == 1)
 				{
-					polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(std::get<1>(entityItem.second)));
+					boolean inner = std::get<2>(entityItem.second) == "inner";//.equals(entities.get(es)); //$NON-NLS-1$
+					if (inner) {
+						polyline->inWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(std::get<1>(entityItem.second)));// .addInnerWay((Way) es);
+					} else {
+						auto WayData = std::dynamic_pointer_cast<EntityWay, EntityBase>(std::get<1>(entityItem.second));
+						if (WayData)
+						{
+							std::string wName = WayData->getTag("name");
+							// if name are not equal keep the way for further check (it could be different suburb)
+							if (wName == boundName || wName == "") {
+								visitedBoundaryWays.insert(WayData->id);
+							}
+							polyline->outWays.push_back(std::dynamic_pointer_cast<EntityWay, EntityBase>(std::get<1>(entityItem.second)));
+						}
+					}
 				}
 			}
 		}
@@ -1623,15 +1611,19 @@ void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 	CityObj objCity;
 	if (placeType == "CITY" ||placeType ==  "TOWN" )
 	{
+		objCity.setType(placeType);
 		SaverCityNode(ptrNode.get(), cityManager);
-		objCity.setType(placeType);
+		
 	}
-	else // if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
+	else  if (placeType ==  "VILLAGE" ||placeType ==  "HAMLET" ||placeType ==  "SUBURB" ||placeType ==  "DISTRICT")
 	{
-		SaverCityNode(ptrNode.get(), townManager);
 		objCity.setType(placeType);
+		SaverCityNode(ptrNode.get(), townManager);
 	}
-
+	else
+	{
+		return;
+	}
 				
 	objCity.setId(cityNode->id);
 	MapObject::parseMapObject(&objCity, cityNode.get());
@@ -1646,11 +1638,11 @@ void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 		objCity.setType("CITY");
 	}
 
-	cities.insert(std::make_pair(ptrNode, objCity));
+	citiesNodes.insert(std::make_pair(ptrNode, objCity));
 
 }
 
- CityObj OBFAddresStreetDB::createMissingCity(std::shared_ptr<EntityBase>& cityNode, std::string t) {
+ CityObj OBFAddresStreetDB::createMissingCity(std::shared_ptr<EntityBase>& cityNode, std::string t, OBFResultDB& dbContext) {
 	CityObj objCity;
 	std::string placeType = boost::to_upper_copy(cityNode->getTag("place"));
 	if (placeType == "CITY" ||placeType ==  "TOWN" )
@@ -1663,11 +1655,18 @@ void OBFAddresStreetDB::iterateOverCity(std::shared_ptr<EntityNode>& cityNode)
 		SaverCityNode(cityNode.get(), townManager);
 		objCity.setType(placeType);
 	}
+	else
+	{
+		return objCity;
+	}
+
 
 				
 	objCity.setId(cityNode->id);
 	MapObject::parseMapObject(&objCity, cityNode.get());
-	
+
+	citiesNodes.insert(std::make_pair(cityNode, objCity));
+	storeCity(cityNode, objCity, dbContext);
 
 	
 	return objCity;
@@ -1681,13 +1680,13 @@ void OBFAddresStreetDB::storeCities(OBFResultDB& dbContext)
 	int cityList = 0;
 	int SqlCode;
 	sqlite3_exec(dbContext.dbAddrCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
-	for (auto mapCity: cities)
+	for (auto mapCity: citiesNodes)
 	{
 		sqlite3_bind_int64(dbContext.cityStmt, 1, mapCity.second.getID());
 		sqlite3_bind_double(dbContext.cityStmt, 2, mapCity.second.getLatLon().first);
 		sqlite3_bind_double(dbContext.cityStmt, 3, mapCity.second.getLatLon().second);
 		sqlite3_bind_text(dbContext.cityStmt, 4, mapCity.second.getName().c_str(), mapCity.second.getName().size(), SQLITE_TRANSIENT);
-		std::shared_ptr<EntityNode> nodeElem = mapCity.first;
+		std::shared_ptr<EntityBase> nodeElem = mapCity.first;
 		sqlite3_bind_text(dbContext.cityStmt, 5, nodeElem->getTag("em_name").c_str(), nodeElem->getTag("em_name").size(), SQLITE_TRANSIENT);
 		sqlite3_bind_text(dbContext.cityStmt, 6, mapCity.second.getType().c_str(), mapCity.second.getType().size(), SQLITE_TRANSIENT);
 
@@ -1713,7 +1712,7 @@ void OBFAddresStreetDB::storeCities(OBFResultDB& dbContext)
 	}
 }
 
-void OBFAddresStreetDB::storeCity(std::shared_ptr<EntityNode>& cityNode, CityObj objData, OBFResultDB& dbContext)
+void OBFAddresStreetDB::storeCity(std::shared_ptr<EntityBase>& cityNode, CityObj objData, OBFResultDB& dbContext)
 {
 
 	//"insert into city (id, latitude, longitude, name, name_en, city_type) values (?1, ?2, ?3, ?4, ?5, ?6)"
@@ -1727,7 +1726,7 @@ void OBFAddresStreetDB::storeCity(std::shared_ptr<EntityNode>& cityNode, CityObj
 		sqlite3_bind_double(dbContext.cityStmt, 2, objData.getLatLon().first);
 		sqlite3_bind_double(dbContext.cityStmt, 3, objData.getLatLon().second);
 		sqlite3_bind_text(dbContext.cityStmt, 4, objData.getName().c_str(), objData.getName().size(), SQLITE_TRANSIENT);
-		std::shared_ptr<EntityNode> nodeElem = cityNode;
+		std::shared_ptr<EntityBase> nodeElem = cityNode;
 		sqlite3_bind_text(dbContext.cityStmt, 5, nodeElem->getTag("em_name").c_str(), nodeElem->getTag("em_name").size(), SQLITE_TRANSIENT);
 		sqlite3_bind_text(dbContext.cityStmt, 6, objData.getType().c_str(), objData.getType().size(), SQLITE_TRANSIENT);
 

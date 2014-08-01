@@ -154,10 +154,10 @@ namespace std
 	{
 		std::size_t operator()(const CityObj& hashWork) const
 		{
-			size_t seed;
+			size_t seed = 23;
 			CityObj& objCon = const_cast<CityObj&>(hashWork);
 			boost::hash_combine(seed, objCon.getName());
-			boost::hash_combine(seed, objCon.getEnName());
+			boost::hash_combine(seed, objCon.getType());
 			boost::hash_combine(seed, objCon.getID());
 			return seed;
 		}
