@@ -24,7 +24,7 @@ public:
 	{
 		int intersections = 0;
 		if (nodes.size() == 0) return false;
-		for(unsigned int idx = 0; idx < nodes.size() - 1; idx++)
+		for(unsigned int idx = 0; idx < nodes.size() - 2; idx++)
 		{
 			if (OsmMapUtils::ray_intersect_lon(nodes[idx], nodes[idx+1],lat, lon) != 360)
 				intersections++;
@@ -83,6 +83,16 @@ public:
 	std::string polyAltName;
 	std::string polyType;
 	void updateRings();
+
+	typedef bg::model::point<double, 2, bg::cs::cartesian> pointD;
+	typedef bg::model::box<pointD> boxD;
+	typedef bg::model::linestring<pointD> lineD;
+	typedef bg::model::segment<pointD> segmD;
+	typedef bg::model::ring<pointD, true> ringD;
+	typedef bg::model::polygon<pointD, true> polyD;
+
+	std::vector<polyD> polygons;
+
 private:
 	float maxLat;
 	float minLat;

@@ -15,6 +15,8 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 #pragma pop_macro("realloc")
+#include "RTree.h"
+
 #include "MultiPoly.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
@@ -34,9 +36,7 @@
 #include <boost/container/list.hpp>
 #include "boost/multi_array.hpp"
 #include "ArchiveIO.h"
-
 #include "Rtree_Serialization.h"
-
 
 namespace io = boost::iostreams;
 namespace ar = boost::archive;

@@ -5,6 +5,7 @@
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#include "RTree.h"
 #include "MultiPoly.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>

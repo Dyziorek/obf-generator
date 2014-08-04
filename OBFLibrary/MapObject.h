@@ -92,6 +92,7 @@ class CityObj :
 	public MapObject
 {
 private:
+	std::string cityName;
 	std::string isin;
 	std::string postcode;
 	static long POSTCODE_INTERNAL_ID;
@@ -132,7 +133,8 @@ public:
 	}
 	void setIsin(std::string outisin)
 	{
-		isin=  outisin;
+		isin =  outisin;
+		cityName = getName();
 	}
 	std::string getPostcode()
 	{
@@ -141,7 +143,10 @@ public:
 	void setPostcode(std::string post)
 	{
 		postcode =  post;
+		cityName = getName();
 	}
+
+	
 
 	static  CityObj createPostcode(std::string post);
 };

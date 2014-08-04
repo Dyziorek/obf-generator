@@ -5,9 +5,10 @@
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#include "RTree.h"
 #include "MultiPoly.h"
 
-#include "RTree.h"
+
 //SkAutoGraphics ag;
 long MultiPoly::numberCalls = 0;
 
@@ -344,6 +345,8 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			return false;
 		}
 		
+		
+
 		std::shared_ptr<Ring> containedInOuter;
 		// use a sortedset to get the smallest outer containing the point
 		for (std::shared_ptr<Ring> outer : outRing) {
@@ -356,6 +359,44 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		if (!containedInOuter) {
 			return false;
 		}
+
+		pointD ptCheck;
+		ptCheck.set<0>(point.first);
+		ptCheck.set<1>(point.second);
+		polyD polyWork;
+		double areaVal;
+
+		
+		ringD containedInner;
+
+		for(polyD polyData:  polygons)
+		{
+			boxD boxInfo;
+			bg::envelope(polyData, boxInfo);
+
+			if (bg::covered_by(ptCheck, polyData.outer()))
+			{
+				polyWork = polyData;
+				areaVal = bg::area(polyData.outer());
+			}
+		}
+
+		ringD outerRing = polyWork.outer();
+
+		for(ringD inData: polyWork.inners())
+		{
+			if (bg::covered_by(ptCheck, inData))
+			{
+				containedInner = inData;
+			}
+		}
+
+		if (containedInner.size() > 0)
+		{
+			return false;
+		}
+		else
+			return true;
 		
 		//use a sortedSet to get the smallest inner Ring
 		std::shared_ptr<Ring> containedInInner;
@@ -433,6 +474,43 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		// keep sorted
 		std::sort(inRing.begin(), inRing.end());
+
+
+		polyD polyData;
+		
+
+		auto inData = polyData.inners();
+		auto outData = polyData.outer();
+
+		for (auto ringData : inRing)
+		{
+			ringD inRing;
+			for (auto ringNode : ringData->getListNodes())
+			{
+				pointD ptData;
+				LatLon coord =  ringNode->getLatLon();
+				ptData.set<0>(coord.first);
+				ptData.set<1>(coord.second);
+				inRing.push_back(ptData);
+			}
+			inData.push_back(inRing);
+		}
+		auto ringData = outRing.front();
+		{
+			for (auto ringNode : ringData->getListNodes())
+			{
+				pointD ptData;
+				LatLon coord =  ringNode->getLatLon();
+				ptData.set<0>(coord.first);
+				ptData.set<1>(coord.second);
+				outData.push_back(ptData);
+			}
+			polyData.outer() = outData;
+			bg::correct(polyData);
+			polygons.push_back(polyData);
+		}
+		
+		
 	}
 
 	void MultiPoly::createData(std::shared_ptr<EntityRelation>& relItem)

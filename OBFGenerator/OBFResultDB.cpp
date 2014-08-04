@@ -17,6 +17,7 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 #pragma pop_macro("realloc")
+#include "RTree.h"
 #include "MultiPoly.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <google\protobuf\io\zero_copy_stream_impl_lite.h>
@@ -32,7 +33,7 @@
 #include "OBFMapDB.h"
 #include "OBFElementDB.h"
 #include "OBFRenderingTypes.h"
-
+#include "Rtree_Serialization.h"
 
 OBFResultDB::OBFResultDB(void) 
 {
@@ -667,10 +668,7 @@ void OBFResultDB::SaverCityNode(EntityBase* nn, TileManager<CityObj>& manager)
 	CityObj objCity;
 	
 	MapObject::parseMapObject(&objCity, nn);
-	if (nn->getTag("is_in") != "")
-	{
-		objCity.setIsin(boost::to_lower_copy(nn->getTag("is_in")));
-	}
+	objCity.setIsin(boost::to_lower_copy(nn->getTag("is_in")));
 	if (nn->getTag("place") != "")
 	{
 		objCity.setType(boost::to_upper_copy(nn->getTag("place")));

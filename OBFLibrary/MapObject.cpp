@@ -65,6 +65,7 @@ MapObject::~MapObject(void)
  {
 	 isAlwaysVisible = false;
 	 isin = "";
+	 cityName = getName();
 	 streets.clear();
  }
  
@@ -72,6 +73,7 @@ MapObject::~MapObject(void)
  {
 	 isin = parent.isin;
 	 postcode = parent.postcode;
+	 cityName = parent.cityName;
 	 streets.clear();
 	 if (parent.streets.size() > 0)
 	 {
