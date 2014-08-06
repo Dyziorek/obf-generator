@@ -125,7 +125,7 @@ void OBFpoiDB::writePoiDataIndex(BinaryMapDataWriter& writer, OBFResultDB& dbCtx
 	int zoomStart = 6;
 	processPOIIntoTree(dbCtx, treeData, zoomStart, bbox, namesIndex);
 
-	__int64 fileP = writer.startWritePoiIndex("POIDATA", bbox.min_corner().get<0>(), bbox.max_corner().get<0>(), bbox.min_corner().get<1>(), bbox.max_corner().get<1>());
+	__int64 fileP = writer.startWritePoiIndex(poiTableName, bbox.min_corner().get<0>(), bbox.max_corner().get<0>(), bbox.min_corner().get<1>(), bbox.max_corner().get<1>());
 
 	writer.writePoiCategoriesTable(treeData.node.category);
 	writer.writePoiSubtypesTable(treeData.node.category);
@@ -2089,6 +2089,7 @@ void OBFAddresStreetDB::putNamedMapObject(std::map<std::string, std::list<std::s
 std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sqlite3_stmt* waynodesStat)
 {
 	std::vector<EntityNode> resVec;
+	sqlite3_reset(waynodesStat);
 	sqlite3_bind_int64( waynodesStat, 1, streetId);
 	int sqlCode = SQLITE_OK;
 	sqlCode = sqlite3_step(waynodesStat);
@@ -2103,84 +2104,85 @@ std::vector<EntityNode> OBFAddresStreetDB::loadStreetNodes(__int64 streetId, sql
 void OBFAddresStreetDB::readStreetsAndBuildingsForCity(sqlite3_stmt* streetBuildingsStat, CityObj city,
 			sqlite3_stmt* waynodesStat, std::unordered_map<Street, std::list<EntityNode>>& streetNodes, std::unordered_map<__int64, Street>& visitedStreets,
 			std::unordered_map<std::string, std::vector<Street>>& uniqueNames)  {
-			sqlite3_bind_int64( streetBuildingsStat, 1, city.getID());
-			int sqlCode = SQLITE_OK;
-			sqlCode = sqlite3_step(streetBuildingsStat);
-		while (sqlCode == SQLITE_ROW) {
-			long streetId = sqlite3_column_int64(streetBuildingsStat, 0);
-			if (visitedStreets.find(streetId) == visitedStreets.end()) {
-				std::string streetName = (const char*)sqlite3_column_text(streetBuildingsStat, 1);
-				std::string streetEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 2);
-				double lat = sqlite3_column_double(streetBuildingsStat, 3);
-				double lon = sqlite3_column_double(streetBuildingsStat, 4);
-				// load the street nodes
-				std::vector<EntityNode> thisWayNodes = loadStreetNodes(streetId, waynodesStat);
-				if (uniqueNames.find(streetName) == uniqueNames.end()) {
-					uniqueNames.insert(std::make_pair(streetName, std::vector<Street>()));
-				}
-				Street street(city);
-				uniqueNames[streetName].push_back(street);
-				street.setLocation(lat, lon);
-				street.setId(streetId);
-				// If there are more streets with same name in different districts.
-				// Add district name to all other names. If sorting is right, the first street was the one in the city
-				const char* district = (const char*)sqlite3_column_text(streetBuildingsStat, 11);
-				std::string cityPart = district == nullptr || (city.getName() == district) ? "" : " (" + std::string(district) + ")";
-				street.setName(streetName + cityPart);
-				street.setEnName(streetEnName + cityPart);
-				streetNodes.insert(std::make_pair(street, std::list<EntityNode>(thisWayNodes.begin(), thisWayNodes.end())));
-
-				visitedStreets.insert(std::make_pair(streetId, street)); // mark the street as visited
-			}
-			if (sqlite3_column_text(streetBuildingsStat, 5) != nullptr) {
-				Street s = visitedStreets[streetId];
-				Building b;
-				b.setId(sqlite3_column_int64(streetBuildingsStat, 5));
-				const char* bldName = (const char*)sqlite3_column_text(streetBuildingsStat, 6);
-				if (bldName != nullptr)
-				{
-					b.setName(bldName);
-				}
-				const char* bldEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 7);
-				if (bldEnName != nullptr)
-				{
-					b.setEnName(bldEnName);
-				}
-				b.setLocation(sqlite3_column_double(streetBuildingsStat, 8), sqlite3_column_double(streetBuildingsStat, 9));
-				const char* postCode = (const char*)sqlite3_column_text(streetBuildingsStat, 10);
-				if (postCode != nullptr)
-				{
-					b.postCode = std::string(postCode);
-				}
-				const char* name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 12);
-				if (name2 != nullptr)
-				{
-					b.name2 = std::string(name2);
-				}
-				// no en name2 for now
-				name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 13);
-				if (name2 != nullptr)
-				{
-					b.name2 = std::string(name2);
-				}
-				double lat2 = sqlite3_column_double(streetBuildingsStat,14);
-				double lon2 = sqlite3_column_double(streetBuildingsStat,15);
-				if (lat2 != 0 || lon2 != 0) {
-					b.location2 = LatLon(lat2, lon2);
-				}
-				b.interval = sqlite3_column_int(streetBuildingsStat, 16);
-				const char* itype = (const char*)sqlite3_column_text(streetBuildingsStat, 17);
-				if (itype != nullptr)
-				{
-					std::string type(itype);
-					if (type != "") {
-						b.setInterpType(type);
+				sqlite3_reset(streetBuildingsStat);
+				sqlite3_bind_int64( streetBuildingsStat, 1, city.getID());
+				int sqlCode = SQLITE_OK;
+				sqlCode = sqlite3_step(streetBuildingsStat);
+			while (sqlCode == SQLITE_ROW) {
+				long streetId = sqlite3_column_int64(streetBuildingsStat, 0);
+				if (visitedStreets.find(streetId) == visitedStreets.end()) {
+					std::string streetName = (const char*)sqlite3_column_text(streetBuildingsStat, 1);
+					std::string streetEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 2);
+					double lat = sqlite3_column_double(streetBuildingsStat, 3);
+					double lon = sqlite3_column_double(streetBuildingsStat, 4);
+					// load the street nodes
+					std::vector<EntityNode> thisWayNodes = loadStreetNodes(streetId, waynodesStat);
+					if (uniqueNames.find(streetName) == uniqueNames.end()) {
+						uniqueNames.insert(std::make_pair(streetName, std::vector<Street>()));
 					}
+					Street street(city);
+					uniqueNames[streetName].push_back(street);
+					street.setLocation(lat, lon);
+					street.setId(streetId);
+					// If there are more streets with same name in different districts.
+					// Add district name to all other names. If sorting is right, the first street was the one in the city
+					const char* district = (const char*)sqlite3_column_text(streetBuildingsStat, 11);
+					std::string cityPart = district == nullptr || (city.getName() == district) ? "" : " (" + std::string(district) + ")";
+					street.setName(streetName + cityPart);
+					street.setEnName(streetEnName + cityPart);
+					streetNodes.insert(std::make_pair(street, std::list<EntityNode>(thisWayNodes.begin(), thisWayNodes.end())));
+
+					visitedStreets.insert(std::make_pair(streetId, street)); // mark the street as visited
 				}
-				s.addBuildingCheckById(b);
+				if (sqlite3_column_text(streetBuildingsStat, 5) != nullptr) {
+					Street s = visitedStreets[streetId];
+					Building b;
+					b.setId(sqlite3_column_int64(streetBuildingsStat, 5));
+					const char* bldName = (const char*)sqlite3_column_text(streetBuildingsStat, 6);
+					if (bldName != nullptr)
+					{
+						b.setName(bldName);
+					}
+					const char* bldEnName = (const char*)sqlite3_column_text(streetBuildingsStat, 7);
+					if (bldEnName != nullptr)
+					{
+						b.setEnName(bldEnName);
+					}
+					b.setLocation(sqlite3_column_double(streetBuildingsStat, 8), sqlite3_column_double(streetBuildingsStat, 9));
+					const char* postCode = (const char*)sqlite3_column_text(streetBuildingsStat, 10);
+					if (postCode != nullptr)
+					{
+						b.postCode = std::string(postCode);
+					}
+					const char* name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 12);
+					if (name2 != nullptr)
+					{
+						b.name2 = std::string(name2);
+					}
+					// no en name2 for now
+					name2 = (const char*)sqlite3_column_text(streetBuildingsStat, 13);
+					if (name2 != nullptr)
+					{
+						b.name2 = std::string(name2);
+					}
+					double lat2 = sqlite3_column_double(streetBuildingsStat,14);
+					double lon2 = sqlite3_column_double(streetBuildingsStat,15);
+					if (lat2 != 0 || lon2 != 0) {
+						b.location2 = LatLon(lat2, lon2);
+					}
+					b.interval = sqlite3_column_int(streetBuildingsStat, 16);
+					const char* itype = (const char*)sqlite3_column_text(streetBuildingsStat, 17);
+					if (itype != nullptr)
+					{
+						std::string type(itype);
+						if (type != "") {
+							b.setInterpType(type);
+						}
+					}
+					s.addBuildingCheckById(b);
+				}
+				sqlCode = sqlite3_step(streetBuildingsStat);
 			}
-			sqlCode = sqlite3_step(streetBuildingsStat);
-		}
 
 		
 	}

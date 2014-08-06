@@ -64,6 +64,7 @@ public:
 
 	void build();
 	void paint();
+	void paint(std::pair<double, double> point, std::string);
 	void paintList(std::vector<std::shared_ptr<EntityWay>> wayList, SkCanvas* painter);
 	void createData(std::shared_ptr<EntityRelation>& relItem);
 	std::list<std::shared_ptr<Ring>> combineRings(std::vector<std::shared_ptr<EntityWay>> inList);
@@ -90,6 +91,7 @@ public:
 	typedef bg::model::segment<pointD> segmD;
 	typedef bg::model::ring<pointD, true> ringD;
 	typedef bg::model::polygon<pointD, true> polyD;
+	
 
 	std::vector<polyD> polygons;
 

@@ -19,8 +19,10 @@ std::unique_ptr<SimpleStreet> DBAStreet::findStreet(std::string name,CityObj cit
 		if(cityPart == "") {
 			return findStreet(name, city);
 		}
+		const char* strName = name.c_str();
 		//SELECT id,latitude,longitude FROM street WHERE ?1 = city AND ?2 = citypart AND ?3 = name
 		sqlite3_stmt* addrSearch = workCtx.searchStrStmt;
+		sqlite3_reset(addrSearch);
 		sqlite3_bind_int64(addrSearch, 1, city.getID());
 		sqlite3_bind_text(addrSearch, 2, cityPart.c_str(), cityPart.size(), SQLITE_TRANSIENT);
 		sqlite3_bind_text(addrSearch, 3, name.c_str(), name.size(), SQLITE_TRANSIENT);
@@ -42,6 +44,7 @@ std::unique_ptr<SimpleStreet> DBAStreet::findStreet(std::string name,CityObj cit
 {
 		//SELECT id,name,citypart,latitude,longitude FROM street WHERE ?1 = city AND ?2 = name
 		sqlite3_stmt* addrSearch = workCtx.searchStrNoCityStmt;
+		sqlite3_reset(addrSearch);
 		sqlite3_bind_int64(addrSearch, 1, city.getID());
 		sqlite3_bind_text(addrSearch, 2, name.c_str(), name.size(), SQLITE_TRANSIENT);
 		int sqlDB = sqlite3_step(addrSearch);
@@ -65,10 +68,12 @@ __int64 DBAStreet::insertStreet(std::string name,std::string nameEn,LatLon locat
 {
 	//"insert into street (id, latitude, longitude, name, name_en, city, citypart) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
 	sqlite3_stmt* addrInsert = workCtx.streetStmt;
+	const char* strStreetName = name.c_str();
 	sqlite3* streetCtx = workCtx.dbAddrCtx;
 	char* errMsg;
 		int SqlCode;
 	sqlite3_exec(streetCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+	sqlite3_reset(addrInsert);
 	sqlite3_bind_int64(addrInsert, 6, city.getID());
 	sqlite3_bind_double(addrInsert, 2, location.first);
 	sqlite3_bind_double(addrInsert, 3, location.second);
@@ -93,6 +98,7 @@ __int64 DBAStreet::insertStreet(std::string name,std::string nameEn,LatLon locat
 bool DBAStreet::findBuilding(std::shared_ptr<EntityBase> house)
 {
 	sqlite3_stmt* searchBuildStmt = workCtx.searchBuildStmt;
+	sqlite3_reset(searchBuildStmt);
 	sqlite3_bind_int64(searchBuildStmt, 1, house->id);
 	int SqlCode = sqlite3_step(searchBuildStmt);
 	return (SqlCode == SQLITE_ROW);
@@ -108,6 +114,7 @@ void DBAStreet::writeBuilding(std::unordered_set<long long>& idsOfStreet, Buildi
 	sqlite3_exec(bldCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
 	for (long long id : idsOfStreet)
 	{
+		sqlite3_reset(bldInsert);
 		sqlite3_bind_int64(bldInsert, 1, building.getID());
 		sqlite3_bind_double(bldInsert, 2, building.getLatLon().first);
 		sqlite3_bind_double(bldInsert, 3, building.getLatLon().second);
@@ -170,6 +177,7 @@ bool DBAStreet::findStreetNode(std::shared_ptr<EntityBase> node)
 	int SqlCode;
 	bool success = false;
 	sqlite3_exec(bldCtx, "BEGIN TRANSACTION", NULL, NULL, &errMsg);
+	sqlite3_reset(searchStmt);
 	sqlite3_bind_int64(searchStmt, 1, node->id);
 	SqlCode = sqlite3_step(searchStmt);
 	if (SqlCode == SQLITE_ROW)
@@ -197,6 +205,7 @@ void DBAStreet::writeStreetWayNodes(std::unordered_set<long long>& idsOfStreet,s
 		{
 			if (node || node->getLatLon().first != -1000)
 			{
+				
 				sqlite3_bind_int64(insertStrNodeStmt, 1, node->id);
 				sqlite3_bind_double(insertStrNodeStmt, 2, node->getLatLon().first);
 				sqlite3_bind_double(insertStrNodeStmt, 3, node->getLatLon().second);

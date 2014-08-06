@@ -326,6 +326,7 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 		}
 		std::map<std::string, std::string> assocMap;
 		std::vector<std::tuple<__int64, int, std::string>> relMembers;
+		std::set<__int64> relIdsSet;
 		bool firstTimeNode = true;
 		bool firstTimeWay = true;
 		bool firstTimeRel = true;
@@ -558,12 +559,17 @@ UINT __cdecl ProcDataSave(	sqlite3* dbCtx , sqlite3* dbWayCtx ,sqlite3* dbRelCtx
 						Relation relData = group.relations().Get(relidx);
 						__int64 relMemId = 0;
 						relMembers.clear();
+						relIdsSet.clear();
 						for (int relMem = 0; relMem < relData.memids().size(); relMem++)
 						{
 							relMemId += relData.memids().Get(relMem);
 							std::string roleId = strings[relData.roles_sid().Get(relMem)];
 							int type = relData.types().Get(relMem);
-							relMembers.push_back(std::tuple<__int64, int, std::string>(relMemId, type,roleId));
+							if (relIdsSet.find(relMemId) == relIdsSet.end())
+							{
+								relMembers.push_back(std::tuple<__int64, int, std::string>(relMemId, type,roleId));
+								relIdsSet.insert(relMemId);
+							}
 						}
 						for (int keyId = 0; keyId < relData.keys().size(); keyId++)
 						{

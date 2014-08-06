@@ -440,10 +440,10 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 		BinaryMapDataWriter writter(&rafek);
 
-		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, mapName, *this);
+		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, "MAPDATA", *this);
 		((OBFrouteDB*)routeIndexer)->writeBinaryRouteIndex(writter, *this, "ROUTEDATA");
-		((OBFAddresStreetDB*)addresIndexer)->writeAddresMapIndex(writter,mapName, *this);
-		((OBFpoiDB*)poiIndexer)->writePoiDataIndex(writter, *this, "POIMANIAK");
+		((OBFAddresStreetDB*)addresIndexer)->writeAddresMapIndex(writter,"ADDRDATA", *this);
+		((OBFpoiDB*)poiIndexer)->writePoiDataIndex(writter, *this, "POIDATA");
 		writter.close();
 //		rafek.close();
 		//((OBFpoiDB*)poiIndexer)->writePoiMapIndex(writter, mapName, *this);

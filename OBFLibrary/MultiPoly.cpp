@@ -346,40 +346,44 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 		}
 		
 		
-
-		std::shared_ptr<Ring> containedInOuter;
-		// use a sortedset to get the smallest outer containing the point
-		for (std::shared_ptr<Ring> outer : outRing) {
-			if (outer->containsPoint(point.first, point.second)) {
-				containedInOuter = outer;
-				break;
-			}
-		}
-		
-		if (!containedInOuter) {
-			return false;
-		}
-
 		pointD ptCheck;
 		ptCheck.set<0>(point.first);
 		ptCheck.set<1>(point.second);
 		polyD polyWork;
 		double areaVal;
 
+		bool coveredBoost = false;
 		
 		ringD containedInner;
 
 		for(polyD polyData:  polygons)
 		{
-			boxD boxInfo;
-			bg::envelope(polyData, boxInfo);
-
 			if (bg::covered_by(ptCheck, polyData.outer()))
 			{
 				polyWork = polyData;
 				areaVal = bg::area(polyData.outer());
+				coveredBoost = true;
+				break;
 			}
 		}
+
+		if (!coveredBoost)
+			return false;
+
+		for(ringD containedInner:  polyWork.inners())
+		{
+			if (bg::covered_by(ptCheck, containedInner))
+			{
+				coveredBoost = false;
+				break;
+			}
+		}
+
+		if (coveredBoost)
+		{
+			paint(point, "boostTrue");
+		}
+		return coveredBoost;
 
 		ringD outerRing = polyWork.outer();
 
@@ -391,12 +395,32 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			}
 		}
 
-		if (containedInner.size() > 0)
-		{
+		//if (containedInner.size() > 0)
+		//{
+		//	return false;
+		//}
+		//else if (outerRing.size() > 0)
+		//{
+		//	return true;
+		//}
+		std::shared_ptr<Ring> containedInOuter;
+		// use a sortedset to get the smallest outer containing the point
+		for (std::shared_ptr<Ring> outer : outRing) {
+			if (outer->containsPoint(point.first, point.second)) {
+				containedInOuter = outer;
+				break;
+			}
+		}
+		
+		if (!containedInOuter) {
+			if (coveredBoost)
+			{
+				bg::correct(outerRing);
+				paint(point, "boostTrue");
+			}
 			return false;
 		}
-		else
-			return true;
+
 		
 		//use a sortedSet to get the smallest inner Ring
 		std::shared_ptr<Ring> containedInInner;
@@ -406,6 +430,13 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 				break;
 			}
 		}
+
+		if (!containedInInner && coveredBoost == false)
+		{
+			bg::correct(outerRing);
+			paint(point, "boostFalse");
+		}
+		
 
 		if (!containedInInner) return true;
 		if (outRing.size() == 1) {
@@ -495,9 +526,11 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 			}
 			inData.push_back(inRing);
 		}
-		auto ringData = outRing.front();
+		for(auto ringData = outRing.begin(); ringData != outRing.end(); ringData++)
 		{
-			for (auto ringNode : ringData->getListNodes())
+			polyD polyData;
+			auto outData = polyData.outer();
+			for (auto ringNode : ringData->get()->getListNodes())
 			{
 				pointD ptData;
 				LatLon coord =  ringNode->getLatLon();
@@ -534,9 +567,79 @@ std::shared_ptr<EntityWay> MultiPoly::combineTwoWaysIfHasPoints(std::shared_ptr<
 				}
 			}
 		}
+		updateRings();
 	}
 
+	void MultiPoly::paint(std::pair<double, double> point, std::string prefix)
+	{
+	
+		if(numberCalls > 100)
+			return;
 
+		SkImage::Info info = {
+			800, 600, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+		};
+		double scale =0;
+	double offx, offy;
+	double gscale = 0;
+	SkScalar gmaxx = maxLon, gmaxy = maxLat;
+	SkScalar goffx = minLon, goffy = minLat;
+	
+	if (point.first > maxLat)
+	{
+		gmaxy = point.first;
+	}
+	else if (point.first < minLat)
+	{
+		goffy = point.first;
+	}
+	if (point.second > maxLon)
+	{
+		gmaxx = point.second;
+	}
+	else if (point.second < minLon)
+	{
+		goffx = point.second;
+	}
+		SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
+		SkCanvas* painter = imageRender->getCanvas();
+		painter->drawColor(SK_ColorWHITE);
+		SkRect limits;
+		painter->getClipBounds(&limits);
+		gmaxx+=0.001;
+		goffx-=0.001;
+		gmaxy+=0.001;
+		goffy-=0.001;
+		SkScalar minScale = std::min(limits.height() / (gmaxy - goffy) , limits.width() / (gmaxx - goffx));
+		
+		//getScaleOffsets(&scale, &offx, &offy, &goffx, &goffy,limits);
+		for(auto outRingData : outRing)
+		{
+			outRingData->generateImage(painter, SK_ColorBLACK, minScale, goffx, goffy);
+		}
+		//paintImage(painter,minScale, goffx, goffy);
+		
+		SkScalar pointX1 = (point.second - goffx) * minScale;
+		SkScalar pointY1 = limits.height() - (point.first - goffy) * minScale;
+
+		SkPaint type;
+		type.setColor(SK_ColorDKGRAY);
+		type.setStrokeWidth(5);
+		type.setStyle(SkPaint::Style::kStrokeAndFill_Style);
+		painter->drawPoint(pointX1, pointY1, type);
+
+		SkAutoTUnref<SkImage> image(imageRender->newImageSnapshot());
+		SkAutoDataUnref data(image->encode());
+		if (NULL == data.get()) {
+			return ;
+		}
+		char buff[10];
+		_ultoa_s(numberCalls++, buff,10);
+		std::string pathImage = "D:\\osmData\\" + prefix + boost::lexical_cast<std::string, int>(numberCalls) + std::string(".png");
+		SkFILEWStream stream(pathImage.c_str());
+
+		stream.write(data->data(), data->size());
+	}
 
 	void MultiPoly::paint()
 	{
