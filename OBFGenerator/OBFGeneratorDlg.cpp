@@ -23,6 +23,7 @@
 #include "..\..\..\..\core\protos\OBF.pb.h"
 #include "RandomAccessFileReader.h"
 #include "BinaryAddressDataReader.h"
+#include "BinaryRouteDataReader.h"
 #include "BinaryMapDataReader.h"
 #include "BinaryIndexDataReader.h"
 

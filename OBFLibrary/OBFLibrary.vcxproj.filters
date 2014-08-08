@@ -93,6 +93,12 @@
     <ClInclude Include="BinaryAddressDataReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BinaryRouteDataReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryReaderUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -171,6 +177,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BinaryAddressDataReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryRouteDataReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryReaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -36,11 +36,10 @@
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
-#include "BinaryAddressDataReader.h"
-#include "BinaryIndexDataReader.h"
 #include "ArchiveIO.h"
 #include <limits>
 //#include "Rtree_Serialization.h"
+#include "BinaryReaderUtils.h"
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
@@ -230,7 +229,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis, RandomA
 			break;
 		case OsmAndMapIndex::kLevelsFieldNumber:
 			{
-			auto length = BinaryIndexDataReader::readBigEndianInt(cis);
+			auto length = BinaryReaderUtils::readBigEndianInt(cis);
             auto offset = cis->CurrentPosition();
             auto oldLimit = cis->PushLimit(length);
 			std::shared_ptr<BinaryMapSection> section(new BinaryMapSection());
@@ -245,7 +244,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis, RandomA
 			readMapEncodingRules(cis, defaultId++);
 			break;
 		default:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			BinaryReaderUtils::skipUnknownField(cis, tag);
 			break;
 		}
 
@@ -284,20 +283,20 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 				mapRules->createRule(ruleType, ruleID, name, value);
 				cis->PopLimit(oldLimit);
 			  return;
-			case obf::OsmAndMapIndex_MapEncodingRule::kIdFieldNumber:
+			case OsmAndMapIndex_MapEncodingRule::kIdFieldNumber:
 				cis->ReadVarint32(&ruleID);
 				 break;
-			case obf::OsmAndMapIndex_MapEncodingRule::kTagFieldNumber:
+			case OsmAndMapIndex_MapEncodingRule::kTagFieldNumber:
 				wfl::WireFormatLite::ReadString(cis, &name);
 				break;
-			case obf::OsmAndMapIndex_MapEncodingRule::kTypeFieldNumber:
+			case OsmAndMapIndex_MapEncodingRule::kTypeFieldNumber:
 				cis->ReadVarint32(&ruleType);
 				break;
-			case obf::OsmAndMapIndex_MapEncodingRule::kValueFieldNumber:
+			case OsmAndMapIndex_MapEncodingRule::kValueFieldNumber:
 				wfl::WireFormatLite::ReadString(cis, &value);
 				break;
 			default:
-				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				BinaryReaderUtils::skipUnknownField(cis, tag);
 				break;
 		  }
 	}
@@ -362,17 +361,17 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 				  }
 				  else
 				  {
-					  BinaryIndexDataReader::skipUnknownField(cis, tag);
+					  BinaryReaderUtils::skipUnknownField(cis, tag);
 				  }
 			  }
 			  else
 			  {
-			  BinaryIndexDataReader::skipUnknownField(cis, tag);
+			  BinaryReaderUtils::skipUnknownField(cis, tag);
 			  }
               break;
 			}
         default:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			BinaryReaderUtils::skipUnknownField(cis, tag);
             break;
         }
     }
@@ -383,7 +382,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 {
 	gp::uint32 BoxLength;
 	uint32_t currOffset = cis->CurrentPosition();
-	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
+	BoxLength = BinaryReaderUtils::readBigEndianInt(cis);
 	gp::uint32 oldVal = cis->PushLimit(BoxLength);
 	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
 	childSection->offset = currOffset;
@@ -401,23 +400,23 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 			section->childSections.push_back(childSection);
 			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
-		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.min_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kRightFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.max_corner().set<0>(section->rootBox.max_corner().get<0>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kTopFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.min_corner().set<1>(section->rootBox.min_corner().get<1>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
+		case OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
 			{
 				pointI ptCenter;
 				boxI bxInit;
@@ -435,17 +434,17 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 }
 				else
 				{
-					BinaryIndexDataReader::skipUnknownField(cis, tag);
+					BinaryReaderUtils::skipUnknownField(cis, tag);
 				}
 			}
 			//BinaryIndexDataReader::skipUnknownField(cis, tag);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
-			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
+		case OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
+			childSection->dataOffset = BinaryReaderUtils::readBigEndianInt(cis);
 			childSection->offset = cis->CurrentPosition();
 			break;
 		default:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			BinaryReaderUtils::skipUnknownField(cis, tag);
 			break;
 		}
 
@@ -456,7 +455,7 @@ void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_
 void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& region)
 {
 	gp::uint32 BoxLength;
-	BoxLength = BinaryIndexDataReader::readBigEndianInt(cis);
+	BoxLength = BinaryReaderUtils::readBigEndianInt(cis);
 	gp::uint32 oldVal = cis->PushLimit(BoxLength);
 	std::shared_ptr<BinaryMapSection> childSection(new BinaryMapSection);
 	childSection->offset = cis->CurrentPosition();
@@ -473,23 +472,23 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 			section->childSections.push_back(childSection);
 			childSection->geoBox = translateBox(childSection->rootBox);
 			return;
-		case obf::OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kLeftFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.min_corner().set<0>(section->rootBox.min_corner().get<0>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kRightFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kRightFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.max_corner().set<0>(section->rootBox.max_corner().get<0>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kTopFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kTopFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.min_corner().set<1>(section->rootBox.min_corner().get<1>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
-			BinaryIndexDataReader::readSInt32(cis, value);
+		case OsmAndMapIndex_MapDataBox::kBottomFieldNumber:
+			BinaryReaderUtils::readSInt32(cis, value);
 			childSection->rootBox.max_corner().set<1>(section->rootBox.max_corner().get<1>() + value);
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
+		case OsmAndMapIndex_MapDataBox::kBoxesFieldNumber:
 			{
 				auto areaVal = bg::area(region);
 				if (/*fabs(areaVal) > 1 && bg::covered_by(region, childSection->rootBox)*/true)
@@ -498,15 +497,15 @@ void BinaryMapDataReader::loadChildTreeNode(gio::CodedInputStream* cis, std::sha
 				}
 				else
 				{
-					BinaryIndexDataReader::skipUnknownField(cis, tag);
+					BinaryReaderUtils::skipUnknownField(cis, tag);
 				}
 			}
 			break;
-		case obf::OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
-			childSection->dataOffset = BinaryIndexDataReader::readBigEndianInt(cis);
+		case OsmAndMapIndex_MapDataBox::kShiftToMapDataFieldNumber:
+			childSection->dataOffset = BinaryReaderUtils::readBigEndianInt(cis);
 			break;
 		default:
-			BinaryIndexDataReader::skipUnknownField(cis, tag);
+			BinaryReaderUtils::skipUnknownField(cis, tag);
 			break;
 		}
 
@@ -769,10 +768,10 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 			}
 			break;
 
-			case obf::MapDataBlock::kBaseIdFieldNumber:
+			case MapDataBlock::kBaseIdFieldNumber:
 				cis->ReadVarint64(&baseId);
 				break;
-			case obf::MapDataBlock::kDataObjectsFieldNumber:
+			case MapDataBlock::kDataObjectsFieldNumber:
 				{
 				uint32_t	 len;
 				cis->ReadVarint32(&len);
@@ -781,7 +780,7 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 				cis->PopLimit(localimit);
 				}
 				break;
-			case obf::MapDataBlock::kStringTableFieldNumber:
+			case MapDataBlock::kStringTableFieldNumber:
 				{
 					uint32_t lenStr;
 					cis->ReadVarint32(&lenStr);
@@ -792,13 +791,13 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 						cis->PopLimit(oldStrLimit);
 						break;
 					}
-					BinaryIndexDataReader::readStringTable(cis, stringTable);
+					BinaryReaderUtils::readStringTable(cis, stringTable);
 					assert(cis->BytesUntilLimit() == 0);
 					cis->PopLimit(oldStrLimit);
 				}
 				break;
 			default:
-				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				BinaryReaderUtils::skipUnknownField(cis, tag);
 				break;
 		}
 	}
@@ -836,15 +835,15 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 				continueWhile = false;
 			}
 			break;
-			case obf::MapData::kIdFieldNumber:
+			case MapData::kIdFieldNumber:
 				{
-				 idDef = BinaryIndexDataReader::readSInt64(cis);
+				 idDef = BinaryReaderUtils::readSInt64(cis);
 				 objects.insert(std::make_pair(baseid+idDef, std::shared_ptr<MapObjectData>(localMapObj)));
     			 localMapObj->localId = baseid+idDef;
 				}
 				break;
-			case obf::MapData::kAreaCoordinatesFieldNumber:
-			case obf::MapData::kCoordinatesFieldNumber:
+			case MapData::kAreaCoordinatesFieldNumber:
+			case MapData::kCoordinatesFieldNumber:
 				{
 					uint32_t limitVtx;
 					cis->ReadVarint32(&limitVtx);
@@ -862,8 +861,8 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 						int32_t x = 0;
 						int32_t y = 0;
 						pointI ptData;
-						BinaryIndexDataReader::readSInt32(cis, x);
-						BinaryIndexDataReader::readSInt32(cis, y);
+						BinaryReaderUtils::readSInt32(cis, x);
+						BinaryReaderUtils::readSInt32(cis, y);
 						ptRef.set<0>(ptRef.get<0>() + (x << ShiftCoordinates));
 						ptRef.set<1>(ptRef.get<1>() + (y << ShiftCoordinates));
 						(*pointerData++) = ptRef;
@@ -875,7 +874,7 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					{
 						
 						localMapObj->points = ptDataVec;
-						localMapObj->isArea = obf::MapData::kAreaCoordinatesFieldNumber == tagVal;
+						localMapObj->isArea = MapData::kAreaCoordinatesFieldNumber == tagVal;
 #ifdef _DEBUG 
 						for(pointI ptVec : ptDataVec)
 						{
@@ -895,7 +894,7 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					}
 				}
 				break;
-			case obf::MapData::kPolygonInnerCoordinatesFieldNumber:
+			case MapData::kPolygonInnerCoordinatesFieldNumber:
 				{
 					uint32_t limitVtx;
 					cis->ReadVarint32(&limitVtx);
@@ -915,8 +914,8 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 						int32_t x = 0;
 						int32_t y = 0;
 						pointI ptData;
-						BinaryIndexDataReader::readSInt32(cis, x);
-						BinaryIndexDataReader::readSInt32(cis, y);
+						BinaryReaderUtils::readSInt32(cis, x);
+						BinaryReaderUtils::readSInt32(cis, y);
 						ptRef.set<0>(ptRef.get<0>() + (x << ShiftCoordinates));
 						ptRef.set<1>(ptRef.get<1>() + (y << ShiftCoordinates));
 						(*pointerData++) = ptRef;
@@ -930,13 +929,13 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					}
 				}
 				break;
-			case obf::MapData::kTypesFieldNumber:
-			case obf::MapData::kAdditionalTypesFieldNumber:
+			case MapData::kTypesFieldNumber:
+			case MapData::kAdditionalTypesFieldNumber:
 				{
 					uint32_t limitTypes;
 					cis->ReadVarint32(&limitTypes);
 					uint32_t oldLimitTypes = cis->PushLimit(limitTypes);
-					std::list<int>& typeIds = tagVal == obf::MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
+					std::list<int>& typeIds = tagVal == MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
 					while(cis->BytesUntilLimit() > 0)
 					{
 						uint32_t ruleId;
@@ -946,7 +945,7 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					cis->PopLimit(oldLimitTypes);
 				}
 				break;
-			case obf::MapData::kStringNamesFieldNumber:
+			case MapData::kStringNamesFieldNumber:
 				{
 					uint32_t limitNames;
 					cis->ReadVarint32(&limitNames);
@@ -962,7 +961,7 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 				}				
 				break;
 			default:
-				BinaryIndexDataReader::skipUnknownField(cis, tag);
+				BinaryReaderUtils::skipUnknownField(cis, tag);
 				break;
 		}
 	}

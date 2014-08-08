@@ -2337,7 +2337,7 @@ void OBFAddresStreetDB::writeCityBlockIndex(BinaryMapDataWriter& writer, std::st
 					}
 				}
 			}
-			if (millisf > 500) {
+			if (millisf > 0) {
 				std::wstringstream wstrm;
 				std::wstring wname;
 				stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;

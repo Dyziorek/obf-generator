@@ -23,9 +23,10 @@
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
 #include "BinaryAddressDataReader.h"
+#include "BinaryRouteDataReader.h"
 #include "BinaryIndexDataReader.h"
 #include <boost/detail/endian.hpp>
-
+#include "BinaryReaderUtils.h"
 
 
 using namespace google::protobuf;
@@ -76,11 +77,14 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 		case OsmAndStructure::kMapIndexFieldNumber:
 			ReadMapData(&strmData);
 			break;
+		case OsmAndStructure::kRoutingIndexFieldNumber:
+			ReadRouteData(&strmData);
+			break;
 		case OsmAndStructure::kAddressIndexFieldNumber:
 			ReadAddresIndex(&strmData);
 			break;
 		default:
-			skipUnknownField(&strmData, tagCode);
+			BinaryReaderUtils::skipUnknownField(&strmData, tagCode);
 			break;
 		}
 	}
@@ -92,31 +96,12 @@ BinaryIndexDataReader::~BinaryIndexDataReader(void)
 }
 
 
-void BinaryIndexDataReader::skipUnknownField( gio::CodedInputStream* cis, int tag )
-{
-    auto wireType = wfl::WireFormatLite::GetTagWireType(tag);
-    if(wireType == wfl::WireFormatLite::WIRETYPE_FIXED32_LENGTH_DELIMITED)
-    {
-        auto length = readBigEndianInt(cis);
-        cis->Skip(length);
-    }
-    else
-        wfl::WireFormatLite::SkipField(cis, tag);
-}
 
-uint32 BinaryIndexDataReader::readBigEndianInt(gio::CodedInputStream* cis )
-{
-    uint32 be;
-    cis->ReadRaw(&be, sizeof(be));
- #ifndef BOOST_BIG_ENDIAN
-	reverse_bytes(sizeof(be),(char*)&be);
- #endif
-	return be;
-}
+
 
 void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* cis)
 {
-	int limitValue = readBigEndianInt(cis);
+	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
 	reader.ReadMapDataSection(cis, rad);
@@ -129,7 +114,7 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 
 void BinaryIndexDataReader::ReadAddresIndex(google::protobuf::io::CodedInputStream* cis)
 {
-	int limitValue = readBigEndianInt(cis);
+	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
 	addresser.ReadMapAddresses(cis, rad);
@@ -137,55 +122,15 @@ void BinaryIndexDataReader::ReadAddresIndex(google::protobuf::io::CodedInputStre
 	cis->Seek(offset + limitValue);
 }
 
-bool BinaryIndexDataReader::readSInt32( gio::CodedInputStream* cis, int32_t& output )
+void BinaryIndexDataReader::ReadRouteData(google::protobuf::io::CodedInputStream* cis)
 {
-	uint32_t newVal;
-	bool returnData;
-	returnData = cis->ReadVarint32(&newVal);
-	output = wfl::WireFormatLite::ZigZagDecode32(newVal);
-	return returnData;
-}
-
-int64_t BinaryIndexDataReader::readSInt64( gio::CodedInputStream* cis )
-{
-	uint64_t newVal;
-	int64_t result = -1LL;
-	if(cis->ReadVarint64(&newVal))
-		result = wfl::WireFormatLite::ZigZagDecode64(newVal);
-	return result;
+	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
+	int offset = cis->CurrentPosition();
+	int oldLimit = cis->PushLimit(limitValue);
+	router.ReadRouteInfo(cis, rad);
+	cis->PopLimit(oldLimit);
+	cis->Seek(offset + limitValue);
 }
 
 
-bool BinaryIndexDataReader::readString( gio::CodedInputStream* cis, std::string& output )
-{
-    std::string value;
-    if(!internal::WireFormatLite::ReadString(cis, &value))
-        return false;
-
-    output = value;
-    return true;
-}
-
-void BinaryIndexDataReader::readStringTable( gio::CodedInputStream* cis, std::vector<std::string>& stringTableOut )
-{
-    for(;;)
-    {
-        auto tag = cis->ReadTag();
-        switch(internal::WireFormatLite::GetTagFieldNumber(tag))
-        {
-        case 0:
-            return;
-		case StringTable::kSFieldNumber:
-            {
-                std::string value;
-                if(readString(cis, value))
-                    stringTableOut.push_back(std::move(value));
-            }
-            break;
-        default:
-            skipUnknownField(cis, tag);
-            break;
-        }
-    }
-}
 

@@ -36,8 +36,7 @@
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryAddressDataReader.h"
-#include "BinaryMapDataReader.h"
-#include "BinaryIndexDataReader.h"
+#include "BinaryReaderUtils.h"
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
@@ -63,15 +62,15 @@ void BinaryAddressDataReader::ReadMapAddresses(gio::CodedInputStream* cis, Rando
 		case 0:
 			return;
 		case OsmAndAddressIndex::kNameFieldNumber:
-			BinaryIndexDataReader::readString(cis, name);
+			BinaryReaderUtils::readString(cis, name);
 			break;
 		case OsmAndAddressIndex::kNameEnFieldNumber:
-			BinaryIndexDataReader::readString(cis, enName);
+			BinaryReaderUtils::readString(cis, enName);
 			break;
 		case OsmAndAddressIndex::kCitiesFieldNumber:
 			{
 				auto currPos = cis->CurrentPosition();
-				uint32_t cityLen = BinaryIndexDataReader::readBigEndianInt(cis);
+				uint32_t cityLen = BinaryReaderUtils::readBigEndianInt(cis);
 				std::shared_ptr<MapAddresBlock> block = std::shared_ptr<MapAddresBlock>(new MapAddresBlock);
 				block->_length = cityLen;
 				block->_offset = currPos;
@@ -82,7 +81,7 @@ void BinaryAddressDataReader::ReadMapAddresses(gio::CodedInputStream* cis, Rando
 			break;
 		case OsmAndAddressIndex::kNameIndexFieldNumber:
 			auto indexNameOffset = cis->CurrentPosition();
-            auto length = BinaryIndexDataReader::readBigEndianInt(cis);
+            auto length = BinaryReaderUtils::readBigEndianInt(cis);
             cis->Seek(indexNameOffset + length + 4);
 			break;
 		}
@@ -102,7 +101,7 @@ void BinaryAddressDataReader::readCityInfo(gio::CodedInputStream* cis, std::shar
             cis->ReadVarint32(reinterpret_cast<uint32_t*>(&block->_type));
             return;
         default:
-            BinaryIndexDataReader::skipUnknownField(cis, tag);
+            BinaryReaderUtils::skipUnknownField(cis, tag);
             break;
         }
     }
