@@ -154,6 +154,7 @@
     <ClInclude Include="BinaryIndexDataReader.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BinaryMapDataReader.h" />
+    <ClInclude Include="BinaryPoiDataReader.h" />
     <ClInclude Include="BinaryReaderUtils.h" />
     <ClInclude Include="BinaryRouteDataReader.h" />
     <ClInclude Include="MapObjectData.h" />
@@ -183,6 +184,7 @@
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
     <ClCompile Include="BinaryMapDataReader.cpp" />
+    <ClCompile Include="BinaryPoiDataReader.cpp" />
     <ClCompile Include="BinaryReaderUtils.cpp" />
     <ClCompile Include="BinaryRouteDataReader.cpp" />
     <ClCompile Include="C:\boost_1_55\libs\iostreams\src\zlib.cpp">

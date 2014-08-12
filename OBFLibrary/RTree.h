@@ -8,6 +8,7 @@
 
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
+namespace bgm = boost::geometry::model;
 
 namespace boost { namespace geometry { namespace index { namespace detail {
 
@@ -229,4 +230,16 @@ public:
 	}
 
 };
+
+typedef bgm::point<__int64, 2, bg::cs::cartesian> pointL;
+typedef bgm::point<int, 2, bg::cs::cartesian> pointI;
+typedef bgm::box<pointI> boxI;
+typedef bgm::box<pointL> boxL;
+typedef bgm::point<double, 2, bg::cs::cartesian> pointD;
+typedef bgm::box<pointD> boxD;
+typedef boost::geometry::model::box<pointI> AreaI;
+typedef boost::geometry::model::box<pointD> AreaD;
+typedef boost::geometry::model::polygon<pointI> polyArea;
+typedef boost::geometry::model::polygon<pointI, true, false> polyLine;
+
 
