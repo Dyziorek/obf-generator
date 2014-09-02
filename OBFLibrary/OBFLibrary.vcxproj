@@ -157,6 +157,7 @@
     <ClInclude Include="BinaryPoiDataReader.h" />
     <ClInclude Include="BinaryReaderUtils.h" />
     <ClInclude Include="BinaryRouteDataReader.h" />
+    <ClInclude Include="CollectionData.h" />
     <ClInclude Include="MapObjectData.h" />
     <ClInclude Include="RandomAccessFileReader.h" />
     <ClInclude Include="RandomAccessFileWriter.h" />

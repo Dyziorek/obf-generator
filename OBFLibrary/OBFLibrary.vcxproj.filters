@@ -102,6 +102,9 @@
     <ClInclude Include="BinaryPoiDataReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CollectionData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -66,6 +66,9 @@
     <ClInclude Include="BatchUpdater.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AtlasMapDxRender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OBFGenerator.cpp">
@@ -108,6 +111,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DBAStreet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AtlasMapDxRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
