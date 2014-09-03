@@ -105,6 +105,9 @@
     <ClInclude Include="CollectionData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AsyncHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -192,6 +195,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BinaryPoiDataReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AsyncHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

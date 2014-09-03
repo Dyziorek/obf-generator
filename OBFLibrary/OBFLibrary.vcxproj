@@ -150,6 +150,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AsyncHelper.h" />
     <ClInclude Include="BinaryAddressDataReader.h" />
     <ClInclude Include="BinaryIndexDataReader.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="TileManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AsyncHelper.cpp" />
     <ClCompile Include="BinaryAddressDataReader.cpp" />
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
