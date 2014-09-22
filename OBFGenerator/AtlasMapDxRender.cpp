@@ -26,6 +26,8 @@ using namespace DirectX;
 #include "AtlasMapDxRender.h"
 
 
+boost::thread_group generators;
+
 AtlasMapDxRender::AtlasMapDxRender(void)
 {
 	g_hInst = nullptr;
@@ -168,8 +170,15 @@ HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
     desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
-	g_pd3dDevice->CreateTexture2D(&desc, nullptr, (ID3D11Texture2D**)&g_pResourceMap);
+	hr = g_pd3dDevice->CreateTexture2D(&desc, nullptr, (ID3D11Texture2D**)&g_pResourceMap);
 
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+    memset( &SRVDesc, 0, sizeof( SRVDesc ) );
+	SRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MipLevels = desc.MipLevels;
+
+	hr = g_pd3dDevice->CreateShaderResourceView(g_pResourceMap, &SRVDesc, &g_pTextureRVMap);
 
     // Create DirectXTK objects
     g_States.reset( new CommonStates( g_pd3dDevice ) );
@@ -188,10 +197,10 @@ void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Re
     typedef unsigned int UINT32; 
     typedef signed int SINT32; 
    
-    #define BitmapColorGetA(color) (((color) >> 24) & 0xFF) 
-    #define BitmapColorGetR(color) (((color) >> 16) & 0xFF) 
-    #define BitmapColorGetG(color) (((color) >> 8) & 0xFF) 
-    #define BitmapColorGetB(color) (((color) >> 0) & 0xFF) 
+    //#define BitmapColorGetA(color) (((color) >> 24) & 0xFF) 
+    //#define BitmapColorGetR(color) (((color) >> 16) & 0xFF) 
+    //#define BitmapColorGetG(color) (((color) >> 8) & 0xFF) 
+    //#define BitmapColorGetB(color) (((color) >> 0) & 0xFF) 
  
     int bmpWidth = skBitmap.width(); 
     int bmpHeight = skBitmap.height();
@@ -206,24 +215,24 @@ void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Re
     SINT32 bpl=stride*4; 
 	
 
-    for(SINT32 y=bmpHeight-1; y>=0; y--) 
-    { 
-        SINT32 base=y*stride; 
-        for(SINT32 x=0; x<(SINT32)bmpWidth; x++) 
-        { 
-            UINT32 i=base+x*4;
-            UINT32 pixelData = *(UINT32*)(m_pmap+i);
-            UINT8 b1=BitmapColorGetB(pixelData);
-            UINT8 g1=BitmapColorGetG(pixelData);
-            UINT8 r1=BitmapColorGetR(pixelData);
-            UINT8 a1=BitmapColorGetA(pixelData);
-            r1=r1*a1/255; 
-            g1=g1*a1/255; 
-            b1=b1*a1/255; 
-            UINT32 temp=(a1<<24)|(r1<<16)|(g1<<8)|b1;//a bmp pixel in little endian is B,G,R,A
-			*(UINT32*)(m_pmap+i) = temp;
-        } 
-    } 
+   // for(SINT32 y=bmpHeight-1; y>=0; y--) 
+   // { 
+   //     SINT32 base=y*stride; 
+   //     for(SINT32 x=0; x<(SINT32)bmpWidth; x++) 
+   //     { 
+   //         UINT32 i=base+x*4;
+   //         UINT32 pixelData = *(UINT32*)(m_pmap+i);
+   //         //UINT8 b1=BitmapColorGetB(pixelData);
+   //         //UINT8 g1=BitmapColorGetG(pixelData);
+   //         //UINT8 r1=BitmapColorGetR(pixelData);
+   //         //UINT8 a1=BitmapColorGetA(pixelData);
+   //         //r1=r1*a1/255; 
+   //         //g1=g1*a1/255; 
+   //         //b1=b1*a1/255; 
+   //         //UINT32 temp=(a1<<24)|(r1<<16)|(g1<<8)|b1;//a bmp pixel in little endian is B,G,R,A
+			//*(UINT32*)(m_pmap+i) = temp;
+   //     } 
+   // } 
 	D3D11_BOX destRegion;
 	destRegion.left = xoffset;
 	destRegion.right = yoffset;

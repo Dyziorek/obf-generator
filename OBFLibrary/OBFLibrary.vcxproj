@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;OBFLIBRARY_EXPORTS;BOOST_IOSTREAMS_NO_LIB;BOOST_GEOMETRY_INDEX_DETAIL_EXPERIMENTAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\core;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\device;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zm140 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm160 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -159,7 +159,15 @@
     <ClInclude Include="BinaryReaderUtils.h" />
     <ClInclude Include="BinaryRouteDataReader.h" />
     <ClInclude Include="CollectionData.h" />
+    <ClInclude Include="DefaultMapStyleValue.h" />
+    <ClInclude Include="DefaultMapValueSet.h" />
+    <ClInclude Include="MapDataGenerator.h" />
     <ClInclude Include="MapObjectData.h" />
+    <ClInclude Include="MapStyleChoiceValue.h" />
+    <ClInclude Include="MapStyleData.h" />
+    <ClInclude Include="MapStyleInfo.h" />
+    <ClInclude Include="MapStyleRule.h" />
+    <ClInclude Include="MapStyleValue.h" />
     <ClInclude Include="RandomAccessFileReader.h" />
     <ClInclude Include="RandomAccessFileWriter.h" />
     <ClInclude Include="Amenity.h" />
@@ -180,9 +188,9 @@
     <ClInclude Include="Street.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TileManager.h" />
+    <ClInclude Include="Tools.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AsyncHelper.cpp" />
     <ClCompile Include="BinaryAddressDataReader.cpp" />
     <ClCompile Include="BinaryIndexDataReader.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
@@ -198,7 +206,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="DefaultMapStyleValue.cpp" />
+    <ClCompile Include="MapDataGenerator.cpp" />
     <ClCompile Include="MapObjectData.cpp" />
+    <ClCompile Include="MapStyleChoiceValue.cpp" />
+    <ClCompile Include="MapStyleData.cpp" />
+    <ClCompile Include="MapStyleInfo.cpp" />
+    <ClCompile Include="MapStyleRule.cpp" />
+    <ClCompile Include="MapStyleValue.cpp" />
     <ClCompile Include="RandomAccessFileReader.cpp" />
     <ClCompile Include="RandomAccessFileWriter.cpp" />
     <ClCompile Include="ArchiveIO.cpp" />
@@ -249,6 +264,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Tools.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

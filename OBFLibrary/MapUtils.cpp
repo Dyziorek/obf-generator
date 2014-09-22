@@ -15,7 +15,17 @@ MapUtils::~MapUtils(void)
 {
 }
 
+ 
+  bool MapUtils::fuzzyCompare(double p1, double p2)
+	{
+	    return (abs(p1 - p2) * 1000000000000. <= std::min(abs(p1), abs(p2)));
+	}
+	
 
+  bool MapUtils::fuzzyCompare(float p1, float p2)
+{
+	    return (abs(p1 - p2) * 100000.f <= std::min(abs(p1), abs(p2)));
+	}
 
 	
 	  double MapUtils::scalarMultiplication(double xA, double yA, double xB, double yB, double xC, double yC) {
@@ -214,7 +224,7 @@ MapUtils::~MapUtils(void)
 	}
 	
 	  double MapUtils::getPowZoom(float zoom){
-		if(zoom >= 0 && zoom - floor(zoom) < 0.001f){
+		  if(zoom >= 0.0f && fuzzyCompare(zoom, static_cast<uint8_t>(zoom))){
 			return 1 << ((int)zoom); 
 		} else {
 			return pow(2, zoom);

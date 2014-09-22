@@ -236,6 +236,7 @@ typedef bgm::point<int, 2, bg::cs::cartesian> pointI;
 typedef bgm::box<pointI> boxI;
 typedef bgm::box<pointL> boxL;
 typedef bgm::point<double, 2, bg::cs::cartesian> pointD;
+typedef bgm::point<float, 2, bg::cs::cartesian> pointF;
 typedef bgm::box<pointD> boxD;
 typedef boost::geometry::model::box<pointI> AreaI;
 typedef boost::geometry::model::box<pointD> AreaD;

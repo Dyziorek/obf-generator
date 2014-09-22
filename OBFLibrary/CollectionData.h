@@ -151,7 +151,7 @@ union TileId
             itEntry = zoomLevel.insert(tileId, outEntry);
         }
 
-        virtual void obtainEntries(QList< std::shared_ptr<ENTRY> >* outList, std::function<bool (const std::shared_ptr<ENTRY>& entry, bool& cancel)> filter = nullptr) const
+        virtual void obtainEntries(std::list< std::shared_ptr<ENTRY> >* outList, std::function<bool (const std::shared_ptr<ENTRY>& entry, bool& cancel)> filter = nullptr) const
         {
             boost::shared_lock<boost::shared_mutex> scopedLocker(&_collectionLock);
 

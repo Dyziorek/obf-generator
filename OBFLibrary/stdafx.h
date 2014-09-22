@@ -47,3 +47,6 @@
 #include "MapObject.h"
 #include "MapUtils.h"
 #include "OSMTags.h"
+
+#include "CollectionData.h"
+#include "RTree.h"

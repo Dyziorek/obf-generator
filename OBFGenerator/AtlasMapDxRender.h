@@ -8,7 +8,6 @@ public:
 	void saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Resource* textureBuffer, int xoffset, int yoffset);
 
 private:
-	D3D_DRIVER_TYPE g_driverType;
 	HINSTANCE                           g_hInst;
 	HWND                                g_hWnd;
 	D3D_DRIVER_TYPE                     g_driverType;
