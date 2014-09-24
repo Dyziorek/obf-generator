@@ -24,7 +24,7 @@ private:
 
 public:
 	MapStyleValue(ValType valType, AccessType acc, std::string name, bool complex);
-	~MapStyleValue(void);
+	virtual ~MapStyleValue(void);
 
 	const int id;
 	const ValType typeData;

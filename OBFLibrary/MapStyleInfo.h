@@ -5,6 +5,11 @@
 class MapStyleInfo
 {
 private:
+
+	enum {
+            RuleIdTagShift = 32,
+        };
+
 	std::string read(const char* value)
 	{
 		if (value == NULL)
@@ -24,8 +29,15 @@ private:
 		return std::string(value);
 	}
 
+	uint64_t encodeRuleId( uint32_t tag, uint32_t value )
+	{
+		return (static_cast<uint64_t>(tag) << RuleIdTagShift) | value;
+	}
+
+	const std::string getTagString( uint64_t ruleId ) const;
+	const std::string getValueString( uint64_t ruleId ) const;
 	void registerValue(MapStyleValue* value);
-	void registerDefaultValue(MapStyleValue* value);
+	void registerDefaultValue(const std::shared_ptr<MapStyleValue>& value);
 	void registerDefaultValues();
 	std::shared_ptr<DefaultMapStyleValue> getDefaultValueDefinitions();
 
@@ -50,7 +62,8 @@ public:
 	~MapStyleInfo(void);
 	void loadRenderStyles(const char *path);
 	void parseFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule);
-	void parseGroup(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule);
+	void parseFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule, std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset);
+	void parseGroup(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule, std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset);
 	void parseGroupFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule);
 	void parseProperty(tinyxml2::XMLElement* workElem);
 	void parseAttribute(tinyxml2::XMLElement* workElem);
@@ -66,5 +79,7 @@ public:
 	const std::string& lookupStringValue( uint32_t id ) const;
 	uint32_t lookupStringId( const std::string& value );
 	uint32_t registerString( const std::string& value );
+	bool registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset, const std::shared_ptr<MapStyleRule>& rule );
+	std::shared_ptr<MapStyleRule> createTagValueRootWrapperRule( uint64_t id, const std::shared_ptr<MapStyleRule>& rule );
 };
 

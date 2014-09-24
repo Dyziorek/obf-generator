@@ -30,6 +30,13 @@
 #include <locale>
 #include <codecvt>
 
+#include "tinyxml2.h"
+#include "MapStyleData.h"
+#include "MapStyleChoiceValue.h"
+#include "DefaultMapStyleValue.h"
+#include "MapStyleRule.h"
+#include "MapStyleInfo.h"
+
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
@@ -897,6 +904,11 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 	#ifdef _DEBUG_VLD
 		VLDReportLeaks();
 	#endif
+
+	MapStyleInfo info;
+	info.loadRenderStyles(nullptr);
+
+	auto idRef = info.lookupStringId(std::string("tag"));
 }
 
 

@@ -17,6 +17,9 @@ static std::shared_ptr<DefaultMapStyleValue> defaultMapStyles;
 MapStyleInfo::MapStyleInfo(void) : _stringsIdBase(0)
 {
 	registerDefaultValues();
+
+	std::shared_ptr<MapStyleValue> valTypeRek(new MapStyleValue(ValType::Booltype, AccessType::In, std::string("SS"), true));
+
 }
 
 
@@ -80,7 +83,7 @@ void MapStyleInfo::loadRenderStyles(const char* path)
 			_parentName = tag;
 			continue;
 		}
-		for ( const tinyxml2::XMLNode* inode=xDoc.FirstChildElement(); inode; inode=inode->NextSibling() )
+		for ( const tinyxml2::XMLNode* inode=node->FirstChildElement(); inode; inode=inode->NextSibling() )
 		{
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)inode;
 			if (std::string("renderingProperty") == iElem->Name())
@@ -206,8 +209,8 @@ void MapStyleInfo::parseFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<M
 	std::unordered_map<std::string, std::string> attrVals;
 	for ( const tinyxml2::XMLAttribute* xAttr = workElem->FirstAttribute(); xAttr; xAttr=xAttr->Next())
 	{
-		std::string attrName = xAttr->Name();
-		std::string attrVal = xAttr->Value();
+		std::string attrName = read(xAttr->Name());
+		std::string attrVal = read(xAttr->Value());
 		attrVals[attrName] = attrVal;
 	}
 	std::shared_ptr<MapStyleRule> filterRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, attrVals));
@@ -228,6 +231,35 @@ void MapStyleInfo::parseFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<M
 		mapRule->_ifElseChildren.push_back(filterRule);
 	}
 }
+void MapStyleInfo::parseFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule, std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset)
+{
+	std::unordered_map<std::string, std::string> attrVals;
+	for ( const tinyxml2::XMLAttribute* xAttr = workElem->FirstAttribute(); xAttr; xAttr=xAttr->Next())
+	{
+		std::string attrName = read(xAttr->Name());
+		std::string attrVal = read(xAttr->Value());
+		attrVals[attrName] = attrVal;
+	}
+	std::shared_ptr<MapStyleRule> filterRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, attrVals));
+	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
+	{
+		tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
+		if (std::string("filter") == iElem->Name())
+		{
+			parseFilter(iElem, filterRule);
+		}
+	 }
+	if (mapRule->_ifChildren.empty())
+	{
+		mapRule->_ifChildren.push_back(filterRule);
+	}
+	else
+	{
+		mapRule->_ifElseChildren.push_back(filterRule);
+	}
+
+	registerRule(ruleset,filterRule);
+}
 
 void MapStyleInfo::parseGroupFilter(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule)
 {
@@ -247,7 +279,7 @@ void MapStyleInfo::parseGroupFilter(tinyxml2::XMLElement* workElem, std::shared_
 	 }
 
 }
-void MapStyleInfo::parseGroup(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule)
+void MapStyleInfo::parseGroup(tinyxml2::XMLElement* workElem, std::shared_ptr<MapStyleRule>& mapRule, std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset)
 {
 	std::shared_ptr<MapStyleRule> groupRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
@@ -263,74 +295,82 @@ void MapStyleInfo::parseGroup(tinyxml2::XMLElement* workElem, std::shared_ptr<Ma
 			}
 			
 	 }
+
+	registerRule(ruleset, groupRule);
 }
 
 void MapStyleInfo::parseOrder(tinyxml2::XMLElement* workElem)
 {
-	std::shared_ptr<MapStyleRule> orderRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
 
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
 	 {
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
 			if (std::string("filter") == iElem->Name())
 			{
-				parseFilter(iElem, orderRule);
+				std::shared_ptr<MapStyleRule> orderRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseFilter(iElem, orderRule, _orderRules);
 			}
 			if (std::string("group") == iElem->Name())
 			{
-				parseGroup(iElem, orderRule);
+				std::shared_ptr<MapStyleRule> orderRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseGroup(iElem, orderRule, _orderRules);
 			}
 			
 	 }
 }
 void MapStyleInfo::parseText(tinyxml2::XMLElement* workElem)
 {
-	std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+	
 
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
 	 {
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
 			if (std::string("filter") == iElem->Name())
 			{
-				parseFilter(iElem, textRule);
+				std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseFilter(iElem, textRule, _textRules);
 			}
 			if (std::string("group") == iElem->Name())
 			{
-				parseGroup(iElem, textRule);
+				std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseGroup(iElem, textRule, _textRules);
 			}
 	 }
 }
 void MapStyleInfo::parsePoint(tinyxml2::XMLElement* workElem)
 {
-	std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
 
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
 	 {
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
 			if (std::string("filter") == iElem->Name())
 			{
-				parseFilter(iElem, textRule);
+				std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseFilter(iElem, textRule, _pointRules);
 			}
 			if (std::string("group") == iElem->Name())
 			{
-				parseGroup(iElem, textRule);
+				std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseGroup(iElem, textRule, _pointRules);
 			}
 	 }
 }
 void MapStyleInfo::parsePolygon(tinyxml2::XMLElement* workElem)
 {
-	std::shared_ptr<MapStyleRule> textRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+	
 
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
 	 {
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
 			if (std::string("filter") == iElem->Name())
 			{
-				parseFilter(iElem, textRule);
+				std::shared_ptr<MapStyleRule> polyRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseFilter(iElem, polyRule, _polygonRules);
 			}
 			if (std::string("group") == iElem->Name())
 			{
-				parseGroup(iElem, textRule);
+				std::shared_ptr<MapStyleRule> polyRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+				parseGroup(iElem, polyRule, _polygonRules);
 			}
 	 }
 }
@@ -343,11 +383,11 @@ void MapStyleInfo::parseLine(tinyxml2::XMLElement* workElem)
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;
 			if (std::string("filter") == iElem->Name())
 			{
-				parseFilter(iElem, textRule);
+				parseFilter(iElem, textRule, _lineRules);
 			}
 			if (std::string("group") == iElem->Name())
 			{
-				parseGroup(iElem, textRule);
+				parseGroup(iElem, textRule, _lineRules);
 			}
 	 }
 }
@@ -358,7 +398,7 @@ void MapStyleInfo::registerValue(MapStyleValue* value)
 	
 }
 
-void MapStyleInfo::registerDefaultValue(MapStyleValue* value)
+void MapStyleInfo::registerDefaultValue(const std::shared_ptr<MapStyleValue>& value)
 {
 	_valueDefinitions[value->name] = std::shared_ptr<MapStyleValue>(value);
 	_firstLoadedValue = _valueDefinitions.size();
@@ -367,7 +407,7 @@ void MapStyleInfo::registerDefaultValue(MapStyleValue* value)
 void MapStyleInfo::registerDefaultValues()
 {
 #define SETUP_DEFAULT_MAP(nameVar, typeData, accType, name, isIS) \
-	registerDefaultValue(getDefaultValueDefinitions()->nameVar.get());
+	registerDefaultValue(getDefaultValueDefinitions()->nameVar);
 	#include "DefaultMapValueSet.h"
 #undef SETUP_DEFAULT_MAP
 }
@@ -418,4 +458,60 @@ uint32_t MapStyleInfo::registerString( const std::string& value )
     _stringsLUT.push_back(value);
 
     return id;
+}
+
+bool MapStyleInfo::registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset, const std::shared_ptr<MapStyleRule>& rule )
+{
+    MapStyleData tagData;
+    if(!rule->getAttribute(defaultMapStyles->INPUT_TAG, tagData))
+    {
+        //OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Error, "Attribute tag should be specified for root filter");
+        return false;
+    }
+
+    MapStyleData valueData;
+    if(!rule->getAttribute(defaultMapStyles->INPUT_VALUE, valueData))
+    {
+        //OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Error, "Attribute tag should be specified for root filter");
+        return false;
+    }
+
+	uint64_t id = encodeRuleId(tagData.simpleData.asUInt, valueData.simpleData.asUInt);
+
+    auto insertedRule = rule;
+    
+    auto itPrevious = ruleset.find(id);
+    if(itPrevious != ruleset.cend())
+    {
+        // all root rules should have at least tag/value
+        insertedRule = createTagValueRootWrapperRule(id, itPrevious->second);
+        insertedRule->_ifElseChildren.push_back(rule);
+    }
+
+    ruleset.insert(std::make_pair(id, std::move(insertedRule)));
+
+    return true;
+}
+
+std::shared_ptr<MapStyleRule> MapStyleInfo::createTagValueRootWrapperRule( uint64_t id, const std::shared_ptr<MapStyleRule>& rule )
+{
+    if(rule->_values.size() <= 2)
+        return rule;
+
+    std::unordered_map< std::string, std::string > attributes;
+    attributes.insert(std::make_pair(std::string("tag"), getTagString(id)));
+    attributes.insert(std::make_pair(std::string("value"), getValueString(id)));
+    std::shared_ptr<MapStyleRule> newRule(new MapStyleRule(this, attributes));
+    newRule->_ifElseChildren.push_back(rule);
+    return newRule;
+}
+
+const std::string MapStyleInfo::getTagString( uint64_t ruleId ) const
+{
+	return lookupStringValue(ruleId >> RuleIdTagShift);
+}
+
+const std::string MapStyleInfo::getValueString( uint64_t ruleId ) const
+{
+    return lookupStringValue(ruleId & ((1ull << RuleIdTagShift) - 1));
 }

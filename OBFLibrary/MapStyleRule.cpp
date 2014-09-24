@@ -66,7 +66,7 @@ MapStyleRule::MapStyleRule(MapStyleInfo* owner, std::unordered_map<std::string, 
                 if(valueDef->isComplex)
                 {
 					parsedValue.isSpecial = true;
-                    if(value.find(':') != std::string::npos)
+                    if(value.find(':') == std::string::npos)
                     {
                         parsedValue.specialData.asFloat.dip = Tools::parseArbitraryFloat(value, -1.0f);
                         parsedValue.specialData.asFloat.px = 0.0f;
@@ -114,4 +114,14 @@ MapStyleRule::MapStyleRule(MapStyleInfo* owner, std::unordered_map<std::string, 
 
 MapStyleRule::~MapStyleRule(void)
 {
+}
+
+bool MapStyleRule::getAttribute(const std::shared_ptr<const MapStyleValue>& key, MapStyleData& value) const
+{
+    auto itValue = _values.find(key);
+    if(itValue == _values.cend())
+        return false;
+
+	value = itValue->second;
+    return true;
 }
