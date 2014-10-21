@@ -6,7 +6,18 @@
 #include "MapStyleInfo.h"
 #include "Tools.h"
 
-MapStyleRule::MapStyleRule(MapStyleInfo* owner, std::unordered_map<std::string, std::string>& _attributes)
+MapStyleRule::MapStyleRule(MapStyleInfo* _owner, std::unordered_map<std::string, std::string>& _attributes)
+{
+	owner = _owner;
+	acquireAttributes(_attributes);
+}
+
+
+MapStyleRule::~MapStyleRule(void)
+{
+}
+
+void MapStyleRule::acquireAttributes(std::unordered_map<std::string, std::string>& _attributes)
 {
 	_values.reserve(_attributes.size());
 	_resolvedValueDefinitions.reserve(_attributes.size());
@@ -111,11 +122,6 @@ MapStyleRule::MapStyleRule(MapStyleInfo* owner, std::unordered_map<std::string, 
     }
 }
 
-
-MapStyleRule::~MapStyleRule(void)
-{
-}
-
 bool MapStyleRule::getAttribute(const std::shared_ptr<const MapStyleValue>& key, MapStyleData& value) const
 {
     auto itValue = _values.find(key);
@@ -124,4 +130,16 @@ bool MapStyleRule::getAttribute(const std::shared_ptr<const MapStyleValue>& key,
 
 	value = itValue->second;
     return true;
+}
+
+
+void MapStyleRule::uniteAttributes(std::unordered_map<std::string, std::string>& _attributes)
+{
+	if (_values.size() == 0)
+	{
+		acquireAttributes(_attributes);
+	}
+	else
+	{
+	}
 }
