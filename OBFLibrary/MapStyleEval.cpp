@@ -122,22 +122,22 @@ MapStyleEval::~MapStyleEval(void)
 
 void MapStyleEval::setBoolValue(const int valDefId, const bool defVal)
 {
-	auto valCheck = _inputs[valDefId];
+	auto& valCheck = _inputs[valDefId];
 	valCheck.asInt = defVal;
 }
 void MapStyleEval::setIntValue(const int valDefId, const int defVal)
 {
-	auto valCheck = _inputs[valDefId];
+	auto& valCheck = _inputs[valDefId];
 	valCheck.asInt = defVal;
 }
 void MapStyleEval::setIntValue(const int valDefId, const unsigned int defVal)
 {
-	auto valCheck = _inputs[valDefId];
+	auto& valCheck = _inputs[valDefId];
 	valCheck.asUInt = defVal;
 }
 void MapStyleEval::setFloatValue(const int valDefId, const float defVal)
 {
-	auto valCheck = _inputs[valDefId];
+	auto& valCheck = _inputs[valDefId];
 	valCheck.asFloat = defVal;
 }
 #pragma push_macro("max")
@@ -145,7 +145,7 @@ void MapStyleEval::setFloatValue(const int valDefId, const float defVal)
 
 void MapStyleEval::setStringValue(const int valDefId, const std::string& defVal)
 {
-	auto valCheck = _inputs[valDefId];
+	auto& valCheck = _inputs[valDefId];
 	bool bOK = owner->lookupStringId(defVal, valCheck.asUInt);
 	if (!bOK)
 	{
@@ -166,7 +166,15 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, rul
 	{
 		bOK = owner->getRule(MapStyleInfo::encodeRuleId(tag, 0), ruleType, ruleHandle);
 	}
-	return false;
+	if (!bOK)
+	{
+		bOK = owner->getRule(MapStyleInfo::encodeRuleId(0, 0), ruleType, ruleHandle);
+	}
+	
+	if (!bOK)
+	{
+		return false;
+	}
 
 	for (auto ruleVal : ruleHandle->_values)
 	{

@@ -702,6 +702,7 @@ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, std::sh
 	
 	MergeStringsToObjects(objects, stringTable);
 	section->sectionData = std::move(objects);
+	section->rules = mapRules;
 	cis->PopLimit(oldLimit);
 }
 

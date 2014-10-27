@@ -542,6 +542,7 @@ bool MapStyleInfo::getRule(uint64_t ruleId, rulesetType rulestype, std::shared_p
 	if (setRuleData != currentSet.end())
 	{
 		ruleData = setRuleData->second;
+		return true;
 	}
 
 	return false;
