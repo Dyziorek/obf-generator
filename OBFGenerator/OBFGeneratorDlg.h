@@ -8,7 +8,7 @@
 
 #define WM_MYMESSAGE (WM_USER + 100)
 
-
+class BinaryIndexDataReader;
 // COBFGeneratorDlg dialog
 class COBFGeneratorDlg : public CDialogEx
 {
@@ -91,5 +91,6 @@ public:
 	virtual void OnOK();
 	afx_msg void OnBnClickedMfcbutton2();
 	CString m_fileReadPath;
+	std::shared_ptr<BinaryIndexDataReader> mapData;
 	CMFCEditBrowseCtrl m_BrowseRead;
 };

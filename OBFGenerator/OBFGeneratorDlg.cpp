@@ -905,10 +905,16 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 		VLDReportLeaks();
 	#endif
 
-	MapStyleInfo info;
-	info.loadRenderStyles(nullptr);
+	std::shared_ptr<MapStyleInfo> info(new MapStyleInfo());
+	info->loadRenderStyles(nullptr);
 
-	auto idRef = info.lookupStringId(std::string("tag"));
+	auto idRef = info->lookupStringId(std::string("tag"));
+
+	if (mapData)
+	{
+		BinaryMapDataReader& readerData = mapData->GetReader();
+		readerData.evaluate(info);
+	}
 }
 
 
@@ -926,6 +932,7 @@ void COBFGeneratorDlg::OnOK()
 	// TODO: Add your specialized code here and/or call the base class
 	results.close();
 	
+
 	CDialogEx::OnOK();
 }
 
@@ -948,6 +955,6 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		
 		boost::filesystem::path pather(cvt);
 		RandomAccessFileReader rad(pather);
-		BinaryIndexDataReader reader(&rad);
+		mapData.swap(std::shared_ptr<BinaryIndexDataReader>(new  BinaryIndexDataReader(&rad)));
 	}
 }

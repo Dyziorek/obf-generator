@@ -1,12 +1,18 @@
 #pragma once
 
-
+enum rulesetType  :  int
+{
+	none = 0, 
+	point = 1, 
+	line = 2, 
+	polygon = 3,
+	text = 4, 
+	order = 5
+};
 
 class MapStyleInfo
 {
 private:
-	enum rulesetType {none, order,point, text, line, polygon};
-
 	rulesetType currentRule;
 	struct Lexeme
 	{
@@ -95,17 +101,12 @@ private:
 		return std::string(value);
 	}
 
-	uint64_t encodeRuleId( uint32_t tag, uint32_t value )
-	{
-		return (static_cast<uint64_t>(tag) << RuleIdTagShift) | value;
-	}
-
 	const std::string getTagString( uint64_t ruleId ) const;
 	const std::string getValueString( uint64_t ruleId ) const;
 	void registerValue(MapStyleValue* value);
 	void registerDefaultValue(const std::shared_ptr<MapStyleValue>& value);
 	void registerDefaultValues();
-	std::shared_ptr<DefaultMapStyleValue> getDefaultValueDefinitions();
+	
 
 	int _firstLoadedValue;
 	std::string _parentName;
@@ -143,5 +144,12 @@ public:
 	bool registerRule(rulesetType rules, const std::shared_ptr<MapStyleRule>& rule );
 	bool registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset, const std::shared_ptr<MapStyleRule>& rule );
 	std::shared_ptr<MapStyleRule> createTagValueRootWrapperRule( uint64_t id, const std::shared_ptr<MapStyleRule>& rule );
+	bool getRule(uint64_t ruleId, rulesetType rulestype, std::shared_ptr<MapStyleRule>& ruleData);
+	static std::shared_ptr<DefaultMapStyleValue> getDefaultValueDefinitions();
+	
+	static uint64_t encodeRuleId( uint32_t tag, uint32_t value )
+	{
+		return (static_cast<uint64_t>(tag) << RuleIdTagShift) | value;
+	}
 };
 

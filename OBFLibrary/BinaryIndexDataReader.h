@@ -13,7 +13,7 @@ public:
 	BinaryIndexDataReader(RandomAccessFileReader* outData);
 	virtual ~BinaryIndexDataReader(void);
 
-	const BinaryMapDataReader& GetReader() const {return reader;}
+	BinaryMapDataReader& GetReader() {return reader;}
 private:
 	RandomAccessFileReader* rad;
 	gio::CodedInputStream strmData;

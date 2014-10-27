@@ -153,6 +153,7 @@
     <ClInclude Include="AsyncHelper.h" />
     <ClInclude Include="BinaryAddressDataReader.h" />
     <ClInclude Include="BinaryIndexDataReader.h" />
+    <ClInclude Include="BinaryMapDataObjects.h" />
     <ClInclude Include="BinaryMapDataWriter.h" />
     <ClInclude Include="BinaryMapDataReader.h" />
     <ClInclude Include="BinaryPoiDataReader.h" />
@@ -165,6 +166,7 @@
     <ClInclude Include="MapObjectData.h" />
     <ClInclude Include="MapStyleChoiceValue.h" />
     <ClInclude Include="MapStyleData.h" />
+    <ClInclude Include="MapStyleEval.h" />
     <ClInclude Include="MapStyleInfo.h" />
     <ClInclude Include="MapStyleRule.h" />
     <ClInclude Include="MapStyleValue.h" />
@@ -193,6 +195,7 @@
   <ItemGroup>
     <ClCompile Include="BinaryAddressDataReader.cpp" />
     <ClCompile Include="BinaryIndexDataReader.cpp" />
+    <ClCompile Include="BinaryMapDataObjects.cpp" />
     <ClCompile Include="BinaryMapDataWriter.cpp" />
     <ClCompile Include="BinaryMapDataReader.cpp" />
     <ClCompile Include="BinaryPoiDataReader.cpp" />
@@ -211,6 +214,9 @@
     <ClCompile Include="MapObjectData.cpp" />
     <ClCompile Include="MapStyleChoiceValue.cpp" />
     <ClCompile Include="MapStyleData.cpp" />
+    <ClCompile Include="MapStyleEval.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
+    </ClCompile>
     <ClCompile Include="MapStyleInfo.cpp" />
     <ClCompile Include="MapStyleRule.cpp" />
     <ClCompile Include="MapStyleValue.cpp" />

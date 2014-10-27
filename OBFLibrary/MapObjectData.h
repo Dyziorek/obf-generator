@@ -3,6 +3,7 @@
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/geometries/box.hpp>
 
+struct BinaryMapSection;
 
 struct MapObjectData
 {
@@ -23,6 +24,10 @@ struct MapObjectData
 	std::list<int> type;
 	std::list<int> addtype;
 	std::list<std::tuple<int,int,std::string>> nameTypeString;
+	std::shared_ptr<BinaryMapSection> section;
+	bool containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional /*= false*/ ) const;
+	int getSimpleLayerValue() const;
+	bool isClosedFigure(bool checkInner = false) const;
 #ifdef _DEBUG
 	bool correctBBox;
 	std::vector<pointD> geoPoints;

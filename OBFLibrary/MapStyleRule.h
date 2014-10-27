@@ -21,5 +21,6 @@ public:
 
 
 	friend class MapStyleInfo;
+	friend class MapStyleEval;
 };
 
