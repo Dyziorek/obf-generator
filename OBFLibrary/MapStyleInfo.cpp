@@ -248,7 +248,7 @@ void MapStyleInfo::parseGroupFilter(tinyxml2::XMLElement* workElem, std::vector<
 		attrVals[attrName] = attrVal;
 	}
 
-	std::shared_ptr<MapStyleRule> groupRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, std::unordered_map<std::string, std::string>()));
+	std::shared_ptr<MapStyleRule> groupRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this,attrVals));
 
 	if (mapRuleStack.empty())
 	{
@@ -301,8 +301,14 @@ void MapStyleInfo::parseGroup(tinyxml2::XMLElement* workElem, std::vector<std::s
 		attrVals[attrName] = attrVal;
 	}
 	
-	std::shared_ptr<MapStyleRule> groupRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, attrVals));
-	mapRuleStack.push_back(std::shared_ptr<Lexeme>(new Group(this)));
+	//std::shared_ptr<MapStyleRule> groupRule = std::shared_ptr<MapStyleRule>(new MapStyleRule(this, attrVals));
+	Group* grp = new Group(this);
+	for (auto hashVal : attrVals)
+	{
+		grp->attributes[hashVal.first] = hashVal.second;
+	}
+	mapRuleStack.push_back(std::shared_ptr<Lexeme>(grp));
+
 	for ( const tinyxml2::XMLNode* node=workElem->FirstChildElement(); node; node=node->NextSibling() )
 	{
 			tinyxml2::XMLElement* iElem = (tinyxml2::XMLElement*)node;

@@ -9,7 +9,7 @@ struct MapStyleData
 	{
 		Tx dip;
 		Tx px;
-		inline Tx calculate(float mul)
+		inline Tx calculate(float mul) const
 		{
 			return dip * mul + px;
 		}

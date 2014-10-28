@@ -4,6 +4,7 @@
 
 MapStyleData::MapStyleData(void)
 {
+	isSpecial = false;
 }
 
 

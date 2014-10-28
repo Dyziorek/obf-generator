@@ -49,6 +49,10 @@
 #include "MapStyleInfo.h"
 #include "MapStyleEval.h"
 
+
+#include <cvt/wstring>
+#include <codecvt>
+
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
 
@@ -919,11 +923,31 @@ void BinaryMapDataReader::MergeStringsToObjects(std::unordered_map<uint64_t, std
 void BinaryMapDataReader::evaluate(std::shared_ptr<MapStyleInfo>& infoDump)
 {
 	std::shared_ptr<MapStyleInfo> styleData(infoDump);
-	MapStyleEval evaluator(styleData, 0.10f);
+	MapStyleEval ordevaluator(styleData, 0.10f);
 
-	evaluator.setIntValue(evaluator._builtInDefValues->id_INPUT_MINZOOM, 15);
-	evaluator.setIntValue(evaluator._builtInDefValues->id_INPUT_MAXZOOM, 15);
+	ordevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MINZOOM, 0);
+	ordevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MAXZOOM, 0);
 
+	MapStyleEval polyevaluator(styleData, 0.10f);
+
+	polyevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MINZOOM, 0);
+	polyevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MAXZOOM, 0);
+
+
+	MapStyleEval ptevaluator(styleData, 0.10f);
+
+	ptevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MINZOOM, 0);
+	ptevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MAXZOOM, 0);
+
+	MapStyleEval lineevaluator(styleData, 0.10f);
+
+	lineevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MINZOOM, 0);
+	lineevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MAXZOOM, 0);
+
+	MapStyleEval textevaluator(styleData, 0.10f);
+
+	textevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MINZOOM, 0);
+	textevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_MAXZOOM, 0);
 
 	for (auto sampleSection : sections)
 	{
@@ -933,7 +957,7 @@ void BinaryMapDataReader::evaluate(std::shared_ptr<MapStyleInfo>& infoDump)
 			for (auto mapData : sectData->sectionData)
 			{
 				MapStyleResult* ressultPlacer = new MapStyleResult(); 
-				evaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
+				ordevaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
 			}
 		}
 		else
@@ -945,7 +969,7 @@ void BinaryMapDataReader::evaluate(std::shared_ptr<MapStyleInfo>& infoDump)
 					for (auto mapData : sampleSection->sectionData)
 					{
 						MapStyleResult* ressultPlacer = new MapStyleResult(); 
-						evaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
+						ordevaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
 					}
 				}
 				else
@@ -957,7 +981,7 @@ void BinaryMapDataReader::evaluate(std::shared_ptr<MapStyleInfo>& infoDump)
 							for (auto mapData : sampleSubSection->sectionData)
 							{
 								MapStyleResult* ressultPlacer = new MapStyleResult(); 
-								evaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
+								ordevaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
 							}
 						}
 						else
@@ -972,14 +996,57 @@ void BinaryMapDataReader::evaluate(std::shared_ptr<MapStyleInfo>& infoDump)
 										{
 											MapStyleResult* ressultPlacer = new MapStyleResult(); 
 											auto decodedType = mapData.second->section->rules->getRuleInfo(typeID);
-											evaluator.setStringValue(evaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
-											evaluator.setStringValue(evaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
-											evaluator.setIntValue(evaluator._builtInDefValues->id_INPUT_LAYER, mapData.second->getSimpleLayerValue());
-											evaluator.setBoolValue(evaluator._builtInDefValues->id_INPUT_AREA,  mapData.second->isArea);
-											evaluator.setBoolValue(evaluator._builtInDefValues->id_INPUT_POINT,  mapData.second->points.size() == 1);
-											evaluator.setBoolValue(evaluator._builtInDefValues->id_INPUT_CYCLE, mapData.second->isClosedFigure());
+											ordevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
+											ordevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
+											ordevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_LAYER, mapData.second->getSimpleLayerValue());
+											ordevaluator.setBoolValue(ordevaluator._builtInDefValues->id_INPUT_AREA,  mapData.second->isArea);
+											ordevaluator.setBoolValue(ordevaluator._builtInDefValues->id_INPUT_POINT,  mapData.second->points.size() == 1);
+											ordevaluator.setBoolValue(ordevaluator._builtInDefValues->id_INPUT_CYCLE, mapData.second->isClosedFigure());
 
-											evaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer);
+											stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+											std::wstringstream strmData;
+											strmData << L"For Tag : " << converter.from_bytes(decodedType.tag) << L", Value "<< converter.from_bytes(decodedType.value) << std::endl;
+											OutputDebugString(strmData.str().c_str());
+											if (ordevaluator.evaluate(mapData.second, rulesetType::order, ressultPlacer))
+											{
+												std::wstring dumpText = ressultPlacer->dump();
+												dumpText.insert(0, L"Order evaluation: ");
+												OutputDebugString(dumpText.c_str());
+												
+											}
+											delete ressultPlacer;
+
+											for (auto& textdata : mapData.second->nameTypeString)
+											{
+												ressultPlacer = new MapStyleResult(); 
+												decodedType = mapData.second->section->rules->getRuleInfo(typeID);
+												textevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
+												textevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
+												textevaluator.setIntValue(textevaluator._builtInDefValues->id_INPUT_TEXT_LENGTH, std::get<2>(textdata).size());
+
+												if (textevaluator.evaluate(mapData.second, rulesetType::text, ressultPlacer))
+												{
+													std::wstring dumpText = ressultPlacer->dump();
+													dumpText.insert(0, L"Text evaluation: ");
+													OutputDebugString(dumpText.c_str());
+												}
+												delete ressultPlacer;
+											}
+											
+											ressultPlacer = new MapStyleResult(); 
+											decodedType = mapData.second->section->rules->getRuleInfo(typeID);
+											polyevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
+											polyevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
+
+											if (polyevaluator.evaluate(mapData.second, rulesetType::polygon, ressultPlacer))
+											{
+												std::wstring  dumpText = ressultPlacer->dump();
+												dumpText.insert(0, L"Polygon evaluation: ");
+												OutputDebugString(dumpText.c_str());
+											}
+											delete ressultPlacer;
+
+
 										}
 									}
 								}
