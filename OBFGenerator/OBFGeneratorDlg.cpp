@@ -908,6 +908,19 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 	std::shared_ptr<MapStyleInfo> info(new MapStyleInfo());
 	info->loadRenderStyles(nullptr);
 
+	std::wstring dumpRules = L"Dumping rules: \r\n";
+	OutputDebugString(dumpRules.c_str());
+	/*OutputDebugString(L"point rules:\n");
+	info->dump(rulesetType::point );
+	OutputDebugString(L"line rules:\n");
+	info->dump(rulesetType::line );
+	OutputDebugString(L"polygon rules:\n");
+	info->dump(rulesetType::polygon);
+	OutputDebugString(L"text rules:\n");
+	info->dump(rulesetType::text);*/
+	OutputDebugString(L"order rules:\n");
+	info->dump(rulesetType::order);
+
 	auto idRef = info->lookupStringId(std::string("tag"));
 
 	if (mapData)

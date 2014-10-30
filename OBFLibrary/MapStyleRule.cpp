@@ -6,6 +6,17 @@
 #include "MapStyleInfo.h"
 #include "Tools.h"
 
+#include <cvt/wstring>
+#include <codecvt>
+#include <boost\format.hpp>
+
+#include "targetver.h"
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
+
+
 MapStyleRule::MapStyleRule(MapStyleInfo* _owner, std::unordered_map<std::string, std::string>& _attributes)
 {
 	owner = _owner;
@@ -41,7 +52,7 @@ void MapStyleRule::acquireAttributes(std::unordered_map<std::string, std::string
             break;
         case ValType::Inttype:
             {
-                if(valueDef->isComplex)
+				if(valueDef->isComplex)
                 {
 					parsedValue.isSpecial = true;
 					if(value.find(':') == std::string::npos)
@@ -142,4 +153,95 @@ void MapStyleRule::uniteAttributes(std::unordered_map<std::string, std::string>&
 	else
 	{
 	}
+}
+
+
+void MapStyleRule::dump( const std::string& prefix /*= QString()*/ ) const
+{
+    auto newPrefix = prefix + std::string("\t");
+    
+	//OutputDebugString
+
+    for(auto itValueEntry : _values)
+    {
+		const auto& valueDef = itValueEntry.first;
+		const auto& value = itValueEntry.second;
+
+        std::stringstream strValue;
+		
+		switch (valueDef->typeData)
+        {
+        case ValType::Booltype:
+            strValue << (value.simpleData.asInt == 1) ? std::string("true") : std::string("false");
+            break;
+        case ValType::Inttype:
+            if(value.isSpecial)
+                strValue << boost::format("%1%:%2%") % value.specialData.asInt.dip % value.specialData.asInt.px;
+            else
+                strValue << value.simpleData.asInt;
+            break;
+		case ValType::Floattype:
+            if(value.isSpecial)
+                strValue << boost::format("%1%:%2%") % value.specialData.asFloat.dip % value.specialData.asFloat.px;
+            else
+                strValue << value.simpleData.asFloat;
+            break;
+        case ValType::Stringtype:
+            strValue << owner->lookupStringValue(value.simpleData.asUInt);
+            break;
+        case ValType::Colortype:
+            {
+                auto color = value.simpleData.asUInt;
+                if((color & 0xFF000000) == 0xFF000000)
+					strValue << boost::format("%#6x") % color;
+                else
+                    strValue << boost::format("%#8x") % color;
+            }
+            break;
+        }
+
+		std::stringstream logOut;
+		logOut << boost::format("%1%%2%%3% = %4%\n") % newPrefix % ((valueDef->typeAcces == AccessType::In) ? ">" : "<") % valueDef->name % strValue.str();
+		stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+    }
+
+    if(!_ifChildren.empty())
+    {
+        std::stringstream logOut;
+		logOut << newPrefix << "If("  << std::endl;
+		stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+            
+        for(auto itChild : _ifChildren)
+        {
+            auto child = *itChild;
+
+			OutputDebugString(converter.from_bytes((boost::format( "%1%AND\n") %  newPrefix).str()).c_str());
+			child.dump(newPrefix);
+        }
+		logOut.clear();
+		logOut << newPrefix << std::endl;
+		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+    }
+
+    if(!_ifElseChildren.empty())
+    {
+		std::stringstream logOut;
+		logOut << newPrefix  << "Selector: [" << std::endl;
+		stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+
+        for(const auto child : _ifElseChildren)
+        {
+            
+			std::stringstream logOut;
+			logOut << newPrefix  << "OR" << std::endl;
+			OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+            child->dump(newPrefix);
+        }
+        logOut.clear();
+		logOut << newPrefix  << "]" << std::endl;
+		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
+    }
 }

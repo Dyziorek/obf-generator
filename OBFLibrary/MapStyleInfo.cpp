@@ -12,7 +12,15 @@
 static std::mutex defualtMapStylesLocker;
 static std::shared_ptr<DefaultMapStyleValue> defaultMapStyles;
 
+#include <cvt/wstring>
+#include <codecvt>
+#include <boost\format.hpp>
 
+#include "targetver.h"
+
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+// Windows Header Files:
+#include <windows.h>
 
 MapStyleInfo::MapStyleInfo(void) : _stringsIdBase(0)
 {
@@ -256,11 +264,14 @@ void MapStyleInfo::parseGroupFilter(tinyxml2::XMLElement* workElem, std::vector<
 	}
 	else if (mapRuleStack.back()->_id == Lexeme::Group)
 	{
-		std::static_pointer_cast<Group>(mapRuleStack.back())->addGroupFilter(groupRule);
+		auto groupData = std::static_pointer_cast<Group>(mapRuleStack.back());
+		groupData->addGroupFilter(groupRule);
 	}
 	else if (mapRuleStack.back()->_id == Lexeme::Rule)
 	{
-		std::static_pointer_cast<Rule>(mapRuleStack.back())->_rule->_ifChildren.push_back(groupRule);
+		auto ruleData = std::static_pointer_cast<Rule>(mapRuleStack.back());
+		auto rulePtr = ruleData->_rule;
+		rulePtr->_ifChildren.push_back(groupRule);
 	}
 
 	
@@ -469,6 +480,7 @@ bool MapStyleInfo::registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule
     if(!rule->getAttribute(defaultMapStyles->INPUT_TAG, tagData))
     {
         //OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Error, "Attribute tag should be specified for root filter");
+		assert(false);
         return false;
     }
 
@@ -476,6 +488,7 @@ bool MapStyleInfo::registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule
     if(!rule->getAttribute(defaultMapStyles->INPUT_VALUE, valueData))
     {
         //OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Error, "Attribute tag should be specified for root filter");
+		assert(false);
         return false;
     }
 
@@ -491,7 +504,7 @@ bool MapStyleInfo::registerRule(std::map< uint64_t, std::shared_ptr<MapStyleRule
         insertedRule->_ifElseChildren.push_back(rule);
     }
 
-    ruleset.insert(std::make_pair(id, std::move(insertedRule)));
+    ruleset[id] = std::move(insertedRule);
 
     return true;
 }
@@ -552,4 +565,42 @@ bool MapStyleInfo::getRule(uint64_t ruleId, rulesetType rulestype, std::shared_p
 	}
 
 	return false;
+}
+
+void MapStyleInfo::dump( rulesetType type, const std::string& prefix /*= QString()*/ ) const
+{
+	std::map< uint64_t, std::shared_ptr<MapStyleRule> > currentSet;
+	switch(type)
+	{
+	case order:
+		currentSet = _orderRules;
+		break;
+		case text:
+		currentSet = _textRules;
+		break;
+		case line:
+		currentSet = _lineRules;
+		break;
+		case polygon:
+		currentSet = _polygonRules;
+		break;
+		case point:
+		currentSet = _pointRules;
+		break;
+	default:
+	case none:
+		return ;
+	}
+    const auto& rules = currentSet;
+    for(auto RuleEntry : rules)
+    {
+        auto tag = getTagString(RuleEntry.first);
+		auto value = getValueString(RuleEntry.first);
+		auto rule = RuleEntry.second;
+
+		auto strLog = boost::format("%1%Rule [%2% (%3%):%4% (%5%)]\n") % prefix % tag % getTagStringId(RuleEntry.first) % value % getValueStringId(RuleEntry.first);
+		stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		OutputDebugString(converter.from_bytes(strLog.str()).c_str());
+        rule->dump(prefix);
+    }
 }

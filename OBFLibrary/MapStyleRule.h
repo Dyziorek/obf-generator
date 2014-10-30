@@ -18,7 +18,7 @@ public:
 	void uniteAttributes(std::unordered_map<std::string, std::string>& _attributes);
 	bool getAttribute(const std::shared_ptr<const MapStyleValue>& key, MapStyleData& value) const;
 	~MapStyleRule(void);
-
+	void dump( const std::string& prefix = std::string() ) const;
 
 	friend class MapStyleInfo;
 	friend class MapStyleEval;

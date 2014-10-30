@@ -9,6 +9,7 @@ namespace bgm = boost::geometry::model;
 
 class BinaryMapRules;
 class MapStyleInfo;
+class MapStyleEval;
 
 class BinaryMapDataReader
 {
@@ -36,6 +37,13 @@ public:
 	void MergeStringsToObjects(std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>>& objects, std::vector<std::string>& stringList);
 	
 	void evaluate(std::shared_ptr<MapStyleInfo>& infoDump);
+
+	void loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, std::list<std::shared_ptr<MapObjectData>>& resultOut);
+	const std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> getSections() const
+	{
+		return sections;
+	}
+	std::list<std::shared_ptr<BinaryMapSection>> getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children);
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;
@@ -48,5 +56,11 @@ private:
         ShiftCoordinates = 5,
         MaskToRead = ~((1u << ShiftCoordinates) - 1),
     };
+
+	void evaluateObject(std::shared_ptr<MapObjectData>& infoDump, MapStyleEval& ordevaluator
+								   , MapStyleEval& textevaluator
+								   , MapStyleEval& polyevaluator
+								   , MapStyleEval& ptevaluator
+								   , MapStyleEval& lineevaluator);
 };
 

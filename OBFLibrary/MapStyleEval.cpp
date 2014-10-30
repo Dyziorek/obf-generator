@@ -16,6 +16,8 @@
 #include "MapStyleEval.h"
 
 #include <sstream>
+#include <cvt/wstring>
+#include <codecvt>
 
 MapStyleResult::MapStyleResult(void)
 {
@@ -141,9 +143,13 @@ std::wstring MapStyleResult::dump()
 		auto& value = valData.second;
 		getStringVal(keyVal, dumpInfo);
 #ifdef _DEBUG
-		std::string textInfo = _Dvalues[keyVal].first;
+		stdext::cvt::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring keyText = converter.from_bytes(_Dvalues[keyVal].first).c_str();
+		strmText << L"Values: keyID:" << keyVal << L", keyText:"<< keyText << L", TextValue:" << dumpInfo << std::endl;
 #endif
+#ifndef  _DEBUG
 		strmText << L"Values: key:" << keyVal << L", TextValue:" << dumpInfo << std::endl;
+#endif
 	}
 
 	dumpInfo = strmText.str();
@@ -280,7 +286,7 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, std
 					? ruleValue.specialData.asInt.calculate(_factor)
                     : ruleValue.simpleData.asInt;
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), outInfo->_values[valueDef->id]);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, outInfo->_values[valueDef->id]);
 				#endif
                 break;
             case ValType::Floattype:
@@ -334,21 +340,45 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, rul
 	std::shared_ptr<MapStyleRule> ruleHandle;
 	const auto tag = _inputs[_builtInDefValues->id_INPUT_TAG].asUInt;
 	const auto value = _inputs[_builtInDefValues->id_INPUT_VALUE].asUInt;
+	bool ruleOK = false;
+	bool evalOK = false;
+	uint32_t emptyID;
+	owner->lookupStringId("", emptyID);
 
-	bool bOK = owner->getRule(MapStyleInfo::encodeRuleId(tag, value), ruleType, ruleHandle);
-	if (!bOK)
+	ruleOK = owner->getRule(MapStyleInfo::encodeRuleId(tag, value), ruleType, ruleHandle);
+	if (ruleOK)
 	{
-		bOK = owner->getRule(MapStyleInfo::encodeRuleId(tag, 0), ruleType, ruleHandle);
+		evalOK = evaluate(mapObject, ruleHandle, outInfo);
 	}
-	if (!bOK)
+	if (!evalOK)
 	{
-		bOK = owner->getRule(MapStyleInfo::encodeRuleId(0, 0), ruleType, ruleHandle);
+		ruleOK = owner->getRule(MapStyleInfo::encodeRuleId(tag, emptyID), ruleType, ruleHandle);
+	}
+	else
+	{
+		return true;
+	}
+	if (ruleOK)
+	{
+		_inputs[_builtInDefValues->id_INPUT_VALUE].asUInt = emptyID;
+		evalOK = evaluate(mapObject, ruleHandle, outInfo);
+	}
+	if (!evalOK)
+	{
+		ruleOK = owner->getRule(MapStyleInfo::encodeRuleId(emptyID, emptyID), ruleType, ruleHandle);
+	}
+	else
+	{
+		return true;
+	}
+	if (ruleOK)
+	{
+		_inputs[_builtInDefValues->id_INPUT_TAG].asUInt = emptyID;
+		_inputs[_builtInDefValues->id_INPUT_VALUE].asUInt = emptyID;
+		evalOK = evaluate(mapObject, ruleHandle, outInfo);
 	}
 	
-	if (!bOK)
-	{
-		return false;
-	}
+	return evalOK;
 
-	return evaluate(mapObject, ruleHandle, outInfo);
+	//return evaluate(mapObject, ruleHandle, outInfo);
 }

@@ -151,5 +151,14 @@ public:
 	{
 		return (static_cast<uint64_t>(tag) << RuleIdTagShift) | value;
 	}
+	uint32_t getTagStringId( uint64_t ruleId ) const
+	{
+		return ruleId >> RuleIdTagShift;
+	}
+	uint32_t getValueStringId( uint64_t ruleId ) const
+	{
+		return ruleId & ((1ull << RuleIdTagShift) - 1);
+	}
+	void MapStyleInfo::dump( rulesetType type, const std::string& prefix = std::string() ) const;
 };
 
