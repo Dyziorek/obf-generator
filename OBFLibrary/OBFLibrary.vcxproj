@@ -164,6 +164,8 @@
     <ClInclude Include="DefaultMapValueSet.h" />
     <ClInclude Include="MapDataGenerator.h" />
     <ClInclude Include="MapObjectData.h" />
+    <ClInclude Include="MapRasterizer.h" />
+    <ClInclude Include="MapRasterizerProvider.h" />
     <ClInclude Include="MapStyleChoiceValue.h" />
     <ClInclude Include="MapStyleData.h" />
     <ClInclude Include="MapStyleEval.h" />
@@ -212,6 +214,8 @@
     <ClCompile Include="DefaultMapStyleValue.cpp" />
     <ClCompile Include="MapDataGenerator.cpp" />
     <ClCompile Include="MapObjectData.cpp" />
+    <ClCompile Include="MapRasterizer.cpp" />
+    <ClCompile Include="MapRasterizerProvider.cpp" />
     <ClCompile Include="MapStyleChoiceValue.cpp" />
     <ClCompile Include="MapStyleData.cpp" />
     <ClCompile Include="MapStyleEval.cpp">

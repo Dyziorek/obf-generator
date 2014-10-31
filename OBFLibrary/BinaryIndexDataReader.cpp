@@ -34,10 +34,14 @@ using namespace obf;
 
 
 
-BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :strmData(outData)
+BinaryIndexDataReader::BinaryIndexDataReader(boost::filesystem::path& pathInfo) 
 {
 
-	rad = outData;
+
+	RandomAccessFileReader rad(pathInfo);
+	fileReader.reset(new RandomAccessFileReader(pathInfo));
+	strmData.reset(new gio::CodedInputStream(fileReader.get()));
+
 	 bool loadedCorrectly = false;
 	uint32 versionID;
 	uint32 confirmVersionID;
@@ -45,7 +49,7 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 	uint32 tagCode;
 	for(;;)
 	{
-		tagCode = strmData.ReadTag();
+		tagCode = strmData->ReadTag();
 		switch (wfl::WireFormatLite::GetTagFieldNumber(tagCode))
 		{
 		case 0:
@@ -64,27 +68,27 @@ BinaryIndexDataReader::BinaryIndexDataReader(RandomAccessFileReader* outData) :s
 			}
 			return;
 		case OsmAndStructure::kVersionFieldNumber:
-			strmData.ReadVarint32(&versionID);
+			strmData->ReadVarint32(&versionID);
 			break;
 		case OsmAndStructure::kDateCreatedFieldNumber:
-			strmData.ReadVarint64(&dateTime);
+			strmData->ReadVarint64(&dateTime);
 			break;
 		case OsmAndStructure::kVersionConfirmFieldNumber:
-			strmData.ReadVarint32(&confirmVersionID);
+			strmData->ReadVarint32(&confirmVersionID);
 			if (confirmVersionID == versionID)
 				loadedCorrectly = true;
 			break;
 		case OsmAndStructure::kMapIndexFieldNumber:
-			ReadMapData(&strmData);
+			ReadMapData(strmData.get());
 			break;
 		case OsmAndStructure::kRoutingIndexFieldNumber:
-			ReadRouteData(&strmData);
+			ReadRouteData(strmData.get());
 			break;
 		case OsmAndStructure::kAddressIndexFieldNumber:
-			ReadAddresIndex(&strmData);
+			ReadAddresIndex(strmData.get());
 			break;
 		default:
-			BinaryReaderUtils::skipUnknownField(&strmData, tagCode);
+			BinaryReaderUtils::skipUnknownField(strmData.get(), tagCode);
 			break;
 		}
 	}

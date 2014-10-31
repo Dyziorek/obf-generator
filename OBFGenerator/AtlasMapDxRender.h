@@ -7,6 +7,7 @@ public:
 	HRESULT Initialize(HWND baseHWND);
 	void saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Resource* textureBuffer, int xoffset, int yoffset);
 
+
 private:
 	HINSTANCE                           g_hInst;
 	HWND                                g_hWnd;

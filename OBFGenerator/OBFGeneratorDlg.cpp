@@ -917,11 +917,9 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 	OutputDebugString(L"polygon rules:\n");
 	info->dump(rulesetType::polygon);
 	OutputDebugString(L"text rules:\n");
-	info->dump(rulesetType::text);*/
+	info->dump(rulesetType::text);
 	OutputDebugString(L"order rules:\n");
-	info->dump(rulesetType::order);
-
-	auto idRef = info->lookupStringId(std::string("tag"));
+	info->dump(rulesetType::order);*/
 
 	if (mapData)
 	{
@@ -967,7 +965,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		std::string cvt = coder.to_bytes(wstrPath);
 		
 		boost::filesystem::path pather(cvt);
-		RandomAccessFileReader rad(pather);
-		mapData.swap(std::shared_ptr<BinaryIndexDataReader>(new  BinaryIndexDataReader(&rad)));
+		
+		mapData.swap(std::shared_ptr<BinaryIndexDataReader>(new  BinaryIndexDataReader(pather)));
 	}
 }

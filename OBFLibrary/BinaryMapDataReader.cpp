@@ -294,9 +294,15 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 					return param1->offset + param1->dataOffset > param2->offset + param2->dataOffset;
 				});
 
-				for (const auto& sectData : sectChilds)
+				for (std::shared_ptr<BinaryMapSection>& sectData : sectChilds)
 				{
 					cis->Seek(sectData->offset+sectData->dataOffset);
+					loadMapDataObjects(cis, sectData, area);
+					std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> sectionObjects(sectData->sectionData);
+					std::for_each(sectionObjects.begin(), sectionObjects.end(), [&resultOut](const std::pair<uint64_t, std::shared_ptr<MapObjectData>>& ref)
+					{
+						resultOut.push_back(ref.second);
+					});
 				}
 				
 			}

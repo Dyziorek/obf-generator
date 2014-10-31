@@ -141,6 +141,12 @@
     <ClInclude Include="MapStyleEval.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MapRasterizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MapRasterizerProvider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -258,6 +264,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MapStyleEval.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MapRasterizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MapRasterizerProvider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
