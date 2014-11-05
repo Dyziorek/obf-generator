@@ -27,13 +27,6 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 
-
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
-
 #include "RandomAccessFileReader.h"
 #include "BinaryRouteDataReader.h"
 #include "BinaryReaderUtils.h"
@@ -52,7 +45,7 @@ BinaryRouteDataReader::~BinaryRouteDataReader(void)
 }
 
 
-void BinaryRouteDataReader::ReadRouteInfo(gio::CodedInputStream* cis, RandomAccessFileReader* outData)
+void BinaryRouteDataReader::ReadRouteInfo(gio::CodedInputStream* cis)
 {
 	uint32_t routeEncodingRuleId = 1;
 	for (;;)

@@ -22,7 +22,7 @@ public:
 	BinaryAddressDataReader(void);
 	~BinaryAddressDataReader(void);
 
-	void ReadMapAddresses(gio::CodedInputStream* cis, RandomAccessFileReader* outData);
+	void ReadMapAddresses(gio::CodedInputStream* cis);
 	void readCityInfo(gio::CodedInputStream* cis, std::shared_ptr<MapAddresBlock>& block);
 private:
 	std::string name;

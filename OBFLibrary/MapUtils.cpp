@@ -6,6 +6,12 @@
 
 #define LOCM_PI       3.14159265358979323846
 
+#pragma push_macro("max")
+#undef max
+#pragma push_macro("min")
+#undef min
+
+
 MapUtils::MapUtils(void)
 {
 }
@@ -946,3 +952,6 @@ bool OsmMapUtils::checkForSmallAreas(std::vector<std::shared_ptr<EntityNode>> no
 
 		return std::list<std::shared_ptr<EntityNode>>(res.begin(), res.end());
 	}
+
+ #pragma pop_macro("max")
+#pragma pop_macro("min")

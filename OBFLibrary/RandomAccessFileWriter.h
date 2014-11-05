@@ -159,9 +159,6 @@ public:
 			raf.seek(pointerToWrite);
 			val = (int) (pointerToCalculateShiftTo - pointerToCalculateShiftFrom);
 			retValue = val;
-			#ifndef BOOST_BIG_ENDIAN
-					reverse_bytes(sizeof(val),(char*)&val);
-			#endif
 			raf.writeInt(val);
 			raf.seek(currentPosition);
 		}

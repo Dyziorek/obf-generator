@@ -61,7 +61,7 @@ class BinaryRouteDataReader
 public:
 	BinaryRouteDataReader(void);
 	~BinaryRouteDataReader(void);
-	void ReadRouteInfo(gio::CodedInputStream* cis, RandomAccessFileReader* outData);
+	void ReadRouteInfo(gio::CodedInputStream* cis);
 	std::shared_ptr<RouteEncodingRule>  ReadRulesInfo(gio::CodedInputStream* cis, uint32_t routeEncodingRuleId);
 	std::string name;
 	std::vector<std::shared_ptr<RouteEncodingRule>> routeRules;

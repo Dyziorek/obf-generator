@@ -2,8 +2,7 @@
 
 
 namespace gio = google::protobuf::io;
-namespace obf = OsmAnd::OBF;
-namespace wfl = google::protobuf::internal;
+
 
 typedef unsigned char uint8;
 
@@ -14,8 +13,8 @@ public:
 	virtual ~BinaryIndexDataReader(void);
 
 	BinaryMapDataReader& GetReader() {return reader;}
+	void getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<MapObjectData>>& outList);
 private:
-	RandomAccessFileReader* rad;
 	std::shared_ptr<gio::CodedInputStream> strmData;
 	std::shared_ptr<RandomAccessFileReader> fileReader;
 	void ReadMapData(google::protobuf::io::CodedInputStream* cis);

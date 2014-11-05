@@ -9,6 +9,10 @@
 #include "Tools.h"
 
 
+#pragma push_macro("max")
+#undef max
+#pragma push_macro("min")
+#undef min
 
 
 bool Tools::extractFirstNumberPosition( const std::string& value, int& first, int& last, bool allowSigned, bool allowDot )
@@ -586,3 +590,6 @@ float Tools::parseArbitraryFloat( const std::string& value, float defValue, bool
     for(auto itEdge = edges.cbegin(); itEdge != edges.cend(); ++itEdge)
         delete *itEdge;
 }
+
+#pragma pop_macro("max")
+#pragma pop_macro("min")

@@ -11,12 +11,6 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/iostreams/stream.hpp>
 
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
-
 #include "RandomAccessFileReader.h"
 #include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
@@ -48,7 +42,7 @@ RandomAccessFileReader::~RandomAccessFileReader(void)
 }
 
 RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& path, RandomAccessFileReader::Mode mode/* = READ*/, uint64_t size /*= 0*/) :
-	_path(""), _size(0), filePointer(0)
+	_path(path), _size(0), filePointer(0), _mode(mode)
 {
 	codeWork = nullptr;
 	_currentBuffer = nullptr;
@@ -56,7 +50,7 @@ RandomAccessFileReader::RandomAccessFileReader(const boost::filesystem::path& pa
 
 	_fd = INVALID_HANDLE_VALUE;
 	pageSize = 0;
-	open(path, mode, size);
+	//open(_path, mode, size);
 
 }
 
@@ -158,6 +152,11 @@ bool RandomAccessFileReader::unmap()
 
 uint8* RandomAccessFileReader::map(unsigned __int64 position, unsigned __int64* newSize)
 {
+	if (!is_open())
+	{
+		open(_path, _mode, 0);
+	}
+
 	auto mappedSize = *newSize;
     if(filePointer + mappedSize >= _size)
         mappedSize = _size - filePointer;
@@ -251,13 +250,16 @@ bool RandomAccessFileReader::Next(const void** src, int* size)
 		unmap();
 	}
     
-	// Check if current position is in valid range
-    if(filePointer < 0 || filePointer >= _size)
-    {
-        *src = nullptr;
-        *size = 0;
-        return false;
-    }
+	if (is_open())
+	{
+		// Check if current position is in valid range
+		if(filePointer < 0 || filePointer >= _size)
+		{
+			*src = nullptr;
+			*size = 0;
+			return false;
+		}
+	}
 
 
     // Map new portion of data

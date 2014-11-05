@@ -14,7 +14,7 @@ private:
 	boost::filesystem::path _path;
 	unsigned __int64 filePointer;
 	uint64_t _size;
-
+	
 	bool unmap();
 	uint8* map(unsigned __int64 position,unsigned __int64* newSize);
 public:
@@ -63,6 +63,7 @@ public:
 
 private:
 	static unsigned __int64 localMemoryBufferLimit;
+	Mode _mode;
 	int pageSize;
 	gio::CodedInputStream* codeWork;
 	uint8* _currentBuffer;

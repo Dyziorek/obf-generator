@@ -8,6 +8,11 @@
 #include "RTree.h"
 #include "MultiPoly.h"
 
+#pragma push_macro("max")
+#undef max
+#pragma push_macro("min")
+#undef min
+
 
 //SkAutoGraphics ag;
 long MultiPoly::numberCalls = 0;
@@ -960,3 +965,6 @@ std::list<MultiPoly> MultiPoly::splitPerRing() {
 
 		return multipolygons;
 	}
+
+#pragma pop_macro("max")
+#pragma pop_macro("min")

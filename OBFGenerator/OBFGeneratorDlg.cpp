@@ -37,6 +37,7 @@
 #include "MapStyleRule.h"
 #include "MapStyleInfo.h"
 
+#include "MapRasterizerProvider.h"
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
@@ -923,8 +924,8 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 
 	if (mapData)
 	{
-		BinaryMapDataReader& readerData = mapData->GetReader();
-		readerData.evaluate(info);
+		
+		
 	}
 }
 
@@ -951,21 +952,41 @@ void COBFGeneratorDlg::OnOK()
 void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 {
 	UpdateData();
-	CFile fileData(m_fileReadPath, CFile::OpenFlags::typeBinary|CFile::modeRead);
-
-
-	if (fileData.m_hFile != CFile::hFileNull)
+	CFile fileData;
+	if (!mapData)
 	{
-		CString strPath = fileData.GetFilePath();
-		m_fileName = fileData.GetFileName();
-		fileData.Close();
-		m_fileReadPath = strPath;
-		std::wstring wstrPath = strPath.GetBuffer();
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
-		std::string cvt = coder.to_bytes(wstrPath);
+		fileData.Open(m_fileReadPath, CFile::OpenFlags::typeBinary|CFile::modeRead);
+	}
+
+
+	if (fileData.m_hFile != CFile::hFileNull || mapData)
+	{
+		if (!mapData)
+		{
+			CString strPath = fileData.GetFilePath();
+			m_fileName = fileData.GetFileName();
+			fileData.Close();
+			m_fileReadPath = strPath;
+			std::wstring wstrPath = strPath.GetBuffer();
+			std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
+			std::string cvt = coder.to_bytes(wstrPath);
 		
-		boost::filesystem::path pather(cvt);
+			boost::filesystem::path pather(cvt);
 		
-		mapData.swap(std::shared_ptr<BinaryIndexDataReader>(new  BinaryIndexDataReader(pather)));
+			mapData.swap(std::shared_ptr<MapRasterizerProvider>(new  MapRasterizerProvider()));
+			mapData->obtainMaps(cvt.c_str());
+		}
+		
+		boxI bgData = mapData->getWholeBox();
+		boxL bgDataMax;
+		bg::convert(bgData, bgDataMax);
+		pointI ptCenter;
+		bg::centroid(bgDataMax, ptCenter);
+		boxI bgCenter;
+		bgCenter.min_corner() = ptCenter;
+		bgCenter.max_corner().set<0>(ptCenter.get<0>() + 100);
+		bgCenter.max_corner().set<1>(ptCenter.get<1>() + 100);
+		auto mapDataObjets = mapData->obtainMapData(bgCenter, 25);
+		
 	}
 }

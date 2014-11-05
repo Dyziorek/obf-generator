@@ -26,13 +26,6 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 
-
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
-
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryAddressDataReader.h"
@@ -50,7 +43,7 @@ BinaryAddressDataReader::~BinaryAddressDataReader(void)
 {
 }
 
-void BinaryAddressDataReader::ReadMapAddresses(gio::CodedInputStream* cis, RandomAccessFileReader* outData)
+void BinaryAddressDataReader::ReadMapAddresses(gio::CodedInputStream* cis)
 {
 	for (;;)
 	{

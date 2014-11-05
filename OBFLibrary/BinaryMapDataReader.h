@@ -20,7 +20,7 @@ public:
 	~BinaryMapDataReader(void);
 
 	
-	void ReadMapDataSection(gio::CodedInputStream* cis, RandomAccessFileReader* outData);
+	void ReadMapDataSection(gio::CodedInputStream* cis);
 	void readMapLevelHeader(gio::CodedInputStream* cis,  std::shared_ptr<BinaryMapSection> section, int offset, boxI& region);
 
 	void readMapEncodingRules(gio::CodedInputStream* cis, uint32_t defRuleId);
@@ -38,12 +38,12 @@ public:
 	
 	void evaluate(std::shared_ptr<MapStyleInfo>& infoDump);
 
-	void loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, std::list<std::shared_ptr<MapObjectData>>& resultOut);
+	void loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<MapObjectData>>& resultOut);
 	const std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> getSections() const
 	{
 		return sections;
 	}
-	std::list<std::shared_ptr<BinaryMapSection>> getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children);
+	void getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children, std::list<std::shared_ptr<BinaryMapSection>>& dataOut);
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;

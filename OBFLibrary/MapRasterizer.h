@@ -2,8 +2,13 @@
 class MapRasterizer
 {
 public:
-	MapRasterizer(void);
+	MapRasterizer(MapRasterizerProvider& context);
 	~MapRasterizer(void);
 
+	void DrawMap(SkCanvas& canvas);
+
+private:
+
+	MapRasterizerProvider& _context;
 };
 

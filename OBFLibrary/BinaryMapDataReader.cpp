@@ -26,12 +26,6 @@
 #include "SkStream.h"
 #include "SkGraphics.h"
 
-
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
 #include <Ole2.h>
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
@@ -56,7 +50,10 @@
 
 using namespace google::protobuf::internal;
 using namespace OsmAnd::OBF;
-
+#pragma push_macro("max")
+#undef max
+#pragma push_macro("min")
+#undef min
 
 BinaryMapDataReader::BinaryMapDataReader(void) : mapRules(new BinaryMapRules)
 {
@@ -68,7 +65,7 @@ BinaryMapDataReader::~BinaryMapDataReader(void)
 }
 
 
-void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis, RandomAccessFileReader* outData)
+void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 {
 	boxI initBox;
 	boost::geometry::assign_inverse(initBox);
@@ -280,51 +277,54 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
     }
  }
 
- void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, std::list<std::shared_ptr<MapObjectData>>& resultOut)
+ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<MapObjectData>>& resultOut)
  {
+
 	 for (const auto& sectData : sections)
 	 {
-		 if (bg::intersects(std::get<0>(sectData), area))
+		 int hiZoom = std::get<1>(sectData).first;
+		 int loZoom = std::get<1>(sectData).second;
+		 if (currentZoom > loZoom && currentZoom > hiZoom)
 		 {
-			std::list<std::shared_ptr<BinaryMapSection>> sectChilds = getSectionData(area, std::get<2>(sectData)->childSections);
-			if (sectChilds.size() > 0)
-			{
-				sectChilds.sort([](std::shared_ptr<BinaryMapSection>& param1, std::shared_ptr<BinaryMapSection>& param2)
+			 if (bg::intersects(std::get<0>(sectData), area))
+			 {
+				 std::list<std::shared_ptr<BinaryMapSection>> sectChilds;
+				getSectionData(area, std::get<2>(sectData)->childSections, sectChilds);
+				if (sectChilds.size() > 0)
 				{
-					return param1->offset + param1->dataOffset > param2->offset + param2->dataOffset;
-				});
-
-				for (std::shared_ptr<BinaryMapSection>& sectData : sectChilds)
-				{
-					cis->Seek(sectData->offset+sectData->dataOffset);
-					loadMapDataObjects(cis, sectData, area);
-					std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> sectionObjects(sectData->sectionData);
-					std::for_each(sectionObjects.begin(), sectionObjects.end(), [&resultOut](const std::pair<uint64_t, std::shared_ptr<MapObjectData>>& ref)
+					sectChilds.sort([](std::shared_ptr<BinaryMapSection>& param1, std::shared_ptr<BinaryMapSection>& param2)
 					{
-						resultOut.push_back(ref.second);
+						return param1->offset + param1->dataOffset > param2->offset + param2->dataOffset;
 					});
-				}
+
+					for (std::shared_ptr<BinaryMapSection>& sectData : sectChilds)
+					{
+						cis->Seek(sectData->offset+sectData->dataOffset);
+						loadMapDataObjects(cis, sectData, area);
+						std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> sectionObjects(sectData->sectionData);
+						std::for_each(sectionObjects.begin(), sectionObjects.end(), [&resultOut](const std::pair<uint64_t, std::shared_ptr<MapObjectData>>& ref)
+						{
+							resultOut.push_back(ref.second);
+						});
+					}
 				
-			}
+				}
+			 }
 		 }
 	 }
  }
 
- std::list<std::shared_ptr<BinaryMapSection>> BinaryMapDataReader::getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children)
+ void BinaryMapDataReader::getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children, std::list<std::shared_ptr<BinaryMapSection>>& dataOut)
  {
-	 std::list<std::shared_ptr<BinaryMapSection>> mainList = std::list<std::shared_ptr<BinaryMapSection>>();
 	 for (const auto& sectData : children)
 	 {
 		 if (bg::intersects(sectData->rootBox , area))
 		 {
-			 for (const auto& sectChild :  getSectionData(area, sectData->childSections))
-			 {
-				mainList.insert(mainList.end(),sectChild);
-			 }
+			dataOut.push_back(sectData);
+			getSectionData(area, sectData->childSections, dataOut);
 		 }
 	 }
 
-	 return mainList;
  }
 
 void BinaryMapDataReader::loadTreeNodes(gio::CodedInputStream* cis, std::shared_ptr<BinaryMapSection>& section, boxI& area)
@@ -1135,3 +1135,6 @@ for (auto typeID : infoDump->type)
 }
 }
 
+
+#pragma pop_macro("max")
+#pragma pop_macro("min")

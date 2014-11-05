@@ -13,12 +13,6 @@
 #include "ArchiveIO.h"
 #include "Street.h"
 
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
-#include <windows.h>
-
 #include "RandomAccessFileReader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataReader.h"
@@ -28,17 +22,13 @@
 #include <boost/detail/endian.hpp>
 #include "BinaryReaderUtils.h"
 
-
+namespace wfl = google::protobuf::internal;
 using namespace google::protobuf;
-using namespace obf;
-
+using namespace OsmAnd::OBF;
 
 
 BinaryIndexDataReader::BinaryIndexDataReader(boost::filesystem::path& pathInfo) 
 {
-
-
-	RandomAccessFileReader rad(pathInfo);
 	fileReader.reset(new RandomAccessFileReader(pathInfo));
 	strmData.reset(new gio::CodedInputStream(fileReader.get()));
 
@@ -97,6 +87,8 @@ BinaryIndexDataReader::BinaryIndexDataReader(boost::filesystem::path& pathInfo)
 
 BinaryIndexDataReader::~BinaryIndexDataReader(void)
 {
+	strmData.reset();
+	fileReader.reset();
 }
 
 
@@ -108,7 +100,7 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
-	reader.ReadMapDataSection(cis, rad);
+	reader.ReadMapDataSection(cis);
 	reader.PaintSections();
 	cis->PopLimit(oldLimit);
 	
@@ -120,7 +112,7 @@ void BinaryIndexDataReader::ReadAddresIndex(google::protobuf::io::CodedInputStre
 	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
-	addresser.ReadMapAddresses(cis, rad);
+	addresser.ReadMapAddresses(cis);
 	cis->PopLimit(oldLimit);
 	cis->Seek(offset + limitValue);
 }
@@ -130,10 +122,14 @@ void BinaryIndexDataReader::ReadRouteData(google::protobuf::io::CodedInputStream
 	int limitValue = BinaryReaderUtils::readBigEndianInt(cis);
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
-	router.ReadRouteInfo(cis, rad);
+	router.ReadRouteInfo(cis);
 	cis->PopLimit(oldLimit);
 	cis->Seek(offset + limitValue);
 }
 
 
 
+void BinaryIndexDataReader::getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<MapObjectData>>& outList)
+{
+	reader.loadMapDataObjects(strmData.get(), areaCheck,zoom, outList);
+}
