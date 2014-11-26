@@ -284,7 +284,7 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 	 {
 		 int hiZoom = std::get<1>(sectData).first;
 		 int loZoom = std::get<1>(sectData).second;
-		 if (currentZoom > loZoom && currentZoom > hiZoom)
+		 if (currentZoom >= loZoom && currentZoom <= hiZoom)
 		 {
 			 if (bg::intersects(std::get<0>(sectData), area))
 			 {
@@ -310,6 +310,8 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 				
 				}
 			 }
+			 // dont' read lower zoom than desired one (highest zoom is sufficient)
+			 break;
 		 }
 	 }
  }

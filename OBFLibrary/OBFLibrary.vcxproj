@@ -184,6 +184,7 @@
     <ClInclude Include="MapUtils.h" />
     <ClInclude Include="MultiPoly.h" />
     <ClInclude Include="OSMTags.h" />
+    <ClInclude Include="MapRasterizerContext.h" />
     <ClInclude Include="RTree.h" />
     <ClInclude Include="Rtree_Serialization.h" />
     <ClInclude Include="sqlite3.h" />
@@ -243,6 +244,7 @@
     <ClCompile Include="MultiPoly.cpp" />
     <ClCompile Include="OBFRenderingTypes.cpp" />
     <ClCompile Include="OSMTags.cpp" />
+    <ClCompile Include="MapRasterizerContext.cpp" />
     <ClCompile Include="Street.cpp" />
     <ClCompile Include="TileManager.cpp" />
     <ClCompile Include="dllmain.cpp">

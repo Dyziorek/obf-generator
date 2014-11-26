@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
+#include "SkCanvas.h"
 #ifdef _DEBUG_VLD
 	#include "vld.h"
 #endif
@@ -36,7 +37,9 @@
 #include "DefaultMapStyleValue.h"
 #include "MapStyleRule.h"
 #include "MapStyleInfo.h"
-
+#include "MapStyleEval.h"
+#include "MapRasterizer.h"
+#include "MapRasterizerContext.h"
 #include "MapRasterizerProvider.h"
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
@@ -79,6 +82,7 @@ COBFGeneratorDlg::COBFGeneratorDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(COBFGeneratorDlg::IDD, pParent)
 	, m_filePath(_T(""))
 	, m_fileReadPath(_T(""))
+	, m_DecompressFile(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -91,6 +95,7 @@ void COBFGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_PROGRESS, m_progress);
 	DDX_Text(pDX, IDC_MFCEDITBROWSE2, m_fileReadPath);
 	DDX_Control(pDX, IDC_MFCEDITBROWSE2, m_BrowseRead);
+	DDX_Text(pDX, IDC_MFCEDITBROWSE3, m_DecompressFile);
 }
 
 BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
@@ -103,6 +108,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_WM_CREATE()
 	ON_BN_CLICKED(IDC_BUTTON1, &COBFGeneratorDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_MFCBUTTON2, &COBFGeneratorDlg::OnBnClickedMfcbutton2)
+	ON_BN_CLICKED(IDC_MFCBUTTON3, &COBFGeneratorDlg::OnBnClickedMfcbutton3)
 END_MESSAGE_MAP()
 
 
@@ -986,7 +992,200 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		bgCenter.min_corner() = ptCenter;
 		bgCenter.max_corner().set<0>(ptCenter.get<0>() + 100);
 		bgCenter.max_corner().set<1>(ptCenter.get<1>() + 100);
-		auto mapDataObjets = mapData->obtainMapData(bgCenter, 25);
+		auto mapDataObjets = mapData->obtainMapData(bgCenter, 20);
 		
+	}
+}
+
+template<typename T> void read_one(std::ifstream& inp, T& sizeRead)
+{
+	uint8 c;
+	while(1)
+	{
+		inp.read(reinterpret_cast< char * >(&c), 1);
+		sizeRead = (sizeRead << 7) | (c & 0x7f);
+		if (!(c & 0x80))
+			break;
+	}
+
+}
+
+template<typename T> int read_one_buff(const unsigned char* inp, T& sizeRead, size_t limit)
+{
+	uint8 c;
+	uint32_t idx = 0;
+	while(1 && limit > idx)
+	{
+		c = inp[idx];
+		sizeRead = (sizeRead << 7) | (c & 0x7f);
+		if (!(c & 0x80))
+			break;
+		idx++;
+	}
+	return idx;
+}
+
+void COBFGeneratorDlg::OnBnClickedMfcbutton3()
+{
+	UpdateData();
+	std::string outFileDec;
+
+	std::wstring wstrPath = m_DecompressFile;
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
+	outFileDec = coder.to_bytes(wstrPath);
+	outFileDec += ".decompress";
+
+	std::ofstream strmOut(outFileDec, std::ios::out|std::ios::binary);
+	std::ifstream strmData(m_DecompressFile, std::ios::in|std::ios::binary);
+	//ar::binary_iarchive inpFile(strmData, ar::archive_flags::no_header|ar::archive_flags::no_codecvt|ar::archive_flags::no_tracking|ar::archive_flags::no_xml_tag_checking);
+	bool hasDELTA = true;
+	bool skipHeader = false;
+	uint8 version = 0;
+	uint32_t cumulative = 0;
+	uint32_t deltaheader = 0;
+	uint32_t currpos = 0;
+	while (hasDELTA && strmData.peek() != std::char_traits<char>::eof())
+	{
+		
+		byte buff[7];
+		if (!skipHeader)
+		{
+			deltaheader++;
+		std::string textLine;
+		
+		char c='\0';
+		while (c != 0x0A)
+		{
+			strmData.read(&c, 1);
+			textLine.push_back(c);
+		}
+		
+		if (textLine.substr(0, 5) != "DELTA")
+		{
+			hasDELTA = false;
+		}
+		strmOut << textLine << std::endl;
+		
+			strmData.read(reinterpret_cast< char * >(buff), 5);
+			if (buff[0] != 'S' || buff[2] != 'N')
+			{
+				hasDELTA = false;
+				break;
+			}
+			version = buff[3];
+			strmOut << buff << std::endl;
+			if (buff[4] != '\0' && buff[4] =='E')
+			{
+				// empty delta
+				version = 0;
+				strmData.read(reinterpret_cast< char * >(buff), 6);
+				if (buff[0] != 'N' || buff[4] != 'P')
+				{
+					hasDELTA = false;
+					break;
+				}
+			}
+		}
+		
+		if (hasDELTA)
+		{
+			if (version != 1)
+			{
+				// no compress
+			}
+			else
+			{
+				
+
+				// compressed version
+				uint64_t svoffset = 0;
+				read_one(strmData, svoffset);
+
+				uint64_t svLen = 0;
+				read_one(strmData, svLen);
+				uint64_t tvLen = 0;
+				read_one(strmData, tvLen);
+				uint64_t nvlen = 0;
+				read_one(strmData, nvlen);
+				if (nvlen > 50000000)
+				{
+					currpos = strmData.tellg();
+				}
+				uint64_t inlen = 0;
+				read_one(strmData, inlen);
+
+				uint64_t newLen = nvlen + inlen;
+				byte* buffComp = new byte[newLen];
+				if (deltaheader ==938)
+				{
+					currpos = strmData.tellg();
+				}
+				strmData.read(reinterpret_cast< char * >(buffComp), newLen);
+
+				unsigned char* dataBuff = buffComp+inlen;
+				
+
+				uint64_t sizeDataDec = 0;
+				int moved = read_one_buff(dataBuff, sizeDataDec, 10);
+				moved++;
+				std::string strBuff(reinterpret_cast< char const* >(dataBuff+moved),nvlen) ;
+
+				if (sizeDataDec > nvlen)
+				{
+					char flagCheck = strBuff.front();
+					if (flagCheck != 0x78)
+					{
+						strmOut.write(&strBuff.front(), sizeDataDec);	
+						cumulative+=sizeDataDec;
+					}
+					else
+					{
+						std::vector<char> decompressed;
+						io::filtering_istream is;
+						is.push(io::zlib_decompressor());
+						is.push(io::array_source(&strBuff.front(), nvlen));
+						io::copy(is,io::back_inserter(decompressed));
+						strmOut.write(&decompressed.front(), decompressed.size());
+						cumulative+=decompressed.size();
+					}
+				
+				}
+				else
+				{
+					strmOut.write(&strBuff.front(), nvlen);	
+					cumulative+=nvlen;
+				}
+				char peeker = strmData.peek();
+				if (peeker == 'E')
+				{
+					strmData.read(reinterpret_cast< char * >(buff), 7);
+					if (buff[0] != 'E' || buff[5] != 'P')
+					{
+						hasDELTA = false;
+						break;
+					}
+					skipHeader = false;
+				}
+				else if (peeker == 'P')
+				{
+					hasDELTA = false;
+						break;
+				}
+				else
+				{
+					if (peeker != '\0')
+					{
+						currpos = strmData.tellg();
+					}
+					skipHeader = true;
+					strmData.read(reinterpret_cast< char * >(buff), 1);
+				}
+				if (cumulative > 60000000)
+				{
+					hasDELTA = false;
+						break;
+				}
+			}
+		}
 	}
 }

@@ -5,7 +5,7 @@ namespace gio = google::protobuf::io;
 
 struct RouteInfoDataBlock;
 
-enum RoadDirection : uint32_t
+enum RoadDirection : int32_t
     {
         OneWayForward = -1,
         TwoWay = 0,

@@ -94,4 +94,6 @@ public:
 	CString m_fileReadPath;
 	std::shared_ptr<MapRasterizerProvider> mapData;
 	CMFCEditBrowseCtrl m_BrowseRead;
+	afx_msg void OnBnClickedMfcbutton3();
+	CString m_DecompressFile;
 };
