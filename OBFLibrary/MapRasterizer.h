@@ -27,7 +27,7 @@ struct GraphicElement
 	const uint32_t _typeIdIndex;
 
 
-	uint32_t zOrder;
+	double zOrder;
 	std::shared_ptr<MapStyleResult> styleResult;
 };
 

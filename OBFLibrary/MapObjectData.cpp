@@ -33,6 +33,18 @@ bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string&
     return false;
 }
 
+bool MapObjectData::containsType(const uint32_t typeRuleId, bool checkAdditional) const
+{
+	std::list<int> typeList = checkAdditional ? addtype : type;
+	for (int typeId : typeList)
+	{
+		if (typeId == typeRuleId)
+			return true;
+	}
+
+    return false;
+}
+
 int MapObjectData::getSimpleLayerValue() const
 {
     for(const auto typeRuleId : addtype)

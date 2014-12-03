@@ -25,7 +25,8 @@ struct MapObjectData
 	std::list<int> addtype;
 	std::list<std::tuple<int,int,std::string>> nameTypeString;
 	std::shared_ptr<BinaryMapSection> section;
-	bool containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional /*= false*/ ) const;
+	bool containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional = false ) const;
+	bool containsType(const uint32_t typeRuleId, bool checkAdditional = false) const;
 	int getSimpleLayerValue() const;
 	bool isClosedFigure(bool checkInner = false) const;
 #ifdef _DEBUG

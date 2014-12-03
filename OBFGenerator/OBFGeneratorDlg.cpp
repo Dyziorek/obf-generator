@@ -1029,163 +1029,166 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton3()
 {
 	UpdateData();
 	std::string outFileDec;
-
+	std::string inFileDec;
 	std::wstring wstrPath = m_DecompressFile;
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
 	outFileDec = coder.to_bytes(wstrPath);
-	outFileDec += ".decompress";
+	inFileDec = outFileDec;
+	outFileDec += ".outSVG";
 
 	std::ofstream strmOut(outFileDec, std::ios::out|std::ios::binary);
 	std::ifstream strmData(m_DecompressFile, std::ios::in|std::ios::binary);
-	//ar::binary_iarchive inpFile(strmData, ar::archive_flags::no_header|ar::archive_flags::no_codecvt|ar::archive_flags::no_tracking|ar::archive_flags::no_xml_tag_checking);
-	bool hasDELTA = true;
-	bool skipHeader = false;
-	uint8 version = 0;
-	uint32_t cumulative = 0;
-	uint32_t deltaheader = 0;
-	uint32_t currpos = 0;
-	while (hasDELTA && strmData.peek() != std::char_traits<char>::eof())
-	{
-		
-		byte buff[7];
-		if (!skipHeader)
-		{
-			deltaheader++;
-		std::string textLine;
-		
-		char c='\0';
-		while (c != 0x0A)
-		{
-			strmData.read(&c, 1);
-			textLine.push_back(c);
-		}
-		
-		if (textLine.substr(0, 5) != "DELTA")
-		{
-			hasDELTA = false;
-		}
-		strmOut << textLine << std::endl;
-		
-			strmData.read(reinterpret_cast< char * >(buff), 5);
-			if (buff[0] != 'S' || buff[2] != 'N')
-			{
-				hasDELTA = false;
-				break;
-			}
-			version = buff[3];
-			strmOut << buff << std::endl;
-			if (buff[4] != '\0' && buff[4] =='E')
-			{
-				// empty delta
-				version = 0;
-				strmData.read(reinterpret_cast< char * >(buff), 6);
-				if (buff[0] != 'N' || buff[4] != 'P')
-				{
-					hasDELTA = false;
-					break;
-				}
-			}
-		}
-		
-		if (hasDELTA)
-		{
-			if (version != 1)
-			{
-				// no compress
-			}
-			else
-			{
-				
 
-				// compressed version
-				uint64_t svoffset = 0;
-				read_one(strmData, svoffset);
 
-				uint64_t svLen = 0;
-				read_one(strmData, svLen);
-				uint64_t tvLen = 0;
-				read_one(strmData, tvLen);
-				uint64_t nvlen = 0;
-				read_one(strmData, nvlen);
-				if (nvlen > 50000000)
-				{
-					currpos = strmData.tellg();
-				}
-				uint64_t inlen = 0;
-				read_one(strmData, inlen);
+	////ar::binary_iarchive inpFile(strmData, ar::archive_flags::no_header|ar::archive_flags::no_codecvt|ar::archive_flags::no_tracking|ar::archive_flags::no_xml_tag_checking);
+	//bool hasDELTA = true;
+	//bool skipHeader = false;
+	//uint8 version = 0;
+	//uint32_t cumulative = 0;
+	//uint32_t deltaheader = 0;
+	//uint32_t currpos = 0;
+	//while (hasDELTA && strmData.peek() != std::char_traits<char>::eof())
+	//{
+	//	
+	//	byte buff[7];
+	//	if (!skipHeader)
+	//	{
+	//		deltaheader++;
+	//	std::string textLine;
+	//	
+	//	char c='\0';
+	//	while (c != 0x0A)
+	//	{
+	//		strmData.read(&c, 1);
+	//		textLine.push_back(c);
+	//	}
+	//	
+	//	if (textLine.substr(0, 5) != "DELTA")
+	//	{
+	//		hasDELTA = false;
+	//	}
+	//	strmOut << textLine << std::endl;
+	//	
+	//		strmData.read(reinterpret_cast< char * >(buff), 5);
+	//		if (buff[0] != 'S' || buff[2] != 'N')
+	//		{
+	//			hasDELTA = false;
+	//			break;
+	//		}
+	//		version = buff[3];
+	//		strmOut << buff << std::endl;
+	//		if (buff[4] != '\0' && buff[4] =='E')
+	//		{
+	//			// empty delta
+	//			version = 0;
+	//			strmData.read(reinterpret_cast< char * >(buff), 6);
+	//			if (buff[0] != 'N' || buff[4] != 'P')
+	//			{
+	//				hasDELTA = false;
+	//				break;
+	//			}
+	//		}
+	//	}
+	//	
+	//	if (hasDELTA)
+	//	{
+	//		if (version != 1)
+	//		{
+	//			// no compress
+	//		}
+	//		else
+	//		{
+	//			
 
-				uint64_t newLen = nvlen + inlen;
-				byte* buffComp = new byte[newLen];
-				if (deltaheader ==938)
-				{
-					currpos = strmData.tellg();
-				}
-				strmData.read(reinterpret_cast< char * >(buffComp), newLen);
+	//			// compressed version
+	//			uint64_t svoffset = 0;
+	//			read_one(strmData, svoffset);
 
-				unsigned char* dataBuff = buffComp+inlen;
-				
+	//			uint64_t svLen = 0;
+	//			read_one(strmData, svLen);
+	//			uint64_t tvLen = 0;
+	//			read_one(strmData, tvLen);
+	//			uint64_t nvlen = 0;
+	//			read_one(strmData, nvlen);
+	//			if (nvlen > 50000000)
+	//			{
+	//				currpos = strmData.tellg();
+	//			}
+	//			uint64_t inlen = 0;
+	//			read_one(strmData, inlen);
 
-				uint64_t sizeDataDec = 0;
-				int moved = read_one_buff(dataBuff, sizeDataDec, 10);
-				moved++;
-				std::string strBuff(reinterpret_cast< char const* >(dataBuff+moved),nvlen) ;
+	//			uint64_t newLen = nvlen + inlen;
+	//			byte* buffComp = new byte[newLen];
+	//			if (deltaheader ==938)
+	//			{
+	//				currpos = strmData.tellg();
+	//			}
+	//			strmData.read(reinterpret_cast< char * >(buffComp), newLen);
 
-				if (sizeDataDec > nvlen)
-				{
-					char flagCheck = strBuff.front();
-					if (flagCheck != 0x78)
-					{
-						strmOut.write(&strBuff.front(), sizeDataDec);	
-						cumulative+=sizeDataDec;
-					}
-					else
-					{
-						std::vector<char> decompressed;
-						io::filtering_istream is;
-						is.push(io::zlib_decompressor());
-						is.push(io::array_source(&strBuff.front(), nvlen));
-						io::copy(is,io::back_inserter(decompressed));
-						strmOut.write(&decompressed.front(), decompressed.size());
-						cumulative+=decompressed.size();
-					}
-				
-				}
-				else
-				{
-					strmOut.write(&strBuff.front(), nvlen);	
-					cumulative+=nvlen;
-				}
-				char peeker = strmData.peek();
-				if (peeker == 'E')
-				{
-					strmData.read(reinterpret_cast< char * >(buff), 7);
-					if (buff[0] != 'E' || buff[5] != 'P')
-					{
-						hasDELTA = false;
-						break;
-					}
-					skipHeader = false;
-				}
-				else if (peeker == 'P')
-				{
-					hasDELTA = false;
-						break;
-				}
-				else
-				{
-					if (peeker != '\0')
-					{
-						currpos = strmData.tellg();
-					}
-					skipHeader = true;
-					strmData.read(reinterpret_cast< char * >(buff), 1);
-				}
-				if (cumulative > 60000000)
-				{
-					hasDELTA = false;
-						break;
-				}
-			}
-		}
-	}
+	//			unsigned char* dataBuff = buffComp+inlen;
+	//			
+
+	//			uint64_t sizeDataDec = 0;
+	//			int moved = read_one_buff(dataBuff, sizeDataDec, 10);
+	//			moved++;
+	//			std::string strBuff(reinterpret_cast< char const* >(dataBuff+moved),nvlen) ;
+
+	//			if (sizeDataDec > nvlen)
+	//			{
+	//				char flagCheck = strBuff.front();
+	//				if (flagCheck != 0x78)
+	//				{
+	//					strmOut.write(&strBuff.front(), sizeDataDec);	
+	//					cumulative+=sizeDataDec;
+	//				}
+	//				else
+	//				{
+	//					std::vector<char> decompressed;
+	//					io::filtering_istream is;
+	//					is.push(io::zlib_decompressor());
+	//					is.push(io::array_source(&strBuff.front(), nvlen));
+	//					io::copy(is,io::back_inserter(decompressed));
+	//					strmOut.write(&decompressed.front(), decompressed.size());
+	//					cumulative+=decompressed.size();
+	//				}
+	//			
+	//			}
+	//			else
+	//			{
+	//				strmOut.write(&strBuff.front(), nvlen);	
+	//				cumulative+=nvlen;
+	//			}
+	//			char peeker = strmData.peek();
+	//			if (peeker == 'E')
+	//			{
+	//				strmData.read(reinterpret_cast< char * >(buff), 7);
+	//				if (buff[0] != 'E' || buff[5] != 'P')
+	//				{
+	//					hasDELTA = false;
+	//					break;
+	//				}
+	//				skipHeader = false;
+	//			}
+	//			else if (peeker == 'P')
+	//			{
+	//				hasDELTA = false;
+	//					break;
+	//			}
+	//			else
+	//			{
+	//				if (peeker != '\0')
+	//				{
+	//					currpos = strmData.tellg();
+	//				}
+	//				skipHeader = true;
+	//				strmData.read(reinterpret_cast< char * >(buff), 1);
+	//			}
+	//			if (cumulative > 60000000)
+	//			{
+	//				hasDELTA = false;
+	//					break;
+	//			}
+	//		}
+	//	}
+	//}
 }
