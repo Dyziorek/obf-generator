@@ -10,7 +10,20 @@ MapObjectData::MapObjectData(void)
 #ifdef _DEBUG
 	correctBBox = true;
 #endif
+	section.reset(new BinaryMapSection);
+	section->rules.reset(new BinaryMapRules());
+	section->rules->createMissingRules();
+}
 
+MapObjectData::MapObjectData(std::shared_ptr<BinaryMapSection> workSection) : section(workSection)
+{
+	localId = 0;
+	isArea = false;
+	boost::geometry::assign_inverse(bbox);
+#ifdef _DEBUG
+	correctBBox = true;
+#endif
+	
 }
 
 

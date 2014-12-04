@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SkCanvas.h"
 #include "MapObjectData.h"
+#include "BinaryMapDataObjects.h"
 #include "MapStyleData.h"
 #include "MapStyleChoiceValue.h"
 #include "DefaultMapStyleValue.h"
@@ -9,7 +10,7 @@
 #include "MapStyleEval.h"
 #include "MapRasterizer.h"
 #include "MapRasterizerContext.h"
-
+#include "Tools.h"
 
 MapRasterizerContext::MapRasterizerContext(void)
 {
@@ -57,40 +58,40 @@ bool MapRasterizerContext::polygonizeCoastlines(
 
     // Align area to 32: this fixes coastlines and specifically Antarctica
     auto alignedArea31 = _area31;
-    alignedArea31.top &= ~((1u << 5) - 1);
-    alignedArea31.left &= ~((1u << 5) - 1);
-    alignedArea31.bottom &= ~((1u << 5) - 1);
-    alignedArea31.right &= ~((1u << 5) - 1);
+	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
 
     uint64_t osmId = 0;
-    QVector< PointI > linePoints31;
+    std::vector< pointI > linePoints31;
     for(auto itCoastline = coastlines.cbegin(); itCoastline != coastlines.cend(); ++itCoastline)
     {
         const auto& coastline = *itCoastline;
 
-        if(coastline->_points31.size() < 2)
+        if(coastline->points.size() < 2)
         {
-            OsmAnd::LogPrintf(LogSeverityLevel::Warning,
+            /*OsmAnd::LogPrintf(LogSeverityLevel::Warning,
                 "Map object #%" PRIu64 " (%" PRIi64 ") is polygonized as coastline, but has %d vertices",
                 coastline->id >> 1, static_cast<int64_t>(coastline->id) / 2,
-                coastline->_points31.size());
+                coastline->points.size());*/
             continue;
         }
 
-        osmId = coastline->id >> 1;
+		osmId = coastline->localId >> 1;
         linePoints31.clear();
-        auto itPoint = coastline->_points31.cbegin();
+        auto itPoint = coastline->points.cbegin();
         auto pp = *itPoint;
         auto cp = pp;
-        auto prevInside = alignedArea31.contains(cp);
+		auto prevInside = bg::covered_by(cp, alignedArea31);// alignedArea31.contains(cp);
         if(prevInside)
             linePoints31.push_back(cp);
-        for(++itPoint; itPoint != coastline->_points31.cend(); ++itPoint)
+        for(++itPoint; itPoint != coastline->points.cend(); ++itPoint)
         {
             cp = *itPoint;
 
-            const auto inside = alignedArea31.contains(cp);
-            const auto lineEnded = buildCoastlinePolygonSegment(env, context, inside, cp, prevInside, pp, linePoints31);
+            const auto inside = bg::covered_by(cp, alignedArea31);
+            const auto lineEnded = buildCoastlinePolygonSegment(env,  inside, cp, prevInside, pp, linePoints31);
             if (lineEnded)
             {
                 appendCoastlinePolygons(closedPolygons, coastlinePolylines, linePoints31);
@@ -106,7 +107,7 @@ bool MapRasterizerContext::polygonizeCoastlines(
         appendCoastlinePolygons(closedPolygons, coastlinePolylines, linePoints31);
     }
 
-    if (closedPolygons.isEmpty() && coastlinePolylines.isEmpty())
+    if (closedPolygons.empty() && coastlinePolylines.empty())
         return false;
 
     // Draw coastlines
@@ -114,43 +115,43 @@ bool MapRasterizerContext::polygonizeCoastlines(
     {
         const auto& polyline = *itPolyline;
 
-        const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-        mapObject->_isArea = false;
-        mapObject->_points31 = polyline;
-        mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastlineLine_encodingRuleId);
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        mapObject->isArea = false;
+        mapObject->points = polyline;
+		mapObject->type.push_back(mapObject->section->rules->naturalCoastlineLine_encodingRuleId);
 
-        outVectorized.push_back(qMove(mapObject));
+        outVectorized.push_back(std::move(mapObject));
     }
 
-    const bool coastlineCrossesBounds = !coastlinePolylines.isEmpty();
-    if(!coastlinePolylines.isEmpty())
+    const bool coastlineCrossesBounds = !coastlinePolylines.empty();
+    if(!coastlinePolylines.empty())
     {
         // Add complete water tile with holes
-        const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.left, context._area31.top)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.right, context._area31.top)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.right, context._area31.bottom)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.left, context._area31.bottom)));
-        mapObject->_points31.push_back(mapObject->_points31.first());
-        convertCoastlinePolylinesToPolygons(env, context, coastlinePolylines, mapObject->_innerPolygonsPoints31, osmId);
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        mapObject->points.push_back(std::move(pointI(_area31.max_corner().get<0>(), _area31.max_corner().get<1>())));
+        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(), _area31.max_corner().get<1>())));
+        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(),_area31.min_corner().get<1>())));
+        mapObject->points.push_back(std::move(pointI(_area31.max_corner().get<0>(), _area31.min_corner().get<1>())));
+        mapObject->points.push_back(mapObject->points.front());
+        convertCoastlinePolylinesToPolygons(env, coastlinePolylines, mapObject->innerpolypoints, osmId);
 
-        mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastline_encodingRuleId);
-        mapObject->_id = osmId;
-        mapObject->_isArea = true;
+        mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
+		mapObject->localId = osmId;
+        mapObject->isArea = true;
 
         assert(mapObject->isClosedFigure());
         assert(mapObject->isClosedFigure(true));
-        outVectorized.push_back(qMove(mapObject));
+        outVectorized.push_back(std::move(mapObject));
     }
 
-    if(!coastlinePolylines.isEmpty())
+    if(!coastlinePolylines.empty())
     {
-        OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Warning, "Invalid polylines found during polygonization of coastlines in area [%d, %d, %d, %d]@%d",
-            context._area31.top,
-            context._area31.left,
-            context._area31.bottom,
-            context._area31.right,
-            context._zoom);
+      /*  OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Warning, "Invalid polylines found during polygonization of coastlines in area [%d, %d, %d, %d]@%d",
+            _area31.top,
+            _area31.left,
+            _area31.bottom,
+            _area31.right,
+            _zoom);*/
     }
 
     if (includeBrokenCoastlines)
@@ -159,12 +160,12 @@ bool MapRasterizerContext::polygonizeCoastlines(
         {
             const auto& polygon = *itPolygon;
 
-            const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-            mapObject->_isArea = false;
-            mapObject->_points31 = polygon;
-            mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastlineBroken_encodingRuleId);
+            const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+			mapObject->isArea = false;
+            mapObject->points = polygon;
+			mapObject->type.push_back(mapObject->section->rules->naturalCoastlineBroken_encodingRuleId);
 
-            outVectorized.push_back(qMove(mapObject));
+            outVectorized.push_back(std::move(mapObject));
         }
     }
 
@@ -173,15 +174,15 @@ bool MapRasterizerContext::polygonizeCoastlines(
     {
         const auto& polygon = *itPolygon;
 
-        const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-        mapObject->_isArea = false;
-        mapObject->_points31 = polygon;
-        mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastlineLine_encodingRuleId);
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        mapObject->isArea = false;
+        mapObject->points = polygon;
+        mapObject->type.push_back(mapObject->section->rules->naturalCoastlineLine_encodingRuleId);
 
-        outVectorized.push_back(qMove(mapObject));
+        outVectorized.push_back(std::move(mapObject));
     }
 
-    if (abortIfBrokenCoastlinesExist && !coastlinePolylines.isEmpty())
+    if (abortIfBrokenCoastlinesExist && !coastlinePolylines.empty())
         return false;
 
     auto fullWaterObjects = 0u;
@@ -196,48 +197,49 @@ bool MapRasterizerContext::polygonizeCoastlines(
 
         bool clockwise = isClockwiseCoastlinePolygon(polygon);
 
-        const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-        mapObject->_points31 = qMove(polygon);
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        mapObject->points = std::move(polygon);
         if(clockwise)
         {
-            mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastline_encodingRuleId);
+            mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
             fullWaterObjects++;
         }
         else
         {
-            mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalLand_encodingRuleId);
+            mapObject->type.push_back(mapObject->section->rules->naturalLand_encodingRuleId);
             fullLandObjects++;
         }
-        mapObject->_id = osmId;
-        mapObject->_isArea = true;
+		mapObject->localId = osmId;
+        mapObject->isArea = true;
 
         assert(mapObject->isClosedFigure());
-        outVectorized.push_back(qMove(mapObject));
+        outVectorized.push_back(std::move(mapObject));
     }
 
     if(fullWaterObjects == 0u && !coastlineCrossesBounds)
     {
-        OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Warning, "Isolated islands found during polygonization of coastlines in area [%d, %d, %d, %d]@%d",
-            context._area31.top,
-            context._area31.left,
-            context._area31.bottom,
-            context._area31.right,
-            context._zoom);
+        /*OsmAnd::LogPrintf(OsmAnd::LogSeverityLevel::Warning, "Isolated islands found during polygonization of coastlines in area [%d, %d, %d, %d]@%d",
+            _area31.top,
+            _area31.left,
+            _area31.bottom,
+            _area31.right,
+            _zoom);*/
 
         // Add complete water tile
-        const std::shared_ptr<Model::MapObject> mapObject(new Model::MapObject(env.dummyMapSection, nullptr));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.left, context._area31.top)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.right, context._area31.top)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.right, context._area31.bottom)));
-        mapObject->_points31.push_back(qMove(PointI(context._area31.left, context._area31.bottom)));
-        mapObject->_points31.push_back(mapObject->_points31.first());
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+		areaInt checkArea(_area31);
+        mapObject->points.push_back(std::move(pointI(checkArea.Left(), checkArea.Top())));
+        mapObject->points.push_back(std::move(pointI(checkArea.Right(), checkArea.Top())));
+        mapObject->points.push_back(std::move(pointI(checkArea.Right(), checkArea.Bottom())));
+		mapObject->points.push_back(std::move(pointI(checkArea.Left(), checkArea.Bottom())));
+        mapObject->points.push_back(mapObject->points.front());
 
-        mapObject->_typesRuleIds.push_back(mapObject->section->encodingDecodingRules->naturalCoastline_encodingRuleId);
-        mapObject->_id = osmId;
-        mapObject->_isArea = true;
+        mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
+		mapObject->localId = osmId;
+        mapObject->isArea = true;
 
         assert(mapObject->isClosedFigure());
-        outVectorized.push_back(qMove(mapObject));
+        outVectorized.push_back(std::move(mapObject));
     }
 
     return true;
@@ -254,11 +256,12 @@ bool MapRasterizerContext::buildCoastlinePolygonSegment(
     bool lineEnded = false;
 
     // Align area to 32: this fixes coastlines and specifically Antarctica
-    auto alignedArea31 = context._area31;
-    alignedArea31.top &= ~((1u << 5) - 1);
-    alignedArea31.left &= ~((1u << 5) - 1);
-    alignedArea31.bottom &= ~((1u << 5) - 1);
-    alignedArea31.right &= ~((1u << 5) - 1);
+    auto alignedArea31 = _area31;
+
+	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
 
     auto point = currentPoint31;
     if (prevInside)
@@ -302,37 +305,37 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
 {
     // Well, since Victor said not to touch this thing, I will replace only output writing,
     // and will even retain old variable names.
-    const auto& px = p0.x;
-    const auto& py = p0.y;
-    const auto& x = p1.x;
-    const auto& y = p1.y;
-    const auto& leftX = bbox.left;
-    const auto& rightX = bbox.right;
-    const auto& topY = bbox.top;
-    const auto& bottomY = bbox.bottom;
+	const auto& px = p0.get<0>();
+    const auto& py = p0.get<1>();
+    const auto& x = p1.get<0>();
+    const auto& y = p1.get<1>();
+	const auto& leftX = bbox.max_corner().get<0>();
+    const auto& rightX = bbox.min_corner().get<0>();
+    const auto& topY = bbox.max_corner().get<1>();
+    const auto& bottomY = bbox.min_corner().get<1>();
 
     // firstly try to search if the line goes in
     if (py < topY && y >= topY) {
         int tx = (int) (px + ((double) (x - px) * (topY - py)) / (y - py));
         if (leftX <= tx && tx <= rightX) {
-            pX.x = tx;//b.first = tx;
-            pX.y = topY;//b.second = topY;
+            pX.set<0>(tx);//b.first = tx;
+            pX.set<1>(topY);//b.second = topY;
             return true;
         }
     }
     if (py > bottomY && y <= bottomY) {
         int tx = (int) (px + ((double) (x - px) * (py - bottomY)) / (py - y));
         if (leftX <= tx && tx <= rightX) {
-            pX.x = tx;//b.first = tx;
-            pX.y = bottomY;//b.second = bottomY;
+            pX.set<0>(tx);//b.first = tx;
+            pX.set<1>(bottomY);//b.second = bottomY;
             return true;
         }
     }
     if (px < leftX && x >= leftX) {
         int ty = (int) (py + ((double) (y - py) * (leftX - px)) / (x - px));
         if (ty >= topY && ty <= bottomY) {
-            pX.x = leftX;//b.first = leftX;
-            pX.y = ty;//b.second = ty;
+            pX.set<0>(leftX);//b.first = leftX;
+            pX.set<1>(ty);//b.second = ty;
             return true;
         }
 
@@ -340,8 +343,8 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
     if (px > rightX && x <= rightX) {
         int ty = (int) (py + ((double) (y - py) * (px - rightX)) / (px - x));
         if (ty >= topY && ty <= bottomY) {
-            pX.x = rightX;//b.first = rightX;
-            pX.y = ty;//b.second = ty;
+            pX.set<0>(rightX);//b.first = rightX;
+            pX.set<1>(ty);//b.second = ty;
             return true;
         }
 
@@ -351,24 +354,24 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
     if (py > topY && y <= topY) {
         int tx = (int) (px + ((double) (x - px) * (topY - py)) / (y - py));
         if (leftX <= tx && tx <= rightX) {
-            pX.x = tx;//b.first = tx;
-            pX.y = topY;//b.second = topY;
+            pX.set<0>(tx);//b.first = tx;
+            pX.set<1>(topY);//b.second = topY;
             return true;
         }
     }
     if (py < bottomY && y >= bottomY) {
         int tx = (int) (px + ((double) (x - px) * (py - bottomY)) / (py - y));
         if (leftX <= tx && tx <= rightX) {
-            pX.x = tx;//b.first = tx;
-            pX.y = bottomY;//b.second = bottomY;
+            pX.set<0>(tx);//b.first = tx;
+            pX.set<1>(bottomY);//b.second = bottomY;
             return true;
         }
     }
     if (px > leftX && x <= leftX) {
         int ty = (int) (py + ((double) (y - py) * (leftX - px)) / (x - px));
         if (ty >= topY && ty <= bottomY) {
-            pX.x = leftX;//b.first = leftX;
-            pX.y = ty;//b.second = ty;
+            pX.set<0>(leftX);//b.first = leftX;
+            pX.set<1>(ty);//b.second = ty;
             return true;
         }
 
@@ -376,8 +379,8 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
     if (px < rightX && x >= rightX) {
         int ty = (int) (py + ((double) (y - py) * (px - rightX)) / (px - x));
         if (ty >= topY && ty <= bottomY) {
-            pX.x = rightX;//b.first = rightX;
-            pX.y = ty;//b.second = ty;
+            pX.set<0>(rightX);//b.first = rightX;
+            pX.set<1>(ty);//b.second = ty;
             return true;
         }
 
@@ -393,10 +396,10 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
 
 void MapRasterizerContext::appendCoastlinePolygons( std::list< std::vector< pointI > >& closedPolygons, std::list< std::vector< pointI > >& coastlinePolylines, std::vector< pointI > & polyline )
 {
-    if(polyline.isEmpty())
+    if(polyline.empty())
         return;
 
-    if(polyline.first() == polyline.last())
+    if(bg::equals(polyline.front(), polyline.back()))
     {
         closedPolygons.push_back(polyline);
         return;
@@ -410,19 +413,19 @@ void MapRasterizerContext::appendCoastlinePolygons( std::list< std::vector< poin
 
         bool remove = false;
 
-        if(polyline.first() == polygon.last())
+        if(bg::equals(polyline.front(), polygon.back()))
         {
             polygon.reserve(polygon.size() + polyline.size() - 1);
             polygon.pop_back();
-            polygon += polyline;
+			polygon.insert(polygon.end(), polyline.begin(), polyline.end());
             remove = true;
             polyline = polygon;
         }
-        else if(polyline.last() == polygon.first())
+        else if(bg::equals(polyline.back(), polygon.front()))
         {
             polyline.reserve(polyline.size() + polygon.size() - 1);
             polyline.pop_back();
-            polyline += polygon;
+			polyline.insert(polyline.end(), polygon.begin(), polygon.end());
             remove = true;
         }
 
@@ -435,7 +438,7 @@ void MapRasterizerContext::appendCoastlinePolygons( std::list< std::vector< poin
             ++itPolygon;
         }
 
-        if (polyline.first() == polyline.last())
+        if (bg::equals(polyline.front(), polyline.back()))
         {
             closedPolygons.push_back(polyline);
             add = false;
@@ -449,39 +452,43 @@ void MapRasterizerContext::appendCoastlinePolygons( std::list< std::vector< poin
     }
 }
 
+
+
 void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
     const MapRasterizerProvider& env,
     std::list< std::vector< pointI > >& coastlinePolylines, std::list< std::vector< pointI > >& coastlinePolygons, uint64_t osmId )
 {
     // Align area to 32: this fixes coastlines and specifically Antarctica
     auto alignedArea31 = _area31;
-    alignedArea31.top &= ~((1u << 5) - 1);
-    alignedArea31.left &= ~((1u << 5) - 1);
-    alignedArea31.bottom &= ~((1u << 5) - 1);
-    alignedArea31.right &= ~((1u << 5) - 1);
+	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
+
+	areaInt checkerArea(alignedArea31);
 
     std::list< std::vector< pointI > > validPolylines;
 
     // Check if polylines has been cut by rasterization viewport
-    QMutableListIterator< QVector< PointI > > itPolyline(coastlinePolylines);
-    while(itPolyline.hasNext())
+	std::list< std::vector< pointI > >::iterator itPolyline(coastlinePolylines.begin());
+	while(itPolyline != coastlinePolylines.end())
     {
-        const auto& polyline = itPolyline.next();
-        assert(!polyline.isEmpty());
+        const auto& polyline = *(itPolyline++);
+        //assert(!polyline.empty());
 
-        const auto& head = polyline.first();
-        const auto& tail = polyline.last();
+        const auto& head = polyline.front();
+        const auto& tail = polyline.back();
 
         // This curve has not been cut by rasterization viewport, so it's
         // impossible to fix it
-        if (!alignedArea31.isOnEdge(head) || !alignedArea31.isOnEdge(tail))
+		if ( checkerArea.onEdge(head) == areaInt::EdgeBox::invalid || checkerArea.onEdge(tail) == areaInt::EdgeBox::invalid)
             continue;
 
         validPolylines.push_back(polyline);
-        itPolyline.remove();
+		coastlinePolylines.erase(itPolyline);
     }
 
-    std::set< QList< QVector< PointI > >::iterator > processedPolylines;
+    std::unordered_set< std::list< std::vector< pointI > >::iterator > processedPolylines;
     while(processedPolylines.size() != validPolylines.size())
     {
         for(auto itPolyline = validPolylines.begin(); itPolyline != validPolylines.end(); ++itPolyline)
@@ -492,14 +499,15 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
 
             // Start from tail of the polyline and search for it's continuation in CCV order
             auto& polyline = *itPolyline;
-            const auto& tail = polyline.last();
-            auto tailEdge = AreaI::Edge::Invalid;
-            alignedArea31.isOnEdge(tail, &tailEdge);
+            const auto& tail = polyline.back();
+            auto tailEdge = areaInt::EdgeBox::invalid;
+			areaInt checkArea(alignedArea31);
+			tailEdge = checkArea.onEdge(tail);
             auto itNearestPolyline = validPolylines.end();
             auto firstIteration = true;
             for(int idx = static_cast<int>(tailEdge) + 4; (idx >= static_cast<int>(tailEdge)) && (itNearestPolyline == validPolylines.end()); idx--, firstIteration = false)
             {
-                const auto currentEdge = static_cast<AreaI::Edge>(idx % 4);
+                const auto currentEdge = static_cast<areaInt::EdgeBox>(idx % 4);
 
                 for(auto itOtherPolyline = validPolylines.begin(); itOtherPolyline != validPolylines.end(); ++itOtherPolyline)
                 {
@@ -508,9 +516,9 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
                         continue;
 
                     // Skip polylines that are on other edges
-                    const auto& otherHead = itOtherPolyline->first();
-                    auto otherHeadEdge = AreaI::Edge::Invalid;
-                    alignedArea31.isOnEdge(otherHead, &otherHeadEdge);
+                    const auto& otherHead = itOtherPolyline->front();
+                    auto otherHeadEdge = areaInt::EdgeBox::invalid;
+                    otherHeadEdge = checkArea.onEdge(otherHead);
                     if(otherHeadEdge != currentEdge)
                         continue;
 
@@ -518,14 +526,14 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
                     if(firstIteration)
                     {
                         bool isNextByCCV = false;
-                        if(currentEdge == AreaI::Edge::Top)
-                            isNextByCCV = (otherHead.x <= tail.x);
-                        else if(currentEdge == AreaI::Edge::Right)
-                            isNextByCCV = (otherHead.y <= tail.y);
-                        else if(currentEdge == AreaI::Edge::Bottom)
-                            isNextByCCV = (tail.x <= otherHead.x);
-                        else if(currentEdge == AreaI::Edge::Left)
-                            isNextByCCV = (tail.y <= otherHead.y);
+                        if(currentEdge == areaInt::EdgeBox::top)
+                            isNextByCCV = (otherHead.get<0>() <= tail.get<0>());
+                        else if(currentEdge == areaInt::EdgeBox::right)
+                            isNextByCCV = (otherHead.get<1>() <= tail.get<1>());
+                        else if(currentEdge == areaInt::EdgeBox::bottom)
+                            isNextByCCV = (tail.get<0>() <= otherHead.get<0>());
+                        else if(currentEdge == areaInt::EdgeBox::left)
+                            isNextByCCV = (tail.get<1>() <= otherHead.get<1>());
                         if(!isNextByCCV)
                             continue;
                     }
@@ -538,16 +546,16 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
                     }
 
                     // Check if current polyline's head is closer (by CCV) that previously selected
-                    const auto& previouslySelectedHead = itNearestPolyline->first();
+                    const auto& previouslySelectedHead = itNearestPolyline->front();
                     bool isCloserByCCV = false;
-                    if(currentEdge == AreaI::Edge::Top)
-                        isCloserByCCV = (otherHead.x > previouslySelectedHead.x);
-                    else if(currentEdge == AreaI::Edge::Right)
-                        isCloserByCCV = (otherHead.y > previouslySelectedHead.y);
-                    else if(currentEdge == AreaI::Edge::Bottom)
-                        isCloserByCCV = (otherHead.x < previouslySelectedHead.x);
-                    else if(currentEdge == AreaI::Edge::Left)
-                        isCloserByCCV = (otherHead.y < previouslySelectedHead.y);
+                    if(currentEdge == areaInt::EdgeBox::top)
+                        isCloserByCCV = (otherHead.get<0>() > previouslySelectedHead.get<0>());
+                    else if(currentEdge == areaInt::EdgeBox::right)
+                        isCloserByCCV = (otherHead.get<1>() > previouslySelectedHead.get<1>());
+                    else if(currentEdge == areaInt::EdgeBox::bottom)
+                        isCloserByCCV = (otherHead.get<0>() < previouslySelectedHead.get<0>());
+                    else if(currentEdge == areaInt::EdgeBox::left)
+                        isCloserByCCV = (otherHead.get<1>() < previouslySelectedHead.get<1>());
 
                     // If closer-by-CCV, then select this
                     if(isCloserByCCV)
@@ -557,9 +565,9 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
             assert(itNearestPolyline != validPolylines.cend());
 
             // Get edge of nearest-by-CCV head
-            auto nearestHeadEdge = AreaI::Edge::Invalid;
-            const auto& nearestHead = itNearestPolyline->first();
-            alignedArea31.isOnEdge(nearestHead, &nearestHeadEdge);
+			auto nearestHeadEdge = areaInt::EdgeBox::invalid;
+            const auto& nearestHead = itNearestPolyline->front();
+			nearestHeadEdge = checkArea.onEdge(nearestHead);
 
             // Fill by edges of area, if required
             int loopShift = 0;
@@ -568,58 +576,58 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
             else if(tailEdge == nearestHeadEdge)
             {
                 bool skipAddingSides = false;
-                if(tailEdge == AreaI::Edge::Top)
-                    skipAddingSides = (tail.x >= nearestHead.x);
-                else if(tailEdge == AreaI::Edge::Right)
-                    skipAddingSides = (tail.y >= nearestHead.y);
-                else if(tailEdge == AreaI::Edge::Bottom)
-                    skipAddingSides = (tail.x <= nearestHead.x);
-                else if(tailEdge == AreaI::Edge::Left)
-                    skipAddingSides = (tail.y <= nearestHead.y);
+                if(tailEdge == areaInt::EdgeBox::top)
+                    skipAddingSides = (tail.get<0>() >= nearestHead.get<0>());
+                else if(tailEdge == areaInt::EdgeBox::right)
+                    skipAddingSides = (tail.get<1>() >= nearestHead.get<1>());
+                else if(tailEdge == areaInt::EdgeBox::bottom)
+                    skipAddingSides = (tail.get<0>() <= nearestHead.get<0>());
+                else if(tailEdge == areaInt::EdgeBox::left)
+                    skipAddingSides = (tail.get<1>() <= nearestHead.get<1>());
 
                 if(!skipAddingSides)
                     loopShift = 4;
             }
             for(int idx = static_cast<int>(tailEdge) + loopShift; idx > static_cast<int>(nearestHeadEdge); idx--)
             {
-                const auto side = static_cast<AreaI::Edge>(idx % 4);
-                PointI p;
+                const auto side = static_cast<areaInt::EdgeBox>(idx % 4);
+                pointI p;
 
-                if(side == AreaI::Edge::Top)
+                if(side == areaInt::EdgeBox::top)
                 {
-                    p.y = alignedArea31.top;
-                    p.x = alignedArea31.left;
+					p.set<1>(checkArea.Top());
+                    p.set<0>(checkArea.Left());
                 }
-                else if(side == AreaI::Edge::Right)
+                else if(side == areaInt::EdgeBox::right)
                 {
-                    p.y = alignedArea31.top;
-                    p.x = alignedArea31.right;
+                    p.set<1>(checkArea.Top());
+                    p.set<0>(checkArea.Right());
                 }
-                else if(side == AreaI::Edge::Bottom)
+                else if(side == areaInt::EdgeBox::bottom)
                 {
-                    p.y = alignedArea31.bottom;
-                    p.x = alignedArea31.right;
+                    p.set<1>(checkArea.Bottom());
+                    p.set<0>(checkArea.Right());
                 }
-                else if(side == AreaI::Edge::Left)
+                else if(side == areaInt::EdgeBox::left)
                 {
-                    p.y = alignedArea31.bottom;
-                    p.x = alignedArea31.left;
+                    p.set<1>(checkArea.Bottom());
+                    p.set<0>(checkArea.Left());
                 }
 
-                polyline.push_back(qMove(p));
+                polyline.push_back(std::move(p));
             }
 
             // If nearest-by-CCV is head of current polyline, cap it and add to polygons, ...
             if(itNearestPolyline == itPolyline)
             {
-                polyline.push_back(polyline.first());
+                polyline.push_back(polyline.front());
                 coastlinePolygons.push_back(polyline);
             }
             // ... otherwise join them. Joined will never be visited, and current will remain unmarked as processed
             else
             {
                 const auto& otherPolyline = *itNearestPolyline;
-                polyline << otherPolyline;
+				polyline.insert(polyline.end(), otherPolyline.begin(), otherPolyline.end());
             }
 
             // After we've selected nearest-by-CCV polyline, mark it as processed
@@ -630,13 +638,13 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
 
 bool MapRasterizerContext::isClockwiseCoastlinePolygon( const std::vector< pointI > & polygon )
 {
-    if(polygon.isEmpty())
+    if(polygon.empty())
         return true;
 
     // calculate middle Y
     int64_t middleY = 0;
     for(auto itVertex = polygon.cbegin(); itVertex != polygon.cend(); ++itVertex)
-        middleY += itVertex->y;
+        middleY += itVertex->get<1>();
     middleY /= polygon.size();
 
     double clockwiseSum = 0;
@@ -653,14 +661,14 @@ bool MapRasterizerContext::isClockwiseCoastlinePolygon( const std::vector< point
         const auto& vertex1 = *itVertex;
 
         int32_t rX;
-        if(!Utilities::rayIntersectX(vertex0, vertex1, middleY, rX))
+        if(!Tools::rayIntersectX(vertex0, vertex1, middleY, rX))
             continue;
 
-        bool skipSameSide = (vertex1.y <= middleY) == (vertex0.y <= middleY);
+        bool skipSameSide = (vertex1.get<1>() <= middleY) == (vertex0.get<1>() <= middleY);
         if (skipSameSide)
             continue;
 
-        bool directionUp = vertex0.y >= middleY;
+        bool directionUp = vertex0.get<1>() >= middleY;
         if (firstX == INT_MIN) {
             firstDirectionUp = directionUp;
             firstX = rX;
@@ -678,9 +686,9 @@ bool MapRasterizerContext::isClockwiseCoastlinePolygon( const std::vector< point
     if (firstX != INT_MIN) {
         bool clockwise = (!firstDirectionUp) == (previousX < firstX);
         if (clockwise) {
-            clockwiseSum += qAbs(previousX - firstX);
+			clockwiseSum += std::abs(previousX - firstX);
         } else {
-            clockwiseSum -= qAbs(previousX - firstX);
+            clockwiseSum -= std::abs(previousX - firstX);
         }
     }
 

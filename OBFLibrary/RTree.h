@@ -243,4 +243,87 @@ typedef boost::geometry::model::box<pointD> AreaD;
 typedef boost::geometry::model::polygon<pointI> polyArea;
 typedef boost::geometry::model::polygon<pointI, true, false> polyLine;
 
+template <typename boxData> 
+int	top(boxData data)
+{
+	return boxData.max_corner().get<1>();
+};
 
+
+struct areaInt : AreaI
+{
+	enum EdgeBox
+	{
+		invalid = -1,
+		top = 1,
+		bottom = 3,
+		left = 0,
+		right = 2
+	};
+
+	areaInt(AreaI& baseObj)
+	{
+		max_corner() = baseObj.max_corner();
+		min_corner() = baseObj.min_corner();
+	}
+
+	int Top()
+	{
+		return max_corner().get<1>();
+	}
+
+	void Top(int inp)
+	{
+		max_corner().set<1>(inp);
+	}
+
+
+	int Left()
+	{
+		return max_corner().get<0>();
+	}
+
+	void Left(int inp)
+	{
+		max_corner().set<0>(inp);
+	}
+
+	int Bottom()
+	{
+		return min_corner().get<1>();
+	}
+
+	void Bottom(int inp)
+	{
+		min_corner().set<1>(inp);
+	}
+	int Right()
+	{
+		return min_corner().get<0>();
+	}
+	void Right(int inp)
+	{
+		min_corner().set<0>(inp);
+	}
+
+	EdgeBox onEdge(pointI ptCheck)
+	{
+		if (ptCheck.get<0>() == max_corner().get<0>())
+		{
+			return EdgeBox::left;
+		}
+		if (ptCheck.get<0>() == min_corner().get<0>())
+		{
+			return EdgeBox::right;
+		}
+		if (ptCheck.get<1>() == max_corner().get<1>())
+		{
+			return EdgeBox::top;
+		}
+		if (ptCheck.get<1>() == min_corner().get<1>())
+		{
+			return EdgeBox::bottom;
+		}
+		return EdgeBox::invalid;
+	}
+};

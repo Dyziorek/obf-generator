@@ -2,6 +2,27 @@
 
 #include <future>
 
+
+namespace std
+{
+	template<>
+	struct hash< std::list< std::vector< pointI > >::iterator >
+	{
+		std::size_t operator()(const std::list< std::vector< pointI > >::iterator& hashWork) const
+		{
+			size_t seed;
+			std::list< std::vector< pointI > >::iterator& objCon = const_cast<std::list< std::vector< pointI > >::iterator&>(hashWork);
+			boost::hash_combine(seed, objCon->size());
+			for (pointI pt : *objCon)
+			{
+				boost::hash_combine(seed, pt.get<0>());
+				boost::hash_combine(seed, pt.get<1>());
+			}
+			return seed;
+		}
+	};
+}
+
 class MapRasterizerContext
 {
 public:
@@ -11,6 +32,7 @@ public:
 	std::vector<std::shared_ptr<GraphicElementGroup>> _graphicElements;
 	std::vector<std::shared_ptr<RasterSymbolGroup>> symbols;
 	std::vector<std::shared_ptr<GraphicElement>> _polygons, _polyLines, _points;
+	AreaI _area31;
 	void sortGraphicElements();
 	bool polygonizeCoastlines( const MapRasterizerProvider& env, const std::list< std::shared_ptr<const MapObjectData> >& coastlines,
 	std::list< std::shared_ptr<const MapObjectData> >& outVectorized,   bool abortIfBrokenCoastlinesExist,  bool includeBrokenCoastlines );

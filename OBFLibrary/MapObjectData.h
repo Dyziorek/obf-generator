@@ -35,6 +35,7 @@ struct MapObjectData
 	AreaD geoBBox;
 #endif
 	MapObjectData(void);
+	MapObjectData(std::shared_ptr<BinaryMapSection> workSection);
 	~MapObjectData(void);
 };
 

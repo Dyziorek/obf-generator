@@ -23,7 +23,9 @@ boxI invTranslateBox(boxD geoBox)
 }
 
 #pragma push_macro("max")
+#pragma push_macro("min")
 #undef max
+#undef min
 
  BinaryMapRules::BinaryMapRules() :  name_encodingRuleId(0), 
 	ref_encodingRuleId(std::numeric_limits<uint32_t>::max()),
@@ -41,7 +43,6 @@ boxI invTranslateBox(boxD geoBox)
 
  }
 
-#pragma pop_macro("max")
 
 BinaryMapRules::~BinaryMapRules()
 {
@@ -49,8 +50,61 @@ BinaryMapRules::~BinaryMapRules()
 
 void BinaryMapRules::createMissingRules()
 {
-	
+    auto nextId = mapRules.size()*2 + 1;
+
+    // Create natural=coastline encoding/decoding rule, if it still does not exist
+    if(naturalCoastline_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        naturalCoastline_encodingRuleId = nextId++;
+        createRule(0, naturalCoastline_encodingRuleId,
+            "natural", "coastline");
+    }
+
+    // Create natural=land encoding/decoding rule, if it still does not exist
+    if(naturalLand_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        naturalLand_encodingRuleId = nextId++;
+        createRule(0, naturalLand_encodingRuleId,
+            "natural", "land");
+    }
+
+    // Create natural=coastline_broken encoding/decoding rule, if it still does not exist
+    if(naturalCoastlineBroken_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        naturalCoastlineBroken_encodingRuleId = nextId++;
+        createRule(0, naturalCoastlineBroken_encodingRuleId,
+            "natural", "coastline_broken");
+    }
+
+    // Create natural=coastline_line encoding/decoding rule, if it still does not exist
+    if(naturalCoastlineLine_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        naturalCoastlineLine_encodingRuleId = nextId++;
+        createRule(0, naturalCoastlineLine_encodingRuleId,
+            "natural", "coastline_line");
+    }
+
+    // Create highway=yes encoding/decoding rule, if it still does not exist
+    if(highway_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        highway_encodingRuleId = nextId++;
+        createRule(0, highway_encodingRuleId,
+            "highway", "yes");
+    }
+
+    // Create layer=-int32_max encoding/decoding rule, if it still does not exist
+    if(layerLowest_encodingRuleId == std::numeric_limits<uint32_t>::max())
+    {
+        layerLowest_encodingRuleId = nextId++;
+        createRule(0, layerLowest_encodingRuleId,
+            "layer", boost::lexical_cast<std::string>(std::numeric_limits<int32_t>::min()));
+    }
+
 }
+
+
+#pragma pop_macro("max")
+#pragma pop_macro("min")
 
 void BinaryMapRules::createRule(uint32_t ruleType, uint32_t id, std::string name, std::string value)
 {

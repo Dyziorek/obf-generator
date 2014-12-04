@@ -81,16 +81,38 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 			detailedmapMapObjects.push_back(mapItem);
 		}
 	}
-
+	bool fillEntireArea;
 	if(!detailedmapCoastlineObjects.empty())
     {
-        const bool coastlinesWereAdded = polygonizeCoastlines(env, context,
-            detailedmapCoastlineObjects,
-            polygonizedCoastlineObjects,
-            !basemapCoastlineObjects.isEmpty(),
-            true);
+        const bool coastlinesWereAdded = _context->polygonizeCoastlines(_source,  detailedmapCoastlineObjects,
+            polygonizedCoastlineObjects, false, true);
         fillEntireArea = !coastlinesWereAdded && fillEntireArea;
-        addBasemapCoastlines = (!coastlinesWereAdded && !detailedLandData) || zoom <= static_cast<ZoomLevel>(BasemapZoom);
+    }
+
+	if(fillEntireArea)
+    {
+        //assert(foundation != MapFoundationType::Undefined);
+		
+        const std::shared_ptr<MapObjectData> bgMapObject(new MapObjectData());
+        bgMapObject->isArea = true;
+        bgMapObject->points.push_back(std::move(pointI(workArea.max_corner().get<0>(), workArea.max_corner().get<1>())));
+        bgMapObject->points.push_back(std::move(pointI(workArea.min_corner().get<0>(), workArea.max_corner().get<1>())));
+        bgMapObject->points.push_back(std::move(pointI(workArea.min_corner().get<0>(), workArea.min_corner().get<1>())));
+        bgMapObject->points.push_back(std::move(pointI(workArea.max_corner().get<0>(), workArea.min_corner().get<1>())));
+        bgMapObject->points.push_back(bgMapObject->points.front());
+       /* if(foundation == MapFoundationType::FullWater)
+            bgMapObject->_typesRuleIds.push_back(bgMapObject->section->encodingDecodingRules->naturalCoastline_encodingRuleId);
+        else if(foundation == MapFoundationType::FullLand || foundation == MapFoundationType::Mixed)
+            bgMapObject->type.push_back(bgMapObject->section->rules->naturalLand_encodingRuleId);
+        else*/
+        {
+            bgMapObject->isArea = false;
+            bgMapObject->type.push_back(bgMapObject->section->rules->naturalCoastlineBroken_encodingRuleId);
+        }
+        bgMapObject->addtype.push_back(bgMapObject->section->rules->layerLowest_encodingRuleId);
+
+        assert(bgMapObject->isClosedFigure());
+        polygonizedCoastlineObjects.push_back(std::move(bgMapObject));
     }
 
 	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());

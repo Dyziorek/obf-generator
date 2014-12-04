@@ -777,8 +777,8 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 {
 	bool continueWhile = true;
 	 __int64 idDef;
-	 MapObjectData* localMapObj = new MapObjectData;
-	 localMapObj->section = section;
+	 MapObjectData* localMapObj = new MapObjectData(section);
+	 
 	while (continueWhile)
 	{
 		uint32_t tag = cis->ReadTag();
