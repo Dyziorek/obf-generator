@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "SkCanvas.h"
+#include "SkDashPathEffect.h"
+#include "SkBitmapProcShader.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <boost/filesystem.hpp>
 #include "MapObjectData.h"
@@ -28,7 +30,11 @@
 
 namespace bf = boost::filesystem;
 
-MapRasterizerProvider::MapRasterizerProvider(void)
+MapRasterizerProvider::MapRasterizerProvider(void) :
+	defaultBgColor(_defaultBgColor), shadowLevelMin(_shadowLevelMin), shadowLevelMax(_shadowLevelMax),
+	polygonMinSizeToDisplay(_polygonMinSizeToDisplay), roadDensityZoomTile(_roadDensityZoomTile),
+	roadsDensityLimitPerTile(_roadsDensityLimitPerTile), shadowRenderingMode(_shadowRenderingMode), shadowRenderingColor(_shadowRenderingColor),
+	mapPaint(_mapPaint), textPaint(_textPaint)
 {
 	workingStyle.reset(new MapStyleInfo());
 	workingStyle->loadRenderStyles(nullptr);
@@ -46,6 +52,137 @@ MapRasterizerProvider::MapRasterizerProvider(void)
 
 MapRasterizerProvider::~MapRasterizerProvider(void)
 {
+}
+
+
+void MapRasterizerProvider::initializeOneWayPaint( SkPaint& paint )
+{
+    paint.setAntiAlias(true);
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setColor(0xff6c70d5);
+}
+
+void MapRasterizerProvider::initialize()
+{
+	_mapPaint.setAntiAlias(true);
+
+    _textPaint.setAntiAlias(true);
+    _textPaint.setLCDRenderText(true);
+    _textPaint.setTextEncoding(SkPaint::kUTF16_TextEncoding);
+    /*_textPaint.setStyle(SkPaint::kFill_Style);
+    _textPaint.setStrokeWidth(1);
+    _textPaint.setColor(SK_ColorBLACK);
+    _textPaint.setTextAlign(SkPaint::kCenter_Align);*/
+    //static_assert(sizeof(QChar) == 2, "If QChar is not 2 bytes, then encoding is not kUTF16_TextEncoding");
+
+    _shadowLevelMin = 0;
+    _shadowLevelMax = 256;
+    _roadDensityZoomTile = 0;
+    _roadsDensityLimitPerTile = 0;
+    _shadowRenderingMode = 0;
+    _shadowRenderingColor = 0xff969696;
+    _polygonMinSizeToDisplay = 0.0;
+    _defaultBgColor = 0xfff1eee8;
+
+	
+    workingStyle->resolveAttribute("defaultColor", _attributeRule_defaultColor);
+    workingStyle->resolveAttribute("shadowRendering", _attributeRule_shadowRendering);
+    workingStyle->resolveAttribute("polygonMinSizeToDisplay", _attributeRule_polygonMinSizeToDisplay);
+    workingStyle->resolveAttribute("roadDensityZoomTile", _attributeRule_roadDensityZoomTile);
+    workingStyle->resolveAttribute("roadsDensityLimitPerTile", _attributeRule_roadsDensityLimitPerTile);
+
+    {
+        const float intervals_oneway[4][4] =
+        {
+            {0, 12, 10, 152},
+            {0, 12, 9, 153},
+            {0, 18, 2, 154},
+            {0, 18, 1, 155}
+        };
+        SkPathEffect* arrowDashEffect1 = new SkDashPathEffect(intervals_oneway[0], 4, 0);
+        SkPathEffect* arrowDashEffect2 = new SkDashPathEffect(intervals_oneway[1], 4, 1);
+        SkPathEffect* arrowDashEffect3 = new SkDashPathEffect(intervals_oneway[2], 4, 1);
+        SkPathEffect* arrowDashEffect4 = new SkDashPathEffect(intervals_oneway[3], 4, 1);
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(1.0f);
+            paint.setPathEffect(arrowDashEffect1)->unref();
+            _oneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(2.0f);
+            paint.setPathEffect(arrowDashEffect2)->unref();
+            _oneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(3.0f);
+            paint.setPathEffect(arrowDashEffect3)->unref();
+            _oneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(4.0f);
+            paint.setPathEffect(arrowDashEffect4)->unref();
+            _oneWayPaints.push_back(std::move(paint));
+        }
+    }
+    
+    {
+        const float intervals_reverse[4][4] =
+        {
+            {0, 12, 10, 152},
+            {0, 13, 9, 152},
+            {0, 14, 2, 158},
+            {0, 15, 1, 158}
+        };
+        SkPathEffect* arrowDashEffect1 = new SkDashPathEffect(intervals_reverse[0], 4, 0);
+        SkPathEffect* arrowDashEffect2 = new SkDashPathEffect(intervals_reverse[1], 4, 1);
+        SkPathEffect* arrowDashEffect3 = new SkDashPathEffect(intervals_reverse[2], 4, 1);
+        SkPathEffect* arrowDashEffect4 = new SkDashPathEffect(intervals_reverse[3], 4, 1);
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(1.0f);
+            paint.setPathEffect(arrowDashEffect1)->unref();
+            _reverseOneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(2.0f);
+            paint.setPathEffect(arrowDashEffect2)->unref();
+            _reverseOneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(3.0f);
+            paint.setPathEffect(arrowDashEffect3)->unref();
+            _reverseOneWayPaints.push_back(std::move(paint));
+        }
+
+        {
+            SkPaint paint;
+            initializeOneWayPaint(paint);
+            paint.setStrokeWidth(4.0f);
+            paint.setPathEffect(arrowDashEffect4)->unref();
+            _reverseOneWayPaints.push_back(std::move(paint));
+        }
+    }
+
 }
 
 void MapRasterizerProvider::obtainMaps(const char* path)
@@ -78,9 +215,9 @@ void MapRasterizerProvider::obtainMaps(const char* path)
 
 }
 
-std::list<std::shared_ptr<MapObjectData>> MapRasterizerProvider::obtainMapData(boxI& areaI, int zoom)
+std::list<std::shared_ptr<const MapObjectData>> MapRasterizerProvider::obtainMapData(boxI& areaI, int zoom)
 {
-	std::list<std::shared_ptr<MapObjectData>> outListData;
+	std::list<std::shared_ptr<const MapObjectData>> outListData;
 
 	
 
@@ -115,7 +252,7 @@ void MapRasterizerProvider::applyStyle(std::shared_ptr<MapStyleEval>& evalData)
 	// no initial settings later on.
 }
 
-bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<MapObjectData>>& mapData, int zoom,  std::shared_ptr<MapRasterizerContext>& _context)
+bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const MapObjectData>>& mapData, int zoom,  std::shared_ptr<MapRasterizerContext>& _context)
 {
 	auto& builtinDef = workingStyle->getDefaultValueDefinitions();
 
@@ -269,4 +406,120 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<MapObj
 	}
 
 	return _context->_graphicElements.size() > 0;
+}
+
+bool MapRasterizerProvider::obtainBitmapShader( const std::string& name, SkBitmapProcShader* &outShader ) const
+{
+	std::lock_guard<std::mutex> scopedLock(_shadersBitmapsMutex);
+
+    auto itShaderBitmap = _shadersBitmaps.find(name);
+    if(itShaderBitmap == _shadersBitmaps.cend())
+    {
+        const auto shaderBitmapPath = boost::format("map/shaders/%1%.png") % name;
+
+        // Get data from embedded resources
+        const auto data = obtainResourceByName(shaderBitmapPath.str());
+
+        // Decode bitmap for a shader
+        auto shaderBitmap = new SkBitmap();
+        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        if(!SkImageDecoder::DecodeStream(&dataStream, shaderBitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
+            return false;
+        itShaderBitmap = _shadersBitmaps.insert(name, std::shared_ptr<SkBitmap>(shaderBitmap));
+    }
+
+    // Create shader from that bitmap
+    outShader = new SkBitmapProcShader(*itShaderBitmap->get(), SkShader::kRepeat_TileMode, SkShader::kRepeat_TileMode);
+    return true;
+}
+
+bool MapRasterizerProvider::obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const
+{
+    std::lock_guard<std::mutex> scopedLock(_pathEffectsMutex);
+
+    auto itPathEffects = _pathEffects.find(encodedPathEffect);
+    if(itPathEffects == _pathEffects.cend())
+    {
+        std::vector<std::string> strIntervals;
+		boost::split(strIntervals, encodedPathEffect, boost::is_any_of("_"), boost::algorithm::token_compress_on);
+
+        const auto intervals = new SkScalar[strIntervals.size()];
+        auto interval = intervals;
+        for(auto itInterval = strIntervals.cbegin(); itInterval != strIntervals.cend(); ++itInterval, interval++)
+            *interval = boost::lexical_cast<float>(itInterval);
+
+        SkPathEffect* pathEffect = new SkDashPathEffect(intervals, strIntervals.size(), 0);
+        delete[] intervals;
+
+        auto itPathEffectsRet = _pathEffects.insert(std::make_pair(encodedPathEffect, pathEffect));
+		itPathEffects = itPathEffectsRet.first;
+    }
+
+	outPathEffect = itPathEffects->second;
+    return true;
+}
+
+bool MapRasterizerProvider::obtainMapIcon( const std::string& name, std::shared_ptr<const SkBitmap>& outIcon ) const
+{
+    std::lock_guard<std::mutex> scopedLock(_mapIconsMutex);
+
+    auto itIcon = _mapIcons.constFind(name);
+    if(itIcon == _mapIcons.cend())
+    {
+        const auto bitmapPath = std::string::fromLatin1("map/map_icons/%1.png").arg(name);
+
+        // Get data from embedded resources
+        auto data = obtainResourceByName(bitmapPath);
+
+        // Decode data
+        auto bitmap = new SkBitmap();
+        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
+            return false;
+
+        itIcon = _mapIcons.insert(name, std::shared_ptr<const SkBitmap>(bitmap));
+    }
+
+    outIcon = *itIcon;
+    return true;
+}
+
+bool MapRasterizerProvider::obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const
+{
+    std::lock_guard<std::mutex> scopedLock(_textShieldsMutex);
+
+    auto itTextShield = _textShields.constFind(name);
+    if(itTextShield == _textShields.cend())
+    {
+        const auto bitmapPath = std::string::fromLatin1("map/shields/%1.png").arg(name);
+
+        // Get data from embedded resources
+        auto data = obtainResourceByName(bitmapPath);
+
+        // Decode data
+        auto bitmap = new SkBitmap();
+        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
+            return false;
+
+        itTextShield = _textShields.insert(name, std::shared_ptr<const SkBitmap>(bitmap));
+    }
+
+    outTextShield = *itTextShield;
+    return true;
+}
+
+std::vector<uint8_t> MapRasterizerProvider::obtainResourceByName( const std::string& name ) const
+{
+    // Try to obtain from external resources first
+    if(static_cast<bool>(owner->externalResourcesProvider))
+    {
+        bool ok = false;
+        const auto resource = owner->externalResourcesProvider->getResource(name, &ok);
+        if(ok)
+            return resource;
+    }
+
+    // Otherwise obtain from embedded
+    return EmbeddedResources::decompressResource(name);
 }

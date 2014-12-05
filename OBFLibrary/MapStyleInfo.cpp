@@ -405,6 +405,17 @@ bool MapStyleInfo::resolveValueDefinition( const std::string& name, std::shared_
     return false;
 }
 
+bool MapStyleInfo::resolveAttribute( const std::string& name, std::shared_ptr<const MapStyleRule>& outDefinition ) const
+{
+	auto& attributeVal = _attributes.find(name);
+	if (attributeVal != _attributes.end())
+	{
+		outDefinition = attributeVal->second;
+		return true;
+	}
+	return false;
+}
+
 bool MapStyleInfo::lookupStringId( const  std::string& value, uint32_t& id ) const
 {
     auto itId = _stringsRevLUT.find(value);

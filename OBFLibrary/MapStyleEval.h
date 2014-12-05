@@ -45,12 +45,12 @@ private:
 	std::unordered_map<uint32_t, std::pair<std::string , _variant_t>> _Dvalues;
 #endif
 public:
-	bool getIntVal(uint32_t id, int32_t& value);
-	bool getIntVal(uint32_t id, uint32_t& value);
-	bool getBoolVal(uint32_t id, int32_t& value);
-	bool getStringVal(uint32_t id, std::string& value);
-	bool getStringVal(uint32_t id, std::wstring& value);
-	bool getFloatVal(uint32_t id, float& value);
+	bool getIntVal(uint32_t id, int32_t& value) const;
+	bool getIntVal(uint32_t id, uint32_t& value) const;
+	bool getBoolVal(uint32_t id, int32_t& value) const;
+	bool getStringVal(uint32_t id, std::string& value) const;
+	bool getStringVal(uint32_t id, std::wstring& value) const;
+	bool getFloatVal(uint32_t id, float& value) const;
 	MapStyleResult(void);
 	~MapStyleResult(void);
 

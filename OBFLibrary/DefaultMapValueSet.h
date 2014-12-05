@@ -47,7 +47,7 @@ SETUP_DEFAULT_MAP(OUTPUT_ICON, Out, Stringtype, "icon", false)
 SETUP_DEFAULT_MAP(OUTPUT_ICON_ORDER, Out, Inttype, "iconOrder", false)
 
 // polygon/way
-SETUP_DEFAULT_MAP(OUTPUT_Colortype, Out, Colortype, "color", false)
+SETUP_DEFAULT_MAP(OUTPUT_COLOR, Out, Colortype, "color", false)
 SETUP_DEFAULT_MAP(OUTPUT_COLOR_2, Out, Colortype, "color_2", false)
 SETUP_DEFAULT_MAP(OUTPUT_COLOR_3, Out, Colortype, "color_3", false)
 SETUP_DEFAULT_MAP(OUTPUT_COLOR_0, Out, Colortype, "color_0", false)
@@ -70,7 +70,7 @@ SETUP_DEFAULT_MAP(OUTPUT_CAP_0, Out, Stringtype, "cap_0", false)
 SETUP_DEFAULT_MAP(OUTPUT_CAP__1, Out, Stringtype, "cap__1", false)
 
 SETUP_DEFAULT_MAP(OUTPUT_SHADER, Out, Stringtype, "shader", false)
-SETUP_DEFAULT_MAP(OUTPUT_SHADOW_Colortype, Out, Colortype, "shadowColor", false)
+SETUP_DEFAULT_MAP(OUTPUT_SHADOW_COLOR, Out, Colortype, "shadowColor", false)
 SETUP_DEFAULT_MAP(OUTPUT_SHADOW_RADIUS, Out, Inttype, "shadowRadius", true)
 
 #endif // SETUP_DEFAULT_MAP

@@ -13,7 +13,7 @@ public:
 	virtual ~BinaryIndexDataReader(void);
 
 	BinaryMapDataReader& GetReader() {return reader;}
-	void getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<MapObjectData>>& outList);
+	void getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<const MapObjectData>>& outList);
 private:
 	std::shared_ptr<gio::CodedInputStream> strmData;
 	std::shared_ptr<RandomAccessFileReader> fileReader;

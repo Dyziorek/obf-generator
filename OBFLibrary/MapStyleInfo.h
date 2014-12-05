@@ -137,6 +137,7 @@ public:
 	void parseItemClass(tinyxml2::XMLElement* workElem, std::map< uint64_t, std::shared_ptr<MapStyleRule> >& ruleset);
 
 	bool resolveValueDefinition( const std::string& name, std::shared_ptr<const MapStyleValue>& outDefinition ) const;
+	bool resolveAttribute( const std::string& name, std::shared_ptr<const MapStyleRule>& outDefinition ) const;
 	bool lookupStringId( const  std::string& value, uint32_t& id ) const;
 	const std::string& lookupStringValue( uint32_t id ) const;
 	uint32_t lookupStringId( const std::string& value );

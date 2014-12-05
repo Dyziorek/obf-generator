@@ -129,7 +129,7 @@ void BinaryIndexDataReader::ReadRouteData(google::protobuf::io::CodedInputStream
 
 
 
-void BinaryIndexDataReader::getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<MapObjectData>>& outList)
+void BinaryIndexDataReader::getMapObjects(boxI& areaCheck, int zoom, std::list<std::shared_ptr<const MapObjectData>>& outList)
 {
 	reader.loadMapDataObjects(strmData.get(), areaCheck,zoom, outList);
 }

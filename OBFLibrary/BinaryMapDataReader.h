@@ -38,7 +38,7 @@ public:
 	
 	void evaluate(std::shared_ptr<MapStyleInfo>& infoDump);
 
-	void loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<MapObjectData>>& resultOut);
+	void loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<const MapObjectData>>& resultOut);
 	const std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> getSections() const
 	{
 		return sections;

@@ -24,7 +24,7 @@ MapStyleResult::~MapStyleResult(void)
 {
 }
 
-bool MapStyleResult::getIntVal(uint32_t id, int32_t& value)
+bool MapStyleResult::getIntVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
@@ -40,7 +40,7 @@ bool MapStyleResult::getIntVal(uint32_t id, int32_t& value)
 	}
 	return bOK;
 }
-bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value)
+bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value) const
 {
 	bool bOK = false;
 
@@ -56,7 +56,7 @@ bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value)
 	}
 	return bOK;
 }
-bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value)
+bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
@@ -72,7 +72,7 @@ bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value)
 	}
 	return bOK;
 }
-bool MapStyleResult::getStringVal(uint32_t id, std::string& value)
+bool MapStyleResult::getStringVal(uint32_t id, std::string& value) const
 {
 	bool bOK = false;
 
@@ -92,7 +92,7 @@ bool MapStyleResult::getStringVal(uint32_t id, std::string& value)
 	return bOK;
 }
 
-bool MapStyleResult::getStringVal(uint32_t id, std::wstring& value)
+bool MapStyleResult::getStringVal(uint32_t id, std::wstring& value) const
 {
 	bool bOK = false;
 
@@ -111,7 +111,7 @@ bool MapStyleResult::getStringVal(uint32_t id, std::wstring& value)
 	}
 	return bOK;
 }
-bool MapStyleResult::getFloatVal(uint32_t id, float& value)
+bool MapStyleResult::getFloatVal(uint32_t id, float& value) const
 {
 	bool bOK = false;
 

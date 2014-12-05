@@ -277,7 +277,7 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
     }
  }
 
- void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<MapObjectData>>& resultOut)
+ void BinaryMapDataReader::loadMapDataObjects(gio::CodedInputStream* cis, boxI& area, int currentZoom, std::list<std::shared_ptr<const MapObjectData>>& resultOut)
  {
 
 	 for (const auto& sectData : sections)

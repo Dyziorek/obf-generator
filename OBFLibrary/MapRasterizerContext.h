@@ -33,6 +33,8 @@ public:
 	std::vector<std::shared_ptr<RasterSymbolGroup>> symbols;
 	std::vector<std::shared_ptr<GraphicElement>> _polygons, _polyLines, _points;
 	AreaI _area31;
+	double _tileScale;
+	pointD _pixelScaleXY;
 	void sortGraphicElements();
 	bool polygonizeCoastlines( const MapRasterizerProvider& env, const std::list< std::shared_ptr<const MapObjectData> >& coastlines,
 	std::list< std::shared_ptr<const MapObjectData> >& outVectorized,   bool abortIfBrokenCoastlinesExist,  bool includeBrokenCoastlines );
