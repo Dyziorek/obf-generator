@@ -1,12 +1,27 @@
 #pragma once
 
-enum GraphElementType
-        {
-            Polygons,
-            Polylines,
-            Polylines_ShadowOnly,
-            Points,
-        };
+class MapRasterizerProvider;
+
+class MapRasterizerContext;
+
+class MapRasterizer
+{
+public:
+	enum GraphElementType : uint32_t
+{
+    Point = 1,
+    Polyline = 2,
+    Polygon = 3,
+};
+
+
+enum GraphElementsType
+{
+    Polygons,
+    Polylines,
+    Polylines_ShadowOnly,
+    Points,
+};
 
 struct GraphicElement;
 struct GraphicElementGroup
@@ -74,12 +89,7 @@ struct RasterSymbolPin : public RasterSymbol
 	std::string resourceName;
 };
 
-class MapRasterizerProvider;
 
-class MapRasterizerContext;
-
-class MapRasterizer
-{
 public:
 	MapRasterizer(MapRasterizerProvider& dataSrc);
 
@@ -87,6 +97,7 @@ public:
 
 	void createContextData(boxI& workArea, int workZoom);
 
+	void DrawMap(std::string pathFile);
 	void DrawMap(SkCanvas& canvas);
 
 
@@ -110,7 +121,7 @@ private:
 
 	MapRasterizerProvider& _source;
 	std::shared_ptr<MapRasterizerContext> _context;
-	void rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr<GraphicElement> >& primitives, GraphElementType type);
+	void rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr<GraphicElement> >& primitives, GraphElementsType type);
 
 	void rasterizePolygon( const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive);
 	void rasterizePolyline(const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow);

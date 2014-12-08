@@ -35,7 +35,7 @@ bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string&
 {
 	const auto typeRuleId = section->rules->getruleIdFromNames(tag, value);
 
-	std::list<int> typeList = checkAdditional ? addtype : type;
+	std::vector<int> typeList = checkAdditional ? addtype : type;
 
 	for (int typeId : typeList)
 	{
@@ -48,7 +48,7 @@ bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string&
 
 bool MapObjectData::containsType(const uint32_t typeRuleId, bool checkAdditional) const
 {
-	std::list<int> typeList = checkAdditional ? addtype : type;
+	std::vector<int> typeList = checkAdditional ? addtype : type;
 	for (int typeId : typeList)
 	{
 		if (typeId == typeRuleId)

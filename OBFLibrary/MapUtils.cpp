@@ -22,10 +22,10 @@ MapUtils::~MapUtils(void)
 }
 
  
-  bool MapUtils::fuzzyCompare(double p1, double p2)
-	{
-	    return (abs(p1 - p2) * 1000000000000. <= std::min(abs(p1), abs(p2)));
-	}
+bool MapUtils::fuzzyCompare(double p1, double p2)
+{
+	return (abs(p1 - p2) * 1000000000000. <= std::min(abs(p1), abs(p2)));
+}
 	
 
   bool MapUtils::fuzzyCompare(float p1, float p2)

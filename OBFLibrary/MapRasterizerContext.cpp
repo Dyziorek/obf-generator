@@ -23,7 +23,7 @@ MapRasterizerContext::~MapRasterizerContext(void)
 
 void MapRasterizerContext::sortGraphicElements()
 {
-	const auto funcSort = [](const std::shared_ptr<GraphicElement>& firstPair, const std::shared_ptr<GraphicElement>& secondPair){
+	const auto funcSort = [](const std::shared_ptr<MapRasterizer::GraphicElement>& firstPair, const std::shared_ptr<MapRasterizer::GraphicElement>& secondPair){
 		if (MapUtils::fuzzyCompare(firstPair->zOrder, secondPair->zOrder))
 		{
 			if (firstPair->_typeIdIndex == secondPair->_typeIdIndex)
@@ -35,7 +35,7 @@ void MapRasterizerContext::sortGraphicElements()
 		return firstPair->zOrder < secondPair->zOrder;
 	};
 
-	for(std::shared_ptr<GraphicElementGroup> groupElem : _graphicElements)
+	for(std::shared_ptr<MapRasterizer::GraphicElementGroup> groupElem : _graphicElements)
 	{
 		_points.insert(_points.end(), groupElem->_points.begin(), groupElem->_points.end());
 		_polygons.insert(_polygons.end(), groupElem->_polygons.begin(), groupElem->_polygons.end());

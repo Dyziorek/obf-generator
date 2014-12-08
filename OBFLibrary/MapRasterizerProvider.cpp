@@ -2,6 +2,8 @@
 #include "SkCanvas.h"
 #include "SkDashPathEffect.h"
 #include "SkBitmapProcShader.h"
+#include "SkStream.h"
+#include "SkImageDecoder.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <boost/filesystem.hpp>
 #include "MapObjectData.h"
@@ -34,7 +36,7 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	defaultBgColor(_defaultBgColor), shadowLevelMin(_shadowLevelMin), shadowLevelMax(_shadowLevelMax),
 	polygonMinSizeToDisplay(_polygonMinSizeToDisplay), roadDensityZoomTile(_roadDensityZoomTile),
 	roadsDensityLimitPerTile(_roadsDensityLimitPerTile), shadowRenderingMode(_shadowRenderingMode), shadowRenderingColor(_shadowRenderingColor),
-	mapPaint(_mapPaint), textPaint(_textPaint)
+	mapPaint(_mapPaint), textPaint(_textPaint), oneWayPaints(_oneWayPaints), reverseOneWayPaints(_reverseOneWayPaints)
 {
 	workingStyle.reset(new MapStyleInfo());
 	workingStyle->loadRenderStyles(nullptr);
@@ -227,6 +229,7 @@ std::list<std::shared_ptr<const MapObjectData>> MapRasterizerProvider::obtainMap
 
 	}
 
+
 	return outListData;
 }
 
@@ -256,6 +259,15 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 {
 	auto& builtinDef = workingStyle->getDefaultValueDefinitions();
 
+	_orderEval.reset(new MapStyleEval(workingStyle, 1.0f));
+	applyStyle(_orderEval);
+
+	_pointEval.reset(new MapStyleEval(workingStyle, 1.0f));
+	_lineEval.reset(new MapStyleEval(workingStyle, 1.0f));
+	_polyEval.reset(new MapStyleEval(workingStyle, 1.0f));
+	_textEval.reset(new MapStyleEval(workingStyle, 1.0f));
+
+
 	_orderEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
 	_orderEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
@@ -269,9 +281,11 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 	_polyEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
 
 	
-	for (std::shared_ptr<MapObjectData> objectMapData: mapData)
+	for (std::shared_ptr<const MapObjectData> cobjectMapData: mapData)
 	{
-		std::shared_ptr<GraphicElementGroup> graphGroup(new GraphicElementGroup());
+		std::shared_ptr<MapObjectData> objectMapData(std::const_pointer_cast<MapObjectData>(cobjectMapData));
+
+		std::shared_ptr<MapRasterizer::GraphicElementGroup> graphGroup(new MapRasterizer::GraphicElementGroup());
 		int typeRuleIDIndex = 0;
 		for(int typeRuleId : objectMapData->type)
 		{
@@ -298,10 +312,10 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 			if (!bOK)
 				continue;
 
-			std::shared_ptr<GraphicElement> graphicElement(new GraphicElement(graphGroup, objectMapData, static_cast<GraphElementType>(graphicType), typeRuleIDIndex));
+			std::shared_ptr<MapRasterizer::GraphicElement> graphicElement(new MapRasterizer::GraphicElement(graphGroup, objectMapData, static_cast<MapRasterizer::GraphElementType>(graphicType), typeRuleIDIndex));
 			graphicElement->zOrder = zOrder;
 
-			if(graphicElement->_type == GraphElementType::Polygons)
+			if(graphicElement->_type == MapRasterizer::GraphElementType::Polygon)
 			{
 				if (objectMapData->points.size() <=2)
 				{
@@ -334,7 +348,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				{
 					// polygon too small to show as polygon in low zoom so convert to point in low zooms
 					graphicElement->zOrder += 1.0 / areaData;
-					std::shared_ptr<GraphicElement> pointElement(new GraphicElement(graphGroup, objectMapData, GraphElementType::Points, typeRuleIDIndex));
+					std::shared_ptr<MapRasterizer::GraphicElement> pointElement(new MapRasterizer::GraphicElement(graphGroup, objectMapData, MapRasterizer::GraphElementType::Point, typeRuleIDIndex));
 					pointElement->zOrder = graphicElement->zOrder;
 					graphGroup->_polygons.push_back(graphicElement);
 
@@ -354,7 +368,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				}
 
 			}
-			else if (graphicElement->_type == GraphElementType::Polylines)
+			else if (graphicElement->_type == MapRasterizer::GraphElementType::Polyline)
 			{
 				if (objectMapData->points.size() < 2)
 				{
@@ -364,7 +378,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				_lineEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
 				_lineEval->setIntValue(builtinDef->id_INPUT_LAYER, objectMapData->getSimpleLayerValue());
 				std::shared_ptr<MapStyleResult> lineResults(new MapStyleResult());
-				bOK = _lineEval->evaluate(objectMapData, rulesetType::point, lineResults.get());
+				bOK = _lineEval->evaluate(objectMapData, rulesetType::line, lineResults.get());
 				if (!bOK)
 					continue;
 
@@ -372,7 +386,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 
 				graphGroup->_polyLines.push_back(graphicElement);
 			}
-			else if(graphicElement->_type == GraphElementType::Points)
+			else if(graphicElement->_type == MapRasterizer::GraphElementType::Point)
 			{
 				if (objectMapData->points.size() < 1)
 				{
@@ -422,14 +436,15 @@ bool MapRasterizerProvider::obtainBitmapShader( const std::string& name, SkBitma
 
         // Decode bitmap for a shader
         auto shaderBitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, shaderBitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
-        itShaderBitmap = _shadersBitmaps.insert(name, std::shared_ptr<SkBitmap>(shaderBitmap));
+        auto itShaderBitmapRet = _shadersBitmaps.insert(std::make_pair(name, std::shared_ptr<SkBitmap>(shaderBitmap)));
+		itShaderBitmap = itShaderBitmapRet.first;
     }
 
     // Create shader from that bitmap
-    outShader = new SkBitmapProcShader(*itShaderBitmap->get(), SkShader::kRepeat_TileMode, SkShader::kRepeat_TileMode);
+	outShader = new SkBitmapProcShader(*itShaderBitmap->second.get(), SkShader::kRepeat_TileMode, SkShader::kRepeat_TileMode);
     return true;
 }
 
@@ -446,7 +461,7 @@ bool MapRasterizerProvider::obtainPathEffect( const std::string& encodedPathEffe
         const auto intervals = new SkScalar[strIntervals.size()];
         auto interval = intervals;
         for(auto itInterval = strIntervals.cbegin(); itInterval != strIntervals.cend(); ++itInterval, interval++)
-            *interval = boost::lexical_cast<float>(itInterval);
+            *interval = boost::lexical_cast<float>(*itInterval);
 
         SkPathEffect* pathEffect = new SkDashPathEffect(intervals, strIntervals.size(), 0);
         delete[] intervals;
@@ -463,24 +478,25 @@ bool MapRasterizerProvider::obtainMapIcon( const std::string& name, std::shared_
 {
     std::lock_guard<std::mutex> scopedLock(_mapIconsMutex);
 
-    auto itIcon = _mapIcons.constFind(name);
+    auto itIcon = _mapIcons.find(name);
     if(itIcon == _mapIcons.cend())
     {
-        const auto bitmapPath = std::string::fromLatin1("map/map_icons/%1.png").arg(name);
+        const auto bitmapPath =  boost::format("map/map_icons/%1%.png") % name;
 
         // Get data from embedded resources
-        auto data = obtainResourceByName(bitmapPath);
+        auto data = obtainResourceByName(bitmapPath.str());
 
         // Decode data
         auto bitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
 
-        itIcon = _mapIcons.insert(name, std::shared_ptr<const SkBitmap>(bitmap));
+        auto itIconRet = _mapIcons.insert(std::make_pair(name, std::shared_ptr<const SkBitmap>(bitmap)));
+		itIcon = itIconRet.first;
     }
 
-    outIcon = *itIcon;
+	outIcon = itIcon->second;
     return true;
 }
 
@@ -488,38 +504,32 @@ bool MapRasterizerProvider::obtainTextShield( const std::string& name, std::shar
 {
     std::lock_guard<std::mutex> scopedLock(_textShieldsMutex);
 
-    auto itTextShield = _textShields.constFind(name);
+    auto itTextShield = _textShields.find(name);
     if(itTextShield == _textShields.cend())
     {
-        const auto bitmapPath = std::string::fromLatin1("map/shields/%1.png").arg(name);
+        const auto bitmapPath =  boost::format("map/shields/%1%.png") % name;
 
         // Get data from embedded resources
-        auto data = obtainResourceByName(bitmapPath);
+        auto data = obtainResourceByName(bitmapPath.str());
 
         // Decode data
         auto bitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
 
-        itTextShield = _textShields.insert(name, std::shared_ptr<const SkBitmap>(bitmap));
+        auto itTextShieldRet = _textShields.insert(std::make_pair(name, std::shared_ptr<const SkBitmap>(bitmap)));
+		itTextShield = itTextShieldRet.first;
     }
 
-    outTextShield = *itTextShield;
+	outTextShield = itTextShield->second;
     return true;
 }
 
 std::vector<uint8_t> MapRasterizerProvider::obtainResourceByName( const std::string& name ) const
 {
-    // Try to obtain from external resources first
-    if(static_cast<bool>(owner->externalResourcesProvider))
-    {
-        bool ok = false;
-        const auto resource = owner->externalResourcesProvider->getResource(name, &ok);
-        if(ok)
-            return resource;
-    }
 
+	return std::vector<uint8_t>();
     // Otherwise obtain from embedded
-    return EmbeddedResources::decompressResource(name);
+    //return EmbeddedResources::decompressResource(name);
 }

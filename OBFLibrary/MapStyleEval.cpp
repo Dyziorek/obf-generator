@@ -28,11 +28,13 @@ bool MapStyleResult::getIntVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_I4, &vtData->second);
 
-	VARIANT vtNewData;
-
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_I4);
+	HRESULT hr = S_OK;
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.intVal;
@@ -44,11 +46,13 @@ bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_UI4, &vtData->second);
 
-	VARIANT vtNewData;
-
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_UI4);
+	HRESULT hr = S_OK;
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.ulVal;
@@ -60,12 +64,13 @@ bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_BOOL, &vtData->second);
 
-	VARIANT vtNewData;
-
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_BOOL);
-	if (SUCCEEDED(hr))
+	HRESULT hr = S_OK;if (SUCCEEDED(hr))
 	{
 		value = vtNewData.boolVal;
 		bOK = true;
@@ -76,11 +81,13 @@ bool MapStyleResult::getStringVal(uint32_t id, std::string& value) const
 {
 	bool bOK = false;
 
-	_variant_t vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
 	_variant_t vtNewData;
-	vtNewData.ChangeType(VT_BSTR, &vtData);
+	vtNewData.ChangeType(VT_BSTR, &vtData->second);
 
-	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData->second, 0, VT_BSTR);
 	if (SUCCEEDED(hr))
 	{
 		_bstr_t bstrData(vtNewData.bstrVal);
@@ -96,11 +103,13 @@ bool MapStyleResult::getStringVal(uint32_t id, std::wstring& value) const
 {
 	bool bOK = false;
 
-	_variant_t vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
 	_variant_t vtNewData;
-	vtNewData.ChangeType(VT_BSTR, &vtData);
+	vtNewData.ChangeType(VT_BSTR, &vtData->second);
 
-	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData->second, 0, VT_BSTR);
 	if (SUCCEEDED(hr))
 	{
 		_bstr_t bstrData(vtNewData.bstrVal);
@@ -115,12 +124,14 @@ bool MapStyleResult::getFloatVal(uint32_t id, float& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	auto& vtData = _values.find(id);
+	if (vtData == _values.end())
+		return false;
 
-	VARIANT vtNewData;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_R4, &vtData->second);
 
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_R4);
-	if (SUCCEEDED(hr))
+	HRESULT hr = S_OK;if (SUCCEEDED(hr))
 	{
 		value = vtNewData.fltVal;
 		bOK = true;

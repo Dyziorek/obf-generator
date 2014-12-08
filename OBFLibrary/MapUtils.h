@@ -19,9 +19,9 @@ public:
 	static double getPowZoom(float zoom);
 
 
-	static inline bool fuzzyCompare(double p1, double p2);
+	static bool fuzzyCompare(double p1, double p2);
 	
-	static inline bool fuzzyCompare(float p1, float p2);
+	static bool fuzzyCompare(float p1, float p2);
 		
 	static double scalarMultiplication(double xA, double yA, double xB, double yB, double xC, double yC);
 

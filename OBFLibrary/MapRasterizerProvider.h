@@ -18,6 +18,12 @@ public:
 		return workingStyle->getDefaultValueDefinitions();
 	}
 
+	std::vector<uint8_t> obtainResourceByName(const std::string& name) const;
+	bool obtainBitmapShader( const std::string& name, SkBitmapProcShader* &outShader ) const;
+	bool obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const;
+	bool obtainMapIcon( const std::string& name, std::shared_ptr<const SkBitmap>& outIcon ) const;
+	bool obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const;
+
 	const SkPaint& mapPaint;
     const SkPaint& textPaint;
 
@@ -29,7 +35,8 @@ public:
     const uint32_t& roadsDensityLimitPerTile;
     const int& shadowRenderingMode;
     const SkColor& shadowRenderingColor;
-
+	const std::vector< SkPaint >& oneWayPaints;
+    const std::vector< SkPaint >& reverseOneWayPaints;
 private:
 	std::shared_ptr<MapStyleInfo> workingStyle;
 	std::list<std::shared_ptr<BinaryIndexDataReader>> mapProviders;
@@ -73,10 +80,6 @@ private:
 	mutable std::mutex _textShieldsMutex;
 	mutable std::unordered_map< std::string, std::shared_ptr<const SkBitmap> > _textShields;
 
-	std::vector<uint8_t> obtainResourceByName(const std::string& name) const;
-	bool obtainBitmapShader( const std::string& name, SkBitmapProcShader* &outShader ) const;
-	bool obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const;
-	bool obtainMapIcon( const std::string& name, std::shared_ptr<const SkBitmap>& outIcon ) const;
-	bool obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const
+
 };
 
