@@ -150,6 +150,9 @@
     <ClInclude Include="MapRasterizerContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EmbeddedResources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -276,6 +279,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MapRasterizerContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EmbeddedResources.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EmbeddedResources_bundle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

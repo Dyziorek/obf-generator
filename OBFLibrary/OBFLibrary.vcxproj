@@ -162,6 +162,7 @@
     <ClInclude Include="CollectionData.h" />
     <ClInclude Include="DefaultMapStyleValue.h" />
     <ClInclude Include="DefaultMapValueSet.h" />
+    <ClInclude Include="EmbeddedResources.h" />
     <ClInclude Include="MapDataGenerator.h" />
     <ClInclude Include="MapObjectData.h" />
     <ClInclude Include="MapRasterizer.h" />
@@ -213,6 +214,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="DefaultMapStyleValue.cpp" />
+    <ClCompile Include="EmbeddedResources.cpp" />
+    <ClCompile Include="EmbeddedResources_bundle.cpp" />
     <ClCompile Include="MapDataGenerator.cpp" />
     <ClCompile Include="MapObjectData.cpp" />
     <ClCompile Include="MapRasterizer.cpp" />

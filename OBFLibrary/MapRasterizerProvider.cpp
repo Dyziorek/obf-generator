@@ -2,6 +2,8 @@
 #include "SkCanvas.h"
 #include "SkDashPathEffect.h"
 #include "SkBitmapProcShader.h"
+#include "SkStream.h"
+#include "SkImageDecoder.h"
 #include <google\protobuf\io\coded_stream.h>
 #include <boost/filesystem.hpp>
 #include "MapObjectData.h"
@@ -269,7 +271,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 	_polyEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
 
 	
-	for (std::shared_ptr<MapObjectData> objectMapData: mapData)
+	for (std::shared_ptr<const MapObjectData> objectMapData: mapData)
 	{
 		std::shared_ptr<GraphicElementGroup> graphGroup(new GraphicElementGroup());
 		int typeRuleIDIndex = 0;
@@ -422,7 +424,7 @@ bool MapRasterizerProvider::obtainBitmapShader( const std::string& name, SkBitma
 
         // Decode bitmap for a shader
         auto shaderBitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, shaderBitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
         itShaderBitmap = _shadersBitmaps.insert(name, std::shared_ptr<SkBitmap>(shaderBitmap));
@@ -463,17 +465,18 @@ bool MapRasterizerProvider::obtainMapIcon( const std::string& name, std::shared_
 {
     std::lock_guard<std::mutex> scopedLock(_mapIconsMutex);
 
-    auto itIcon = _mapIcons.constFind(name);
+    auto itIcon = _mapIcons.find(name);
     if(itIcon == _mapIcons.cend())
     {
-        const auto bitmapPath = std::string::fromLatin1("map/map_icons/%1.png").arg(name);
+		
+        const auto bitmapPath = boost::format("map/map_icons/%1%.png") % name;
 
         // Get data from embedded resources
-        auto data = obtainResourceByName(bitmapPath);
+        auto data = obtainResourceByName(bitmapPath.str());
 
         // Decode data
         auto bitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
 
@@ -488,17 +491,17 @@ bool MapRasterizerProvider::obtainTextShield( const std::string& name, std::shar
 {
     std::lock_guard<std::mutex> scopedLock(_textShieldsMutex);
 
-    auto itTextShield = _textShields.constFind(name);
+    auto itTextShield = _textShields.find(name);
     if(itTextShield == _textShields.cend())
     {
-        const auto bitmapPath = std::string::fromLatin1("map/shields/%1.png").arg(name);
+        const auto bitmapPath = boost::format("map/shields/%1%.png") % name;
 
         // Get data from embedded resources
-        auto data = obtainResourceByName(bitmapPath);
+        auto data = obtainResourceByName(bitmapPath.str());
 
         // Decode data
         auto bitmap = new SkBitmap();
-        SkMemoryStream dataStream(data.constData(), data.length(), false);
+        SkMemoryStream dataStream(data.data(), data.size(), false);
         if(!SkImageDecoder::DecodeStream(&dataStream, bitmap, SkBitmap::Config::kNo_Config, SkImageDecoder::kDecodePixels_Mode))
             return false;
 
@@ -511,15 +514,6 @@ bool MapRasterizerProvider::obtainTextShield( const std::string& name, std::shar
 
 std::vector<uint8_t> MapRasterizerProvider::obtainResourceByName( const std::string& name ) const
 {
-    // Try to obtain from external resources first
-    if(static_cast<bool>(owner->externalResourcesProvider))
-    {
-        bool ok = false;
-        const auto resource = owner->externalResourcesProvider->getResource(name, &ok);
-        if(ok)
-            return resource;
-    }
-
     // Otherwise obtain from embedded
     return EmbeddedResources::decompressResource(name);
 }

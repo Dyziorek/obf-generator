@@ -77,6 +77,6 @@ private:
 	bool obtainBitmapShader( const std::string& name, SkBitmapProcShader* &outShader ) const;
 	bool obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const;
 	bool obtainMapIcon( const std::string& name, std::shared_ptr<const SkBitmap>& outIcon ) const;
-	bool obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const
+	bool obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const;
 };
 

@@ -28,11 +28,14 @@ bool MapStyleResult::getIntVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	_variant_t vtData = _values[id];
 
-	VARIANT vtNewData;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_I4, &vtData);
 
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_I4);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
+
+	
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.intVal;
@@ -44,11 +47,12 @@ bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	_variant_t vtData = _values[id];
 
-	VARIANT vtNewData;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_UI4, &vtData);
 
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_UI4);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.ulVal;
@@ -60,11 +64,12 @@ bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value) const
 {
 	bool bOK = false;
 
-	VARIANT vtData = _values[id];
+	_variant_t vtData = _values[id];
 
-	VARIANT vtNewData;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_BOOL, &vtData);
 
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_BOOL);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.boolVal;
@@ -117,9 +122,10 @@ bool MapStyleResult::getFloatVal(uint32_t id, float& value) const
 
 	VARIANT vtData = _values[id];
 
-	VARIANT vtNewData;
+	_variant_t vtNewData;
+	vtNewData.ChangeType(VT_R4, &vtData);
 
-	HRESULT hr = VariantChangeType(&vtNewData, &vtData, 0, VT_R4);
+	HRESULT hr = S_OK;// VariantChangeType(&vtNewData, &vtData, 0, VT_BSTR);
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.fltVal;
