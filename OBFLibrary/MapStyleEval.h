@@ -42,7 +42,7 @@ class MapStyleResult
 private:
 	std::unordered_map<uint32_t, _variant_t> _values;
 #ifdef _DEBUG
-	std::unordered_map<uint32_t, std::pair<std::string , _variant_t>> _Dvalues;
+	std::unordered_map<uint32_t, std::pair<std::string , std::string>> _Dvalues;
 #endif
 public:
 	bool getIntVal(uint32_t id, int32_t& value) const;

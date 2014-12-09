@@ -37,6 +37,8 @@ public:
     const SkColor& shadowRenderingColor;
 	const std::vector< SkPaint >& oneWayPaints;
     const std::vector< SkPaint >& reverseOneWayPaints;
+
+	std::shared_ptr<BinaryMapSection> dummySectionData;
 private:
 	std::shared_ptr<MapStyleInfo> workingStyle;
 	std::list<std::shared_ptr<BinaryIndexDataReader>> mapProviders;

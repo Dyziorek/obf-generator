@@ -31,6 +31,11 @@ struct BinaryMapSection : public std::enable_shared_from_this<BinaryMapSection>
 		offset = 0;
 		dataOffset = 0;
 	}
+
+	~BinaryMapSection()
+	{
+		sectionData.clear();
+	}
 };
 
 boxD translateBox(boxI inputBox);

@@ -76,7 +76,10 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
     std::list< std::shared_ptr<const MapObjectData> > polygonizedCoastlineObjects;
 	for (const std::shared_ptr<const MapObjectData>& mapItem : mapDatum)
 	{
-		if (mapItem->containsType(mapItem->section->rules->naturalCoastlineLine_encodingRuleId))
+		if (mapItem->section.expired())
+			continue;
+		auto sectionData = mapItem->section.lock();
+		if (mapItem->containsType(sectionData->rules->naturalCoastlineLine_encodingRuleId))
 		{
 			detailedmapCoastlineObjects.push_back(mapItem);
 		}
@@ -97,12 +100,12 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
     {
         //assert(foundation != MapFoundationType::Undefined);
 		
-        const std::shared_ptr<MapObjectData> bgMapObject(new MapObjectData());
+        const std::shared_ptr<MapObjectData> bgMapObject(new MapObjectData(_source.dummySectionData));
         bgMapObject->isArea = true;
-        bgMapObject->points.push_back(std::move(pointI(workArea.max_corner().get<0>(), workArea.max_corner().get<1>())));
-        bgMapObject->points.push_back(std::move(pointI(workArea.min_corner().get<0>(), workArea.max_corner().get<1>())));
         bgMapObject->points.push_back(std::move(pointI(workArea.min_corner().get<0>(), workArea.min_corner().get<1>())));
         bgMapObject->points.push_back(std::move(pointI(workArea.max_corner().get<0>(), workArea.min_corner().get<1>())));
+        bgMapObject->points.push_back(std::move(pointI(workArea.max_corner().get<0>(), workArea.max_corner().get<1>())));
+        bgMapObject->points.push_back(std::move(pointI(workArea.min_corner().get<0>(), workArea.max_corner().get<1>())));
         bgMapObject->points.push_back(bgMapObject->points.front());
        /* if(foundation == MapFoundationType::FullWater)
             bgMapObject->_typesRuleIds.push_back(bgMapObject->section->encodingDecodingRules->naturalCoastline_encodingRuleId);
@@ -111,17 +114,18 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
         else*/
         {
             bgMapObject->isArea = false;
-            bgMapObject->type.push_back(bgMapObject->section->rules->naturalCoastlineBroken_encodingRuleId);
+            bgMapObject->type.push_back(_source.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
         }
-        bgMapObject->addtype.push_back(bgMapObject->section->rules->layerLowest_encodingRuleId);
+        bgMapObject->addtype.push_back(_source.dummySectionData->rules->layerLowest_encodingRuleId);
 
         assert(bgMapObject->isClosedFigure());
         polygonizedCoastlineObjects.push_back(std::move(bgMapObject));
     }
 
 	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());
-	_context->_tileScale = MapUtils::getPowZoom(workZoom);
+	_context->_tileScale = MapUtils::getPowZoom(31 - workZoom);
 	_context->zoom = workZoom;
+	_context->_area31 = workArea;
 	_source.obtainMapPrimitives(mapDatum, workZoom, _context);
 	_source.obtainMapPrimitives(polygonizedCoastlineObjects, workZoom, _context);
 	_context->sortGraphicElements();
@@ -136,7 +140,7 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	}
 
 	SkImage::Info info = {
-		256, 256, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+		1024, 1024, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
 		};
 	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 	SkCanvas* painter = imageRender->getCanvas();
@@ -144,7 +148,6 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	SkAutoDataUnref data(imageRender->newImageSnapshot()->encode());
 	SkFILEWStream stream(pathFile.c_str());
 	stream.write(data->data(), data->size());
-
 
 }
 
@@ -162,7 +165,7 @@ void MapRasterizer::DrawMap(SkCanvas& canvas)
             SkPaint bgPaint;
             bgPaint.setColor(_source.defaultBgColor);
             bgPaint.setStyle(SkPaint::kFill_Style);
-            //canvas.drawRectCoords(destinationArea->top, destinationArea->max_corner()->get<0>(), destinationArea->right, destinationArea->bottom, bgPaint);
+            //canvas.drawRectCoords(destinationArea->top, destinationArea->min_corner()->get<0>(), destinationArea->right, destinationArea->bottom, bgPaint);
         }
         else
         {
@@ -175,10 +178,10 @@ void MapRasterizer::DrawMap(SkCanvas& canvas)
 	
 	auto sizer = canvas.getDeviceSize();
 	AreaI _destinationArea;
-	_destinationArea.max_corner().set<0>(0);
-	_destinationArea.max_corner().set<1>(0);
-	_destinationArea.min_corner().set<1>(sizer.height());
-	_destinationArea.min_corner().set<0>(sizer.width());
+	_destinationArea.min_corner().set<0>(0);
+	_destinationArea.min_corner().set<1>(0);
+	_destinationArea.max_corner().set<1>(sizer.height());
+	_destinationArea.max_corner().set<0>(sizer.width());
 	_context->_pixelScaleXY.set<0>(_context->_tileScale / static_cast<double>(sizer.width()));
 	_context->_pixelScaleXY.set<1>(_context->_tileScale / static_cast<double>(sizer.height()));
 
@@ -387,10 +390,10 @@ void MapRasterizer::rasterizePolygon(
             {
                 outsideBounds.push_back(std::move(vertex));
             }
-			bounds |= (vertex.get<0>() < destinationArea->max_corner().get<0>() ? 1 : 0);
-            bounds |= (vertex.get<0>() > destinationArea->min_corner().get<0>() ? 2 : 0);
-            bounds |= (vertex.get<1>() < destinationArea->max_corner().get<1>() ? 4 : 0);
-            bounds |= (vertex.get<1>() > destinationArea->min_corner().get<1>() ? 8 : 0);
+			bounds |= (vertex.get<0>() < destinationArea->min_corner().get<0>() ? 1 : 0);
+            bounds |= (vertex.get<0>() > destinationArea->max_corner().get<0>() ? 2 : 0);
+            bounds |= (vertex.get<1>() < destinationArea->min_corner().get<1>() ? 4 : 0);
+            bounds |= (vertex.get<1>() > destinationArea->max_corner().get<1>() ? 8 : 0);
         }
 
     }
@@ -402,10 +405,10 @@ void MapRasterizer::rasterizePolygon(
             return;
 
         bool ok = true;
-        ok = ok || contains(outsideBounds, pointF(destinationArea->max_corner().get<0>(),destinationArea->max_corner().get<1>()));
         ok = ok || contains(outsideBounds, pointF(destinationArea->min_corner().get<0>(),destinationArea->min_corner().get<1>()));
-        ok = ok || contains(outsideBounds, pointF(0, destinationArea->min_corner().get<1>()));
-        ok = ok || contains(outsideBounds, pointF(destinationArea->min_corner().get<0>(), 0));
+        ok = ok || contains(outsideBounds, pointF(destinationArea->max_corner().get<0>(),destinationArea->max_corner().get<1>()));
+        ok = ok || contains(outsideBounds, pointF(0, destinationArea->max_corner().get<1>()));
+        ok = ok || contains(outsideBounds, pointF(destinationArea->max_corner().get<0>(), 0));
         if(!ok)
             return;
     }
@@ -448,6 +451,11 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
         return;
 
+	if (primitive->_mapData->section.expired())
+		return;
+
+	auto mapsSectionData = primitive->_mapData->section.lock();
+
     bool ok;
 
     int shadowColor;
@@ -463,11 +471,11 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
 	const auto typeRuleId = primitive->_mapData->type[primitive->_typeIdIndex];
 
     int oneway = 0;
-	if(_context->zoom >= ZoomLevel16 && typeRuleId == primitive->_mapData->section->rules->highway_encodingRuleId)
+	if(_context->zoom >= ZoomLevel16 && typeRuleId == mapsSectionData->rules->highway_encodingRuleId)
     {
-        if(primitive->_mapData->containsType(primitive->_mapData->section->rules->oneway_encodingRuleId, true))
+        if(primitive->_mapData->containsType(mapsSectionData->rules->oneway_encodingRuleId, true))
             oneway = 1;
-        else if(primitive->_mapData->containsType(primitive->_mapData->section->rules->onewayReverse_encodingRuleId, true))
+        else if(primitive->_mapData->containsType(mapsSectionData->rules->onewayReverse_encodingRuleId, true))
             oneway = -1;
     }
 
@@ -504,10 +512,10 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
             else
             {
                 int cross = 0;
-                cross |= (vertex.get<0>() < destinationArea->max_corner().get<0>() ? 1 : 0);
-                cross |= (vertex.get<0>() > destinationArea->min_corner().get<0>() ? 2 : 0);
-                cross |= (vertex.get<1>() < destinationArea->max_corner().get<1>() ? 4 : 0);
-                cross |= (vertex.get<1>() > destinationArea->min_corner().get<0>() ? 8 : 0);
+                cross |= (vertex.get<0>() < destinationArea->min_corner().get<0>() ? 1 : 0);
+                cross |= (vertex.get<0>() > destinationArea->max_corner().get<0>() ? 2 : 0);
+                cross |= (vertex.get<1>() < destinationArea->min_corner().get<1>() ? 4 : 0);
+                cross |= (vertex.get<1>() > destinationArea->max_corner().get<0>() ? 8 : 0);
                 if(pointIdx > 0)
                 {
                     if((prevCross & cross) == 0)
@@ -605,8 +613,12 @@ void MapRasterizer::rasterizeLine_OneWay(
 
 void MapRasterizer::calculateVertex( const pointI& point31, pointF& vertex )
 {
-	vertex.set<0>(static_cast<float>(point31.get<0>() - _context->_area31.max_corner().get<0>()) / _context->_pixelScaleXY.get<0>());
-    vertex.set<1>(static_cast<float>(point31.get<1>() - _context->_area31.max_corner().get<1>()) / _context->_pixelScaleXY.get<1>());
+	auto xVal = static_cast<float>(point31.get<0>());
+	auto xArea = static_cast<float>(_context->_area31.min_corner().get<0>());
+	auto yArea = static_cast<float>(_context->_area31.min_corner().get<1>());
+	auto yVal = static_cast<float>(point31.get<1>());
+	vertex.set<0>((xVal - xArea) / _context->_pixelScaleXY.get<0>());
+	vertex.set<1>((yVal - yArea)/ _context->_pixelScaleXY.get<1>());
 }
 
 bool MapRasterizer::contains( const std::vector< pointF >& vertices, const pointF& other )

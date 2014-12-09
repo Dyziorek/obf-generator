@@ -24,7 +24,7 @@ struct MapObjectData
 	std::vector<int> type;
 	std::vector<int> addtype;
 	std::list<std::tuple<int,int,std::string>> nameTypeString;
-	std::shared_ptr<BinaryMapSection> section;
+	std::weak_ptr<BinaryMapSection> section;
 	bool containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional = false ) const;
 	bool containsType(const uint32_t typeRuleId, bool checkAdditional = false) const;
 	int getSimpleLayerValue() const;
@@ -34,7 +34,6 @@ struct MapObjectData
 	std::vector<pointD> geoPoints;
 	AreaD geoBBox;
 #endif
-	MapObjectData(void);
 	MapObjectData(std::shared_ptr<BinaryMapSection> workSection);
 	~MapObjectData(void);
 };

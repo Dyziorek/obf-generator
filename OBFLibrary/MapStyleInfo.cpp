@@ -539,31 +539,31 @@ const std::string MapStyleInfo::getValueString( uint64_t ruleId ) const
 
 bool MapStyleInfo::getRule(uint64_t ruleId, rulesetType rulestype, std::shared_ptr<MapStyleRule>& ruleData)
 {
-	std::map< uint64_t, std::shared_ptr<MapStyleRule> > currentSet;
+	std::map< uint64_t, std::shared_ptr<MapStyleRule> >* currentSet;
 	switch(rulestype)
 	{
 	case order:
-		currentSet = _orderRules;
+		currentSet = &_orderRules;
 		break;
 		case text:
-		currentSet = _textRules;
+		currentSet = &_textRules;
 		break;
 		case line:
-		currentSet = _lineRules;
+		currentSet = &_lineRules;
 		break;
 		case polygon:
-		currentSet = _polygonRules;
+		currentSet = &_polygonRules;
 		break;
 		case point:
-		currentSet = _pointRules;
+		currentSet = &_pointRules;
 		break;
 	default:
 	case none:
 		return false;
 	}
 
-	auto setRuleData = currentSet.find(ruleId);
-	if (setRuleData != currentSet.end())
+	auto setRuleData = currentSet->find(ruleId);
+	if (setRuleData != currentSet->end())
 	{
 		ruleData = setRuleData->second;
 		return true;

@@ -1061,10 +1061,15 @@ void BinaryMapDataReader::evaluateObject(std::shared_ptr<MapObjectData>& infoDum
 								   , MapStyleEval& ptevaluator
 								   , MapStyleEval& lineevaluator)
 {
+	if (infoDump->section.expired())
+		return;
+	auto sectionData = infoDump->section.lock();
+
 for (auto typeID : infoDump->type)
 {
 	MapStyleResult* ressultPlacer = new MapStyleResult(); 
-	auto decodedType = infoDump->section->rules->getRuleInfo(typeID);
+	
+	auto decodedType = sectionData->rules->getRuleInfo(typeID);
 	ordevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
 	ordevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
 	ordevaluator.setIntValue(ordevaluator._builtInDefValues->id_INPUT_LAYER, infoDump->getSimpleLayerValue());
@@ -1088,7 +1093,7 @@ for (auto typeID : infoDump->type)
 	for (auto& textdata : infoDump->nameTypeString)
 	{
 		ressultPlacer = new MapStyleResult(); 
-		decodedType = infoDump->section->rules->getRuleInfo(typeID);
+		decodedType = sectionData->rules->getRuleInfo(typeID);
 		textevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_TAG, decodedType.tag);
 		textevaluator.setStringValue(ordevaluator._builtInDefValues->id_INPUT_VALUE, decodedType.value);
 		textevaluator.setIntValue(textevaluator._builtInDefValues->id_INPUT_TEXT_LENGTH, std::get<2>(textdata).size());

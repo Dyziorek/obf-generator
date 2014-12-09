@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "SkCanvas.h"
+#include "SkDashPathEffect.h"
+#include "SkBitmapProcShader.h"
 #include "MapObjectData.h"
 #include "BinaryMapDataObjects.h"
 #include "MapStyleData.h"
@@ -9,6 +11,17 @@
 #include "MapStyleInfo.h"
 #include "MapStyleEval.h"
 #include "MapRasterizer.h"
+
+#include <google\protobuf\io\coded_stream.h>
+#include <boost/filesystem.hpp>
+#include "RandomAccessFileReader.h"
+#include "BinaryMapDataReader.h"
+#include "BinaryAddressDataReader.h"
+#include "BinaryRouteDataReader.h"
+#include "BinaryIndexDataReader.h"
+#include <boost/detail/endian.hpp>
+#include "BinaryReaderUtils.h"
+#include "MapRasterizerProvider.h"
 #include "MapRasterizerContext.h"
 #include "Tools.h"
 
@@ -58,10 +71,10 @@ bool MapRasterizerContext::polygonizeCoastlines(
 
     // Align area to 32: this fixes coastlines and specifically Antarctica
     auto alignedArea31 = _area31;
-	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
-    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
-    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+	alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
     alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
 
     uint64_t osmId = 0;
     std::vector< pointI > linePoints31;
@@ -115,10 +128,10 @@ bool MapRasterizerContext::polygonizeCoastlines(
     {
         const auto& polyline = *itPolyline;
 
-        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
         mapObject->isArea = false;
         mapObject->points = polyline;
-		mapObject->type.push_back(mapObject->section->rules->naturalCoastlineLine_encodingRuleId);
+		mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
 
         outVectorized.push_back(std::move(mapObject));
     }
@@ -127,15 +140,15 @@ bool MapRasterizerContext::polygonizeCoastlines(
     if(!coastlinePolylines.empty())
     {
         // Add complete water tile with holes
-        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
-        mapObject->points.push_back(std::move(pointI(_area31.max_corner().get<0>(), _area31.max_corner().get<1>())));
-        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(), _area31.max_corner().get<1>())));
-        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(),_area31.min_corner().get<1>())));
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
+        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(), _area31.min_corner().get<1>())));
         mapObject->points.push_back(std::move(pointI(_area31.max_corner().get<0>(), _area31.min_corner().get<1>())));
+        mapObject->points.push_back(std::move(pointI(_area31.max_corner().get<0>(),_area31.max_corner().get<1>())));
+        mapObject->points.push_back(std::move(pointI(_area31.min_corner().get<0>(), _area31.max_corner().get<1>())));
         mapObject->points.push_back(mapObject->points.front());
         convertCoastlinePolylinesToPolygons(env, coastlinePolylines, mapObject->innerpolypoints, osmId);
 
-        mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
+        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
 		mapObject->localId = osmId;
         mapObject->isArea = true;
 
@@ -160,10 +173,10 @@ bool MapRasterizerContext::polygonizeCoastlines(
         {
             const auto& polygon = *itPolygon;
 
-            const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+            const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
 			mapObject->isArea = false;
             mapObject->points = polygon;
-			mapObject->type.push_back(mapObject->section->rules->naturalCoastlineBroken_encodingRuleId);
+			mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
 
             outVectorized.push_back(std::move(mapObject));
         }
@@ -174,10 +187,10 @@ bool MapRasterizerContext::polygonizeCoastlines(
     {
         const auto& polygon = *itPolygon;
 
-        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
         mapObject->isArea = false;
         mapObject->points = polygon;
-        mapObject->type.push_back(mapObject->section->rules->naturalCoastlineLine_encodingRuleId);
+        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
 
         outVectorized.push_back(std::move(mapObject));
     }
@@ -197,16 +210,16 @@ bool MapRasterizerContext::polygonizeCoastlines(
 
         bool clockwise = isClockwiseCoastlinePolygon(polygon);
 
-        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
         mapObject->points = std::move(polygon);
         if(clockwise)
         {
-            mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
+            mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
             fullWaterObjects++;
         }
         else
         {
-            mapObject->type.push_back(mapObject->section->rules->naturalLand_encodingRuleId);
+            mapObject->type.push_back(env.dummySectionData->rules->naturalLand_encodingRuleId);
             fullLandObjects++;
         }
 		mapObject->localId = osmId;
@@ -226,7 +239,7 @@ bool MapRasterizerContext::polygonizeCoastlines(
             _zoom);*/
 
         // Add complete water tile
-        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData());
+        const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
 		areaInt checkArea(_area31);
         mapObject->points.push_back(std::move(pointI(checkArea.Left(), checkArea.Top())));
         mapObject->points.push_back(std::move(pointI(checkArea.Right(), checkArea.Top())));
@@ -234,7 +247,7 @@ bool MapRasterizerContext::polygonizeCoastlines(
 		mapObject->points.push_back(std::move(pointI(checkArea.Left(), checkArea.Bottom())));
         mapObject->points.push_back(mapObject->points.front());
 
-        mapObject->type.push_back(mapObject->section->rules->naturalCoastline_encodingRuleId);
+        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
 		mapObject->localId = osmId;
         mapObject->isArea = true;
 
@@ -258,10 +271,10 @@ bool MapRasterizerContext::buildCoastlinePolygonSegment(
     // Align area to 32: this fixes coastlines and specifically Antarctica
     auto alignedArea31 = _area31;
 
-	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
-    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
-    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+	alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
     alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
 
     auto point = currentPoint31;
     if (prevInside)
@@ -309,10 +322,10 @@ bool MapRasterizerContext::calculateIntersection( const pointI& p1, const pointI
     const auto& py = p0.get<1>();
     const auto& x = p1.get<0>();
     const auto& y = p1.get<1>();
-	const auto& leftX = bbox.max_corner().get<0>();
-    const auto& rightX = bbox.min_corner().get<0>();
-    const auto& topY = bbox.max_corner().get<1>();
-    const auto& bottomY = bbox.min_corner().get<1>();
+	const auto& leftX = bbox.min_corner().get<0>();
+    const auto& rightX = bbox.max_corner().get<0>();
+    const auto& topY = bbox.min_corner().get<1>();
+    const auto& bottomY = bbox.max_corner().get<1>();
 
     // firstly try to search if the line goes in
     if (py < topY && y >= topY) {
@@ -460,10 +473,10 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
 {
     // Align area to 32: this fixes coastlines and specifically Antarctica
     auto alignedArea31 = _area31;
-	alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
-    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
-    alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
+	alignedArea31.min_corner().set<1>(alignedArea31.min_corner().get<1>() & ~((1u << 5) - 1));
     alignedArea31.min_corner().set<0>(alignedArea31.min_corner().get<0>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<1>(alignedArea31.max_corner().get<1>() & ~((1u << 5) - 1));
+    alignedArea31.max_corner().set<0>(alignedArea31.max_corner().get<0>() & ~((1u << 5) - 1));
 
 	areaInt checkerArea(alignedArea31);
 

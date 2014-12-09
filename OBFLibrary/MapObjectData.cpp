@@ -2,18 +2,6 @@
 #include "MapObjectData.h"
 #include "BinaryMapDataObjects.h"
 
-MapObjectData::MapObjectData(void)
-{
-	localId = 0;
-	isArea = false;
-	boost::geometry::assign_inverse(bbox);
-#ifdef _DEBUG
-	correctBBox = true;
-#endif
-	section.reset(new BinaryMapSection);
-	section->rules.reset(new BinaryMapRules());
-	section->rules->createMissingRules();
-}
 
 MapObjectData::MapObjectData(std::shared_ptr<BinaryMapSection> workSection) : section(workSection)
 {
@@ -33,7 +21,12 @@ MapObjectData::~MapObjectData(void)
 
 bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional /*= false*/ ) const
 {
-	const auto typeRuleId = section->rules->getruleIdFromNames(tag, value);
+	if(section.expired())
+		return false;
+
+	std::shared_ptr<BinaryMapSection> sectionData = section.lock();
+
+	const auto typeRuleId = sectionData->rules->getruleIdFromNames(tag, value);
 
 	std::vector<int> typeList = checkAdditional ? addtype : type;
 
@@ -60,15 +53,21 @@ bool MapObjectData::containsType(const uint32_t typeRuleId, bool checkAdditional
 
 int MapObjectData::getSimpleLayerValue() const
 {
+	if(section.expired())
+		return 0;
+
+	std::shared_ptr<BinaryMapSection> sectionData = section.lock();
+
+
     for(const auto typeRuleId : addtype)
     {
         
 
-		if(section->rules->positiveLayers_encodingRuleIds.find(typeRuleId) != section->rules->positiveLayers_encodingRuleIds.end())
+		if(sectionData->rules->positiveLayers_encodingRuleIds.find(typeRuleId) != sectionData->rules->positiveLayers_encodingRuleIds.end())
             return 1;
-		else if(section->rules->negativeLayers_encodingRuleIds.find(typeRuleId) != section->rules->negativeLayers_encodingRuleIds.end())
+		else if(sectionData->rules->negativeLayers_encodingRuleIds.find(typeRuleId) != sectionData->rules->negativeLayers_encodingRuleIds.end())
             return -1;
-        else if(section->rules->zeroLayers_encodingRuleIds.find(typeRuleId) != section->rules->zeroLayers_encodingRuleIds.end())
+        else if(sectionData->rules->zeroLayers_encodingRuleIds.find(typeRuleId) != sectionData->rules->zeroLayers_encodingRuleIds.end())
             return 0;
     }
 

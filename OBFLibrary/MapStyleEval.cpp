@@ -277,32 +277,37 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, std
                 continue;
 
             const auto& ruleValue = ruleVal.second;
-
+			int valueData;
+			float valueReal;
+			std::string valTxt;
 			switch(valueDef->typeData)
             {
 			case ValType::Booltype:
 				assert(!ruleValue.isSpecial);
 				outInfo->_values[valueDef->id] = (ruleValue.simpleData.asUInt == 1);
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), outInfo->_values[valueDef->id]);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), ruleValue.simpleData.asUInt == 1 ? "true" : "false");
 				#endif
                 break;
             case ValType::Inttype:
-                outInfo->_values[valueDef->id] =
-                    ruleValue.isSpecial
+				valueData = ruleValue.isSpecial
 					? ruleValue.specialData.asInt.calculate(_factor)
                     : ruleValue.simpleData.asInt;
+                outInfo->_values[valueDef->id] = valueData;
+                    
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, outInfo->_values[valueDef->id]);
+				valTxt = boost::lexical_cast<std::string>(valueData);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, valTxt);
 				#endif
                 break;
             case ValType::Floattype:
-                outInfo->_values[valueDef->id] =
-                    ruleValue.isSpecial
+				valueReal = ruleValue.isSpecial
                     ? ruleValue.specialData.asFloat.calculate(_factor)
                     : ruleValue.simpleData.asFloat;
+                outInfo->_values[valueDef->id] = valueReal;
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), outInfo->_values[valueDef->id]);
+				valTxt = boost::lexical_cast<std::string>(valueReal);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), valTxt);
 				#endif
                 break;
             case ValType::Stringtype:
@@ -310,14 +315,15 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, std
                 outInfo->_values[valueDef->id] =
                     owner->lookupStringValue(ruleValue.simpleData.asUInt).c_str();
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), outInfo->_values[valueDef->id]);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), owner->lookupStringValue(ruleValue.simpleData.asUInt));
 				#endif
                 break;
             case ValType::Colortype:
                 assert(!ruleValue.isSpecial);
                 outInfo->_values[valueDef->id] = ruleValue.simpleData.asUInt;
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), outInfo->_values[valueDef->id]);
+				valTxt = boost::lexical_cast<std::string>(ruleValue.simpleData.asUInt);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), boost::lexical_cast<std::string>(ruleValue.simpleData.asUInt));
 				#endif
                 break;
             }

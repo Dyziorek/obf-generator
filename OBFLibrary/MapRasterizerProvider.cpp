@@ -49,6 +49,10 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	_polyEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
 	_textEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
 
+	dummySectionData.reset(new BinaryMapSection());
+	dummySectionData->rules.reset(new BinaryMapRules());
+	dummySectionData->rules->createMissingRules();
+
 }
 
 
@@ -272,13 +276,13 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 	_orderEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
 	_pointEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_pointEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	_pointEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
 	_lineEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_lineEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	_lineEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
 	_polyEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_polyEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	_polyEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
 	
 	for (std::shared_ptr<const MapObjectData> cobjectMapData: mapData)
@@ -289,7 +293,10 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 		int typeRuleIDIndex = 0;
 		for(int typeRuleId : objectMapData->type)
 		{
-			auto& mapDecoder = objectMapData->section->rules->getRuleInfo(typeRuleId);
+			if (objectMapData->section.expired())
+				continue;
+			auto sectionData = objectMapData->section.lock();
+			auto& mapDecoder = sectionData->rules->getRuleInfo(typeRuleId);
 			
 			_orderEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
 			_orderEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);

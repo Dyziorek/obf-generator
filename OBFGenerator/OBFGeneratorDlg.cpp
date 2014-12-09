@@ -890,7 +890,10 @@ void COBFGeneratorDlg::OnClose()
 	// TODO: Add your message handler code here and/or call default
 	SkGraphics::Term();
 	results.close();
-	
+	if (mapData)
+	{
+		mapData.reset();
+	}
 	CDialogEx::OnClose();
 }
 
@@ -931,8 +934,7 @@ void COBFGeneratorDlg::OnBnClickedButton1()
 
 	if (mapData)
 	{
-		
-		
+		mapData.reset();
 	}
 }
 
@@ -941,7 +943,10 @@ void COBFGeneratorDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
 	results.close();
-	
+	if (mapData)
+	{
+		mapData.reset();
+	}
 	CDialogEx::OnCancel();
 }
 
@@ -951,7 +956,10 @@ void COBFGeneratorDlg::OnOK()
 	// TODO: Add your specialized code here and/or call the base class
 	results.close();
 	
-
+	if (mapData)
+	{
+		mapData.reset();
+	}
 	CDialogEx::OnOK();
 }
 
@@ -997,22 +1005,59 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		}
 		
 		boxI bgData = mapData->getWholeBox();
-		boxL bgDataMax;
-		bg::convert(bgData, bgDataMax);
-		pointI ptCenter;
-		bg::centroid(bgDataMax, ptCenter);
-		boxI bgCenter;
-		bgCenter.min_corner() = ptCenter;
-		bgCenter.max_corner().set<0>(ptCenter.get<0>() + 100);
-		bgCenter.max_corner().set<1>(ptCenter.get<1>() + 100);
-		auto mapDataObjets = mapData->obtainMapData(bgCenter, 20);
-		std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
-		render->createContextData(bgCenter, 20);
 
+		int zoomVal = 14;
+		int tileSide = 256;
 
+		auto top = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
+		auto left = MapUtils::get31TileNumberX(MapUtils::get31LongitudeX(bgData.min_corner().get<0>()));
+		auto bottom = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.max_corner().get<1>()));
+		auto right = MapUtils::get31TileNumberY(MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));
 
-		render->DrawMap(newPath);
-		
+		auto rightT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.min_corner().get<0>()));
+		auto topT = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
+		auto leftT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));
+		auto bottomT = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(bgData.max_corner().get<1>()));
+
+		auto tileWidth = leftT - rightT;
+		auto tileHeight = bottomT - topT;
+		if (tileHeight > 3 || tileWidth > 3)
+		{
+			auto idx = tileWidth;
+			auto idy = tileHeight;
+			float minx = MapUtils::get31LongitudeX(bgData.min_corner().get<0>());
+			float miny = MapUtils::get31LatitudeY(bgData.min_corner().get<1>());
+			float stepLon = (MapUtils::get31LongitudeX(bgData.max_corner().get<0>()) - MapUtils::get31LongitudeX(bgData.min_corner().get<0>()))/idx;
+			float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idx;
+			for (int intx = 0; intx < idx; intx++)
+			{
+				for(int inty = 0; inty < idy; inty++)
+				{
+					bgData.min_corner().set<0>( MapUtils::get31TileNumberX(minx+(intx*stepLon)));
+					bgData.min_corner().set<1>( MapUtils::get31TileNumberY(miny+(inty*stepLat)));
+					bgData.max_corner().set<0>( MapUtils::get31TileNumberX(minx+((intx+1)*stepLon)));
+					bgData.max_corner().set<1>( MapUtils::get31TileNumberY(miny+((inty+1)*stepLat)));
+					auto mapDataObjets = mapData->obtainMapData(bgData, zoomVal);
+					std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
+					render->createContextData(bgData, zoomVal);
+					std::stringstream strmText;
+					strmText << "_" << intx << "_" << inty;
+					boost::filesystem::path pp(newPath);
+					std::string newName =  pp.leaf().filename().string() + strmText.str().c_str();
+					newName +=  + ".png";
+					pp.remove_leaf() /= newName;
+					auto result = pp.string();
+					render->DrawMap(result);
+				}
+			}
+		}
+		else
+		{
+			auto mapDataObjets = mapData->obtainMapData(bgData, zoomVal);
+			std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
+			render->createContextData(bgData, zoomVal);
+			render->DrawMap(newPath);
+		}
 	}
 }
 
