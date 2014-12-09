@@ -21,8 +21,8 @@ struct MapObjectData
 	int64_t localId;
 	bool isArea;
 	AreaI bbox;
-	std::list<int> type;
-	std::list<int> addtype;
+	std::vector<int> type;
+	std::vector<int> addtype;
 	std::list<std::tuple<int,int,std::string>> nameTypeString;
 	std::shared_ptr<BinaryMapSection> section;
 	bool containsTypeSlow( const std::string& tag, const std::string& value, bool checkAdditional = false ) const;

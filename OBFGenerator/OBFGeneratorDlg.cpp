@@ -6,6 +6,7 @@
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
 #include "SkCanvas.h"
+#include "SkBitmapProcShader.h"
 #ifdef _DEBUG_VLD
 	#include "vld.h"
 #endif
@@ -959,12 +960,13 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 {
 	UpdateData();
 	CFile fileData;
+
 	if (!mapData)
 	{
 		fileData.Open(m_fileReadPath, CFile::OpenFlags::typeBinary|CFile::modeRead);
 	}
 
-
+	std::string newPath;
 	if (fileData.m_hFile != CFile::hFileNull || mapData)
 	{
 		if (!mapData)
@@ -978,9 +980,20 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 			std::string cvt = coder.to_bytes(wstrPath);
 		
 			boost::filesystem::path pather(cvt);
-		
+			pather.replace_extension("png");
+			newPath = pather.string();
 			mapData.swap(std::shared_ptr<MapRasterizerProvider>(new  MapRasterizerProvider()));
 			mapData->obtainMaps(cvt.c_str());
+		}
+		else
+		{
+			std::wstring wstrPath = m_fileReadPath.GetBuffer();
+			std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
+			std::string cvt = coder.to_bytes(wstrPath);
+		
+			boost::filesystem::path pather(cvt);
+			pather.replace_extension("png");
+			newPath = pather.string();
 		}
 		
 		boxI bgData = mapData->getWholeBox();
@@ -993,6 +1006,12 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		bgCenter.max_corner().set<0>(ptCenter.get<0>() + 100);
 		bgCenter.max_corner().set<1>(ptCenter.get<1>() + 100);
 		auto mapDataObjets = mapData->obtainMapData(bgCenter, 20);
+		std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
+		render->createContextData(bgCenter, 20);
+
+
+
+		render->DrawMap(newPath);
 		
 	}
 }
@@ -1039,6 +1058,8 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton3()
 	std::ofstream strmOut(outFileDec, std::ios::out|std::ios::binary);
 	std::ifstream strmData(m_DecompressFile, std::ios::in|std::ios::binary);
 
+
+	
 
 	////ar::binary_iarchive inpFile(strmData, ar::archive_flags::no_header|ar::archive_flags::no_codecvt|ar::archive_flags::no_tracking|ar::archive_flags::no_xml_tag_checking);
 	//bool hasDELTA = true;

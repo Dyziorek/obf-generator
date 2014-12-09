@@ -29,12 +29,13 @@ public:
 	MapRasterizerContext(void);
 	~MapRasterizerContext(void);
 
-	std::vector<std::shared_ptr<GraphicElementGroup>> _graphicElements;
-	std::vector<std::shared_ptr<RasterSymbolGroup>> symbols;
-	std::vector<std::shared_ptr<GraphicElement>> _polygons, _polyLines, _points;
+	std::vector<std::shared_ptr<MapRasterizer::GraphicElementGroup>> _graphicElements;
+	std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>> symbols;
+	std::vector<std::shared_ptr<MapRasterizer::GraphicElement>> _polygons, _polyLines, _points;
 	AreaI _area31;
 	double _tileScale;
 	pointD _pixelScaleXY;
+	int zoom;
 	void sortGraphicElements();
 	bool polygonizeCoastlines( const MapRasterizerProvider& env, const std::list< std::shared_ptr<const MapObjectData> >& coastlines,
 	std::list< std::shared_ptr<const MapObjectData> >& outVectorized,   bool abortIfBrokenCoastlinesExist,  bool includeBrokenCoastlines );

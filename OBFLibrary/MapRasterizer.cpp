@@ -1,12 +1,16 @@
 #include "stdafx.h"
 
 #include "SkCanvas.h"
-#include "SkCanvas.h"
 #include "SkSurface.h"
 #include "SkImage.h"
 #include "SkData.h"
 #include "SkStream.h"
 #include "SkGraphics.h"
+#include "SkDashPathEffect.h"
+#include "SkBlurDrawLooper.h"
+#include "SkBitmapProcShader.h"
+#include "SkImageDecoder.h"
+#include "SkColorFilter.h"
 
 #include <google\protobuf\io\coded_stream.h>
 #include <boost/filesystem.hpp>
@@ -30,26 +34,26 @@
 #include "MapRasterizerProvider.h"
 #include "Tools.h"
 
-RasterSymbol::RasterSymbol()
+MapRasterizer::RasterSymbol::RasterSymbol()
 {
 }
 
-RasterSymbol::~RasterSymbol()
+MapRasterizer::RasterSymbol::~RasterSymbol()
 {
 }
 
-RasterSymbolonPath::RasterSymbolonPath()
+MapRasterizer::RasterSymbolonPath::RasterSymbolonPath()
 {
 }
 
-RasterSymbolonPath::~RasterSymbolonPath()
+MapRasterizer::RasterSymbolonPath::~RasterSymbolonPath()
 {
 }
 
-RasterSymbolPin::RasterSymbolPin()
+MapRasterizer::RasterSymbolPin::RasterSymbolPin()
 {
 }
-RasterSymbolPin::~RasterSymbolPin()
+MapRasterizer::RasterSymbolPin::~RasterSymbolPin()
 {
 }
 
@@ -81,7 +85,7 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 			detailedmapMapObjects.push_back(mapItem);
 		}
 	}
-	bool fillEntireArea;
+	bool fillEntireArea = true;
 	if(!detailedmapCoastlineObjects.empty())
     {
         const bool coastlinesWereAdded = _context->polygonizeCoastlines(_source,  detailedmapCoastlineObjects,
@@ -117,13 +121,32 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 
 	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());
 	_context->_tileScale = MapUtils::getPowZoom(workZoom);
-
+	_context->zoom = workZoom;
 	_source.obtainMapPrimitives(mapDatum, workZoom, _context);
 	_source.obtainMapPrimitives(polygonizedCoastlineObjects, workZoom, _context);
 	_context->sortGraphicElements();
 
 }
 
+void MapRasterizer::DrawMap(std::string pathFile)
+{
+	if (pathFile.size() == 0)
+	{
+		return;
+	}
+
+	SkImage::Info info = {
+		256, 256, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+		};
+	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
+	SkCanvas* painter = imageRender->getCanvas();
+	DrawMap(*painter);
+	SkAutoDataUnref data(imageRender->newImageSnapshot()->encode());
+	SkFILEWStream stream(pathFile.c_str());
+	stream.write(data->data(), data->size());
+
+
+}
 
 
 void MapRasterizer::DrawMap(SkCanvas& canvas)
@@ -137,9 +160,9 @@ void MapRasterizer::DrawMap(SkCanvas& canvas)
         {
             // If destination area is specified, fill only it with background
             SkPaint bgPaint;
-            bgPaint.setColor(_source.);
+            bgPaint.setColor(_source.defaultBgColor);
             bgPaint.setStyle(SkPaint::kFill_Style);
-            //canvas.drawRectCoords(destinationArea->top, destinationArea->left, destinationArea->right, destinationArea->bottom, bgPaint);
+            //canvas.drawRectCoords(destinationArea->top, destinationArea->max_corner()->get<0>(), destinationArea->right, destinationArea->bottom, bgPaint);
         }
         else
         {
@@ -160,11 +183,13 @@ void MapRasterizer::DrawMap(SkCanvas& canvas)
 	_context->_pixelScaleXY.set<1>(_context->_tileScale / static_cast<double>(sizer.height()));
 
 	_mapPaint = _source.mapPaint;
-	rasterizeMapElements(&_destinationArea, canvas, _context->_polygons, GraphElementType::Polygons);
+	rasterizeMapElements(&_destinationArea, canvas, _context->_polygons, GraphElementsType::Polygons);
+	
+	rasterizeMapElements(&_destinationArea, canvas, _context->_polyLines, GraphElementsType::Polylines);
 	
 }
 
-void MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr< GraphicElement> >& primitives, GraphElementType type)
+void MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr< GraphicElement> >& primitives, GraphElementsType type)
 {
 	const auto polygonMinSizeToDisplay31 = _source.polygonMinSizeToDisplay * (_context->_pixelScaleXY.get<0>() * _context->_pixelScaleXY.get<1>());
     const auto polygonSizeThreshold = 1.0 / polygonMinSizeToDisplay31;
@@ -272,7 +297,7 @@ bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintVal
         else
         {
             SkPathEffect* pathEffect = nullptr;
-            ok = env.obtainPathEffect(encodedPathEffect, pathEffect);
+			ok = _source.obtainPathEffect(encodedPathEffect, pathEffect);
 
             if(ok && pathEffect)
                 _mapPaint.setPathEffect(pathEffect);
@@ -280,7 +305,7 @@ bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintVal
     }
 
     SkColor color;
-    ok = evalResult.getIntegerValue(valueDefId_color, color);
+    ok = evalResult.getIntVal(valueDefId_color, color);
     if(!ok || !color)
         return false;
     _mapPaint.setColor(color);
@@ -288,11 +313,11 @@ bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintVal
     if (valueSetSelector == PaintValuesSet::Set_0)
     {
         std::string shader;
-        ok = evalResult.getStringValue(builtinStyleDefs->id_OUTPUT_SHADER, shader);
+        ok = evalResult.getStringVal(builtinStyleDefs->id_OUTPUT_SHADER, shader);
         if(ok && !shader.empty())
         {
             SkBitmapProcShader* shaderObj = nullptr;
-            if(env.obtainBitmapShader(shader, shaderObj) && shaderObj)
+            if(_source.obtainBitmapShader(shader, shaderObj) && shaderObj)
             {
                 _mapPaint.setShader(static_cast<SkShader*>(shaderObj));
                 shaderObj->unref();
@@ -301,14 +326,14 @@ bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintVal
     }
 
     // do not check shadow color here
-    if (context._shadowRenderingMode == 1 && valueSetSelector == PaintValuesSet::Set_0)
+    if (_source.shadowRenderingMode == 1 && valueSetSelector == PaintValuesSet::Set_0)
     {
         int shadowColor;
-        ok = evalResult.getIntegerValue(builtinStyleDefs->id_OUTPUT_SHADOW_COLOR, shadowColor);
+        ok = evalResult.getIntVal(builtinStyleDefs->id_OUTPUT_SHADOW_COLOR, shadowColor);
         int shadowRadius;
-        evalResult.getIntegerValue(builtinStyleDefs->id_OUTPUT_SHADOW_RADIUS, shadowRadius);
+        evalResult.getIntVal(builtinStyleDefs->id_OUTPUT_SHADOW_RADIUS, shadowRadius);
         if(!ok || shadowColor == 0)
-            shadowColor = context._shadowRenderingColor;
+            shadowColor = _source.shadowRenderingColor;
         if(shadowColor == 0)
             shadowRadius = 0;
 
@@ -324,48 +349,48 @@ void MapRasterizer::rasterizePolygon(
     const AreaI* const destinationArea,
     SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive)
 {
-    assert(primitive->mapObject->points31.size() > 2);
-    assert(primitive->mapObject->isClosedFigure());
-    assert(primitive->mapObject->isClosedFigure(true));
-
+    /*assert(primitive->_mapData->points.size() > 2);
+    assert(primitive->_mapData->isClosedFigure());
+    assert(primitive->_mapData->isClosedFigure(true));
+*/
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, true))
         return;
 
     SkPath path;
     bool containsAtLeastOnePoint = false;
     int pointIdx = 0;
-    PointF vertex;
+    pointF vertex;
     int bounds = 0;
-    QVector< PointF > outsideBounds;
-    const auto pointsCount = primitive->mapObject->points31.size();
-    auto pPoint = primitive->mapObject->points31.constData();
+    std::vector< pointF > outsideBounds;
+    const auto pointsCount = primitive->_mapData->points.size();
+    auto pPoint = primitive->_mapData->points.data();
     for(auto pointIdx = 0; pointIdx < pointsCount; pointIdx++, pPoint++)
     {
         calculateVertex(*pPoint, vertex);
 
         if(pointIdx == 0)
         {
-            path.moveTo(vertex.x, vertex.y);
+            path.moveTo(vertex.get<0>(), vertex.get<1>());
         }
         else
         {
-            path.lineTo(vertex.x, vertex.y);
+            path.lineTo(vertex.get<0>(), vertex.get<1>());
         }
 
         if(destinationArea && !containsAtLeastOnePoint)
         {
-            if(destinationArea->contains(vertex))
+            if(bg::covered_by(vertex, destinationArea))
             {
                 containsAtLeastOnePoint = true;
             }
             else
             {
-                outsideBounds.push_back(qMove(vertex));
+                outsideBounds.push_back(std::move(vertex));
             }
-            bounds |= (vertex.x < destinationArea->left ? 1 : 0);
-            bounds |= (vertex.x > destinationArea->right ? 2 : 0);
-            bounds |= (vertex.y < destinationArea->top ? 4 : 0);
-            bounds |= (vertex.y > destinationArea->bottom ? 8 : 0);
+			bounds |= (vertex.get<0>() < destinationArea->max_corner().get<0>() ? 1 : 0);
+            bounds |= (vertex.get<0>() > destinationArea->min_corner().get<0>() ? 2 : 0);
+            bounds |= (vertex.get<1>() < destinationArea->max_corner().get<1>() ? 4 : 0);
+            bounds |= (vertex.get<1>() > destinationArea->min_corner().get<1>() ? 8 : 0);
         }
 
     }
@@ -377,18 +402,18 @@ void MapRasterizer::rasterizePolygon(
             return;
 
         bool ok = true;
-        ok = ok || contains(outsideBounds, destinationArea->topLeft);
-        ok = ok || contains(outsideBounds, destinationArea->bottomRight);
-        ok = ok || contains(outsideBounds, PointF(0, destinationArea->bottom));
-        ok = ok || contains(outsideBounds, PointF(destinationArea->right, 0));
+        ok = ok || contains(outsideBounds, pointF(destinationArea->max_corner().get<0>(),destinationArea->max_corner().get<1>()));
+        ok = ok || contains(outsideBounds, pointF(destinationArea->min_corner().get<0>(),destinationArea->min_corner().get<1>()));
+        ok = ok || contains(outsideBounds, pointF(0, destinationArea->min_corner().get<1>()));
+        ok = ok || contains(outsideBounds, pointF(destinationArea->min_corner().get<0>(), 0));
         if(!ok)
             return;
     }
 
-    if(!primitive->mapObject->innerPolygonsPoints31.empty())
+	if(!primitive->_mapData->innerpolypoints.empty())
     {
         path.setFillType(SkPath::kEvenOdd_FillType);
-        for(auto itPolygon = primitive->mapObject->innerPolygonsPoints31.cbegin(); itPolygon != primitive->mapObject->innerPolygonsPoints31.cend(); ++itPolygon)
+        for(auto itPolygon = primitive->_mapData->innerpolypoints.cbegin(); itPolygon != primitive->_mapData->innerpolypoints.cend(); ++itPolygon)
         {
             const auto& polygon = *itPolygon;
 
@@ -400,11 +425,11 @@ void MapRasterizer::rasterizePolygon(
 
                 if(pointIdx == 0)
                 {
-                    path.moveTo(vertex.x, vertex.y);
+                    path.moveTo(vertex.get<0>(), vertex.get<1>());
                 }
                 else
                 {
-                    path.lineTo(vertex.x, vertex.y);
+                    path.lineTo(vertex.get<0>(), vertex.get<1>());
                 }
             }
         }
@@ -417,7 +442,7 @@ void MapRasterizer::rasterizePolygon(
 
 void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,    SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow)
 {
-    /*assert(primitive->mapObject->points31.size() >= 2);*/
+    /*assert(primitive->_mapData->points.size() >= 2);*/
 	auto builtinStyleDefs =  _source.getDefaultStyles();
 
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
@@ -426,23 +451,23 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     bool ok;
 
     int shadowColor;
-    ok = primitive->styleResult->getIntegerValue(builtinStyleDefs->id_OUTPUT_SHADOW_COLOR, shadowColor);
+    ok = primitive->styleResult->getIntVal(builtinStyleDefs->id_OUTPUT_SHADOW_COLOR, shadowColor);
     if(!ok || shadowColor == 0)
-        shadowColor = context._shadowRenderingColor;
+        shadowColor = _source.shadowRenderingColor;
 
     int shadowRadius;
-    ok = primitive->styleResult->getIntegerValue(builtinStyleDefs->id_OUTPUT_SHADOW_RADIUS, shadowRadius);
+    ok = primitive->styleResult->getIntVal(builtinStyleDefs->id_OUTPUT_SHADOW_RADIUS, shadowRadius);
     if(drawOnlyShadow && (!ok || shadowRadius == 0))
         return;
 
-    const auto typeRuleId = primitive->mapObject->_typesRuleIds[primitive->typeRuleIdIndex];
+	const auto typeRuleId = primitive->_mapData->type[primitive->_typeIdIndex];
 
     int oneway = 0;
-    if(context._zoom >= ZoomLevel16 && typeRuleId == primitive->mapObject->section->encodingDecodingRules->highway_encodingRuleId)
+	if(_context->zoom >= ZoomLevel16 && typeRuleId == primitive->_mapData->section->rules->highway_encodingRuleId)
     {
-        if(primitive->mapObject->containsType(primitive->mapObject->section->encodingDecodingRules->oneway_encodingRuleId, true))
+        if(primitive->_mapData->containsType(primitive->_mapData->section->rules->oneway_encodingRuleId, true))
             oneway = 1;
-        else if(primitive->mapObject->containsType(primitive->mapObject->section->encodingDecodingRules->onewayReverse_encodingRuleId, true))
+        else if(primitive->_mapData->containsType(primitive->_mapData->section->rules->onewayReverse_encodingRuleId, true))
             oneway = -1;
     }
 
@@ -450,39 +475,39 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     int pointIdx = 0;
     bool intersect = false;
     int prevCross = 0;
-    PointF vertex, middleVertex;
-    const auto pointsCount = primitive->mapObject->points31.size();
+    pointF vertex, middleVertex;
+    const auto pointsCount = primitive->_mapData->points.size();
     const auto middleIdx = pointsCount / 2;
-    auto pPoint = primitive->mapObject->points31.constData();
+    auto pPoint = primitive->_mapData->points.data();
     for(pointIdx = 0; pointIdx < pointsCount; pointIdx++, pPoint++)
     {
         calculateVertex(*pPoint, vertex);
 
         if(pointIdx == 0)
         {
-            path.moveTo(vertex.x, vertex.y);
+            path.moveTo(vertex.get<0>(), vertex.get<1>());
         }
         else
         {
             if(pointIdx == middleIdx)
                 middleVertex = vertex;
 
-            path.lineTo(vertex.x, vertex.y);
+            path.lineTo(vertex.get<0>(), vertex.get<1>());
         }
 
         if(destinationArea && !intersect)
         {
-            if(destinationArea->contains(vertex))
+            if(bg::covered_by(vertex, destinationArea))
             {
                 intersect = true;
             }
             else
             {
                 int cross = 0;
-                cross |= (vertex.x < destinationArea->left ? 1 : 0);
-                cross |= (vertex.x > destinationArea->right ? 2 : 0);
-                cross |= (vertex.y < destinationArea->top ? 4 : 0);
-                cross |= (vertex.y > destinationArea->bottom ? 8 : 0);
+                cross |= (vertex.get<0>() < destinationArea->max_corner().get<0>() ? 1 : 0);
+                cross |= (vertex.get<0>() > destinationArea->min_corner().get<0>() ? 2 : 0);
+                cross |= (vertex.get<1>() < destinationArea->max_corner().get<1>() ? 4 : 0);
+                cross |= (vertex.get<1>() > destinationArea->min_corner().get<0>() ? 8 : 0);
                 if(pointIdx > 0)
                 {
                     if((prevCross & cross) == 0)
@@ -539,7 +564,7 @@ void MapRasterizer::rasterizeLineShadow(
     SkCanvas& canvas, const SkPath& path, uint32_t shadowColor, int shadowRadius )
 {
     // blurred shadows
-    if (context._shadowRenderingMode == 2 && shadowRadius > 0)
+    if (_source.shadowRenderingMode == 2 && shadowRadius > 0)
     {
         // simply draw shadow? difference from option 3 ?
         // paint->setColor(0xffffffff);
@@ -548,7 +573,7 @@ void MapRasterizer::rasterizeLineShadow(
     }
 
     // option shadow = 3 with solid border
-    if (context._shadowRenderingMode == 3 && shadowRadius > 0)
+    if (_source.shadowRenderingMode == 3 && shadowRadius > 0)
     {
         _mapPaint.setLooper(nullptr);
         _mapPaint.setStrokeWidth(_mapPaint.getStrokeWidth() + shadowRadius*2);
@@ -564,14 +589,14 @@ void MapRasterizer::rasterizeLine_OneWay(
 {
     if (oneway > 0)
     {
-        for(auto itPaint = env.oneWayPaints.cbegin(); itPaint != env.oneWayPaints.cend(); ++itPaint)
+        for(auto itPaint = _source.oneWayPaints.cbegin(); itPaint != _source.oneWayPaints.cend(); ++itPaint)
         {
             canvas.drawPath(path, *itPaint);
         }
     }
     else
     {
-        for(auto itPaint = env.reverseOneWayPaints.cbegin(); itPaint != env.reverseOneWayPaints.cend(); ++itPaint)
+        for(auto itPaint = _source.reverseOneWayPaints.cbegin(); itPaint != _source.reverseOneWayPaints.cend(); ++itPaint)
         {
             canvas.drawPath(path, *itPaint);
         }
@@ -580,8 +605,8 @@ void MapRasterizer::rasterizeLine_OneWay(
 
 void MapRasterizer::calculateVertex( const pointI& point31, pointF& vertex )
 {
-    vertex.x = static_cast<float>(point31.x - context._area31.left) / _31toPixelDivisor.x;
-    vertex.y = static_cast<float>(point31.y - context._area31.top) / _31toPixelDivisor.y;
+	vertex.set<0>(static_cast<float>(point31.get<0>() - _context->_area31.max_corner().get<0>()) / _context->_pixelScaleXY.get<0>());
+    vertex.set<1>(static_cast<float>(point31.get<1>() - _context->_area31.max_corner().get<1>()) / _context->_pixelScaleXY.get<1>());
 }
 
 bool MapRasterizer::contains( const std::vector< pointF >& vertices, const pointF& other )
@@ -595,15 +620,15 @@ bool MapRasterizer::contains( const std::vector< pointF >& vertices, const point
         const auto& vertex0 = *itPrevVertex;
         const auto& vertex1 = *itVertex;
 
-        if(Utilities::rayIntersect(vertex0, vertex1, other))
+        if(Tools::rayIntersect(vertex0, vertex1, other))
             intersections++;
     }
 
     // special handling, also count first and last, might not be closed, but
     // we want this!
-    const auto& vertex0 = vertices.first();
-    const auto& vertex1 = vertices.last();
-    if(Utilities::rayIntersect(vertex0, vertex1, other))
+    const auto& vertex0 = vertices.front();
+    const auto& vertex1 = vertices.back();
+    if(Tools::rayIntersect(vertex0, vertex1, other))
         intersections++;
 
     return intersections % 2 == 1;

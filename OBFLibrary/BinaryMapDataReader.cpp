@@ -890,7 +890,7 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					uint32_t limitTypes;
 					cis->ReadVarint32(&limitTypes);
 					uint32_t oldLimitTypes = cis->PushLimit(limitTypes);
-					std::list<int>& typeIds = tagVal == MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
+					auto& typeIds = tagVal == MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
 					while(cis->BytesUntilLimit() > 0)
 					{
 						uint32_t ruleId;
