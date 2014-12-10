@@ -34,6 +34,83 @@ MapRasterizerContext::~MapRasterizerContext(void)
 {
 }
 
+
+void MapRasterizerContext::initialize(MapRasterizerProvider& envData, int zoom)
+{
+	MapStyleResult evalResult;
+
+ //   defaultBgColor = envData.defaultBgColor;
+ //   if(envData.attributeRule_defaultColor)
+ //   {
+ //       MapStyleEvaluator evaluator(envData.owner->style, envData.owner->displayDensityFactor);
+ //       //envData.applyTo(evaluator);
+ //       evaluator.setIntegerValue(envData.styleBuiltinValueDefs->id_INPUT_MINZOOM, zoom);
+
+ //       evalResult.clear();
+ //       if(evaluator.evaluate(envData.attributeRule_defaultColor, &evalResult))
+ //           evalResult.getIntegerValue(envData.styleBuiltinValueDefs->id_OUTPUT_ATTR_COLOR_VALUE, context._defaultBgColor);
+ //   }
+
+ //   _shadowRenderingMode = envData.shadowRenderingMode;
+ //   _shadowRenderingColor = envData.shadowRenderingColor;
+ //   if(envData.attributeRule_shadowRendering)
+ //   {
+ //       MapStyleEvaluator evaluator(envData.owner->style, envData.owner->displayDensityFactor);
+ //       envData.applyTo(evaluator);
+ //       evaluator.setIntegerValue(envData.styleBuiltinValueDefs->id_INPUT_MINZOOM, zoom);
+
+ //       evalResult.clear();
+ //       if(evaluator.evaluate(envData.attributeRule_shadowRendering, &evalResult))
+ //       {
+ //           evalResult.getIntegerValue(envData.styleBuiltinValueDefs->id_OUTPUT_ATTR_INT_VALUE, context._shadowRenderingMode);
+ //           evalResult.getIntegerValue(envData.styleBuiltinValueDefs->id_OUTPUT_SHADOW_COLOR, context._shadowRenderingColor);
+ //       }
+ //   }
+
+    //polygonMinSizeToDisplay = envData.polygonMinSizeToDisplay;
+   // if(envData.attributeRule_polygonMinSizeToDisplay)
+   // {
+   //     MapStyleEval evaluator(envData.getStyleInfo());
+   //     
+   //     evaluator.setIntValue(envData.getDefaultStyles()->id_INPUT_MINZOOM, zoom);
+
+   //     evalResult.clear();
+   //     if(evaluator.evaluate(envData.attributeRule_polygonMinSizeToDisplay, &evalResult))
+   //     {
+   //         int polygonMinSizeToDisplay;
+			//if(evalResult.getIntVal(envData.getDefaultStyles()->id_OUTPUT_ATTR_INT_VALUE, polygonMinSizeToDisplay))
+   //             envData.polygonMinSizeToDisplay = polygonMinSizeToDisplay;
+   //     }
+   // }
+
+ //   context._roadDensityZoomTile = envData.roadDensityZoomTile;
+ //   if(envData.attributeRule_roadDensityZoomTile)
+ //   {
+ //       MapStyleEvaluator evaluator(envData.owner->style, envData.owner->displayDensityFactor);
+ //       envData.applyTo(evaluator);
+ //       evaluator.setIntegerValue(envData.styleBuiltinValueDefs->id_INPUT_MINZOOM, zoom);
+ //       
+ //       evalResult.clear();
+ //       if(evaluator.evaluate(envData.attributeRule_roadDensityZoomTile, &evalResult))
+ //           evalResult.getIntegerValue(envData.styleBuiltinValueDefs->id_OUTPUT_ATTR_INT_VALUE, context._roadDensityZoomTile);
+ //   }
+
+ //   context._roadsDensityLimitPerTile = envData.roadsDensityLimitPerTile;
+ //   if(envData.attributeRule_roadsDensityLimitPerTile)
+ //   {
+ //       MapStyleEvaluator evaluator(envData.owner->style, envData.owner->displayDensityFactor);
+ //       envData.applyTo(evaluator);
+ //       evaluator.setIntegerValue(envData.styleBuiltinValueDefs->id_INPUT_MINZOOM, zoom);
+ //       
+ //       evalResult.clear();
+ //       if(evaluator.evaluate(envData.attributeRule_roadsDensityLimitPerTile, &evalResult))
+ //           evalResult.getIntegerValue(envData.styleBuiltinValueDefs->id_OUTPUT_ATTR_INT_VALUE, context._roadsDensityLimitPerTile);
+ //   }
+
+ //   context._shadowLevelMin = envData.shadowLevelMin;
+ //   context._shadowLevelMax = envData.shadowLevelMax;
+}
+
 void MapRasterizerContext::sortGraphicElements()
 {
 	const auto funcSort = [](const std::shared_ptr<MapRasterizer::GraphicElement>& firstPair, const std::shared_ptr<MapRasterizer::GraphicElement>& secondPair){

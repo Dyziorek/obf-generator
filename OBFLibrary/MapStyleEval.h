@@ -21,7 +21,7 @@ private:
 	float _factor;
 	const std::shared_ptr<MapStyleInfo> styleInfo;
 public:
-	MapStyleEval(const std::shared_ptr<MapStyleInfo>& _style, float _densityFactor);
+	MapStyleEval(const std::shared_ptr<MapStyleInfo>& _style, float _densityFactor = 0.10f );
 	~MapStyleEval(void);
 
 	const std::shared_ptr<MapStyleInfo> owner;
@@ -29,7 +29,8 @@ public:
 	std::shared_ptr<DefaultMapStyleValue> _builtInDefValues;
 
 	bool evaluate(const std::shared_ptr<MapObjectData>& mapObject, rulesetType ruleType, MapStyleResult* const outInfo);
-	bool evaluate(const std::shared_ptr<MapObjectData>& mapObject, std::shared_ptr<MapStyleRule> ruleHandle, MapStyleResult* const outInfo);
+	bool evaluate(const std::shared_ptr<MapObjectData>& mapObject, const std::shared_ptr<const MapStyleRule> ruleHandle, MapStyleResult* const outInfo);
+	bool evaluateRule(const std::shared_ptr<const MapStyleRule> ruleHandle, MapStyleResult* const outInfo);
 	void setBoolValue(const int valDefId, const bool defVal);
 	void setIntValue(const int valDefId, const int defVal);
 	void setIntValue(const int valDefId, const unsigned int defVal);
@@ -51,6 +52,7 @@ public:
 	bool getStringVal(uint32_t id, std::string& value) const;
 	bool getStringVal(uint32_t id, std::wstring& value) const;
 	bool getFloatVal(uint32_t id, float& value) const;
+	void clear();
 	MapStyleResult(void);
 	~MapStyleResult(void);
 

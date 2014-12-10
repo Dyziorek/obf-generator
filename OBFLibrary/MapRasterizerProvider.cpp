@@ -25,7 +25,7 @@
 #include "MapRasterizer.h"
 #include "MapRasterizerContext.h"
 #include "MapRasterizerProvider.h"
-
+#include "EmbeddedResources.h"
 #include "Tools.h"
 
 #include "Sensorsapi.h"
@@ -36,7 +36,10 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	defaultBgColor(_defaultBgColor), shadowLevelMin(_shadowLevelMin), shadowLevelMax(_shadowLevelMax),
 	polygonMinSizeToDisplay(_polygonMinSizeToDisplay), roadDensityZoomTile(_roadDensityZoomTile),
 	roadsDensityLimitPerTile(_roadsDensityLimitPerTile), shadowRenderingMode(_shadowRenderingMode), shadowRenderingColor(_shadowRenderingColor),
-	mapPaint(_mapPaint), textPaint(_textPaint), oneWayPaints(_oneWayPaints), reverseOneWayPaints(_reverseOneWayPaints)
+	mapPaint(_mapPaint), textPaint(_textPaint), oneWayPaints(_oneWayPaints), reverseOneWayPaints(_reverseOneWayPaints)/*,
+	attributeRule_defaultColor(_attributeRule_defaultColor),attributeRule_shadowRendering(_attributeRule_shadowRendering),
+	attributeRule_polygonMinSizeToDisplay(_attributeRule_polygonMinSizeToDisplay), attributeRule_roadDensityZoomTile(_attributeRule_roadDensityZoomTile),
+    attributeRule_roadsDensityLimitPerTile(_attributeRule_roadsDensityLimitPerTile)*/
 {
 	workingStyle.reset(new MapStyleInfo());
 	workingStyle->loadRenderStyles(nullptr);
@@ -53,6 +56,7 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	dummySectionData->rules.reset(new BinaryMapRules());
 	dummySectionData->rules->createMissingRules();
 
+	initialize();
 }
 
 
@@ -91,11 +95,11 @@ void MapRasterizerProvider::initialize()
     _defaultBgColor = 0xfff1eee8;
 
 	
-    workingStyle->resolveAttribute("defaultColor", _attributeRule_defaultColor);
-    workingStyle->resolveAttribute("shadowRendering", _attributeRule_shadowRendering);
-    workingStyle->resolveAttribute("polygonMinSizeToDisplay", _attributeRule_polygonMinSizeToDisplay);
-    workingStyle->resolveAttribute("roadDensityZoomTile", _attributeRule_roadDensityZoomTile);
-    workingStyle->resolveAttribute("roadsDensityLimitPerTile", _attributeRule_roadsDensityLimitPerTile);
+    workingStyle->resolveAttribute("defaultColor", attributeRule_defaultColor);
+    workingStyle->resolveAttribute("shadowRendering", attributeRule_shadowRendering);
+    workingStyle->resolveAttribute("polygonMinSizeToDisplay", attributeRule_polygonMinSizeToDisplay);
+    workingStyle->resolveAttribute("roadDensityZoomTile", attributeRule_roadDensityZoomTile);
+    workingStyle->resolveAttribute("roadsDensityLimitPerTile", attributeRule_roadsDensityLimitPerTile);
 
     {
         const float intervals_oneway[4][4] =
@@ -186,6 +190,24 @@ void MapRasterizerProvider::initialize()
             paint.setStrokeWidth(4.0f);
             paint.setPathEffect(arrowDashEffect4)->unref();
             _reverseOneWayPaints.push_back(std::move(paint));
+        }
+    }
+
+
+	MapStyleResult evalResult;
+
+    if(attributeRule_polygonMinSizeToDisplay)
+    {
+        MapStyleEval evaluator(getStyleInfo());
+        
+        evaluator.setIntValue(getDefaultStyles()->id_INPUT_MINZOOM, ZoomLevel0);
+
+        evalResult.clear();
+        if(evaluator.evaluateRule(attributeRule_polygonMinSizeToDisplay, &evalResult))
+        {
+            int polygonMinSizeToDisplay;
+			if(evalResult.getIntVal(getDefaultStyles()->id_OUTPUT_ATTR_INT_VALUE, polygonMinSizeToDisplay))
+                _polygonMinSizeToDisplay = polygonMinSizeToDisplay;
         }
     }
 
@@ -290,6 +312,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 		std::shared_ptr<MapObjectData> objectMapData(std::const_pointer_cast<MapObjectData>(cobjectMapData));
 
 		std::shared_ptr<MapRasterizer::GraphicElementGroup> graphGroup(new MapRasterizer::GraphicElementGroup());
+		graphGroup->_mapObject = objectMapData;
 		int typeRuleIDIndex = 0;
 		for(int typeRuleId : objectMapData->type)
 		{
@@ -351,13 +374,13 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				graphicElement->styleResult = polyResults;
 
 				auto areaData = Tools::polygonArea(objectMapData->points);
-				if (areaData < /*MapRasterizer::PolygonAreaCutoffLowerThreshold*/ 75)
+				if (areaData > MapRasterizer::PolygonAreaCutoffLowerThreshold)
 				{
-					// polygon too small to show as polygon in low zoom so convert to point in low zooms
+					// polygon large enough to show as polygon in any zoom plus convert to point in low zooms if neccessary
 					graphicElement->zOrder += 1.0 / areaData;
 					std::shared_ptr<MapRasterizer::GraphicElement> pointElement(new MapRasterizer::GraphicElement(graphGroup, objectMapData, MapRasterizer::GraphElementType::Point, typeRuleIDIndex));
 					pointElement->zOrder = graphicElement->zOrder;
-					graphGroup->_polygons.push_back(graphicElement);
+					graphGroup->_polygons.push_back(std::move(graphicElement));
 
 					_pointEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
 					_pointEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
@@ -370,7 +393,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 					}
 					if (typeRuleIDIndex == 0 || objectMapData->nameTypeString.empty())
 					{
-						graphGroup->_points.push_back(pointElement);
+						graphGroup->_points.push_back(std::move(pointElement));
 					}
 				}
 
@@ -391,7 +414,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 
 				graphicElement->styleResult = lineResults;
 
-				graphGroup->_polyLines.push_back(graphicElement);
+				graphGroup->_polyLines.push_back(std::move(graphicElement));
 			}
 			else if(graphicElement->_type == MapRasterizer::GraphElementType::Point)
 			{
@@ -412,7 +435,7 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				{
 					continue;
 				}
-				graphGroup->_points.push_back(graphicElement);
+				graphGroup->_points.push_back(std::move(graphicElement));
 			}
 			else
 			{
@@ -422,8 +445,24 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 			}
 			typeRuleIDIndex++;
 		}
-		graphGroup->_mapObject = objectMapData;
-		_context->_graphicElements.push_back(graphGroup);
+		if (graphGroup)
+		{
+			for (auto apolygon : graphGroup->_polygons)
+			{
+				_context->_polygons.push_back(apolygon);
+			}
+			for (auto apolyline : graphGroup->_polyLines)
+			{
+				_context->_polyLines.push_back(apolyline);
+			}
+			for (auto apoint : graphGroup->_points)
+			{
+				_context->_points.push_back(apoint);
+			}
+		}
+
+		_context->_graphicElements.push_back(std::move(graphGroup));
+
 	}
 
 	return _context->_graphicElements.size() > 0;
@@ -535,8 +574,7 @@ bool MapRasterizerProvider::obtainTextShield( const std::string& name, std::shar
 
 std::vector<uint8_t> MapRasterizerProvider::obtainResourceByName( const std::string& name ) const
 {
+	std::vector<char> resultData = EmbeddedResources::getDataFromResource(name);
+	return std::vector<uint8_t>(resultData.begin(), resultData.end());
 
-	return std::vector<uint8_t>();
-    // Otherwise obtain from embedded
-    //return EmbeddedResources::decompressResource(name);
 }

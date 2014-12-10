@@ -51,10 +51,11 @@ public:
 	sqlite3_stmt* itRelStmt;
 	sqlite3_stmt* itWayBoundStmt;
 
+	int nodeCnt, wayCnt, wayBndCnt, relCnt;
 
 	sqlite3* dbPoiCtx;
 	sqlite3_stmt* poiNodeStmt;
-
+	HWND hParentWnd;
 	sqlite3* dbTransCtx;
 	void storeCities();
 	std::unordered_map<__int64, CityObj> cityLocator;
@@ -77,6 +78,7 @@ public:
 	void addBatch(__int64 id, bool area, std::stringstream& bCoord, std::stringstream& bInCoord ,std::stringstream& bTypes,std::stringstream& bAddtTypes,std::string& name);
 	void addBatchRoute(__int64 id, std::stringstream& types, std::stringstream& ptTypes ,std::stringstream& ptIds,std::stringstream& coords, std::string& name, bool base);
 	void flush();
+	void getStats(sqlite3 *dbCtxSrc);
 	std::map<__int64, std::shared_ptr<EntityNode>> nodes;
 	std::map<__int64, std::shared_ptr<EntityWay>> ways;
 	std::map<__int64, std::shared_ptr<EntityWay>> waybounds;
@@ -91,5 +93,6 @@ public:
 	BatchUpdater* storeData;
 
 	std::string mapName;
+	std::wstring progress;
 };
 

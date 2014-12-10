@@ -101,6 +101,17 @@ sqlCode = 	sqlite3_finalize(poiNodeStmt);
 
 int OBFResultDB::shell_callback(void *pArg, int nArg, char **azArg, char **azCol)
 {
+	if (pArg != nullptr)
+	{
+		int result = 0;
+		if (nArg == 1)
+		{
+			char* azValue = azArg[0];
+			result = boost::lexical_cast<int>(azValue);
+			int* retVal = (int*)pArg;
+			*retVal = result;
+		}
+	}
 	return 0;
 }
 
@@ -262,7 +273,7 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	dbRes = sqlite3_prepare_v2(dbCtxSrc, "select w.wayid, w.node, w.ord, w.tags, n.latitude, n.longitude, n.tags from ways w left join node n on w.node = n.id  where w.boundary > 0 order by w.id", sizeof("select w.wayid, w.node, w.ord, w.tags, n.latitude, n.longitude, n.tags from ways w left join node n on w.node = n.id  where w.boundary > 0 order by w.id"), &itWayBoundStmt, NULL); //$NON-NLS-1$
 	dbRes = sqlite3_prepare_v2(dbCtxSrc, "select r.id, r.relid, r.tags from relations r where length(r.tags) > 0", sizeof("select r.id, r.relid, r.tags from relations r where length(r.tags) > 0"), &itRelStmt, NULL); //$NON-NLS-1$
 
-
+	
 	return 0;
 }
 
@@ -274,8 +285,23 @@ void OBFResultDB::imageResult()
 	//((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, addresor->cities);
 }
 
+void OBFResultDB::getStats(sqlite3 *dbCtxSrc)
+{
+	int dbRes = SQLITE_OK;
+	char* errMsg;
+	dbRes = sqlite3_exec(dbCtxSrc,"select count(*) from (select n.id, n.latitude, n.longitude, n.tags from node n where length(n.tags) > 0)",  &OBFResultDB::shell_callback, &nodeCnt ,&errMsg);
+	dbRes = sqlite3_exec(dbCtxSrc, "select count(*) from (select w.wayid, w.node, w.ord, w.tags, n.latitude, n.longitude, n.tags from ways w left join node n on w.node = n.id order by w.id)",  &OBFResultDB::shell_callback, &wayCnt ,&errMsg);
+	dbRes = sqlite3_exec(dbCtxSrc, "select count(*) from (select w.wayid, w.node, w.ord, w.tags, n.latitude, n.longitude, n.tags from ways w left join node n on w.node = n.id  where w.boundary > 0 order by w.id)", &OBFResultDB::shell_callback, &wayBndCnt ,&errMsg);
+	dbRes = sqlite3_exec(dbCtxSrc, "select count(*) from (select r.id, r.relid, r.tags from relations r where length(r.tags) > 0)", &OBFResultDB::shell_callback,&relCnt,&errMsg);
+}
+
 int OBFResultDB::iterateOverElements(int iterationPhase)
 {
+
+
+
+	std::wstringstream strbuf;
+	
 	if (iterationPhase == PHASEINDEXCITY)
 	{
 		iterateOverElements(NODEELEM, 
@@ -286,6 +312,10 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 					 ((OBFAddresStreetDB*)addresIndexer)->iterateOverCity(ptrNode);
 				}
 		});
+		strbuf << L"Storing cities ";
+		progress = strbuf.str();
+		::PostMessage(hParentWnd, WM_MYMESSAGE, NULL, (LPARAM)progress.c_str());
+
 		((OBFAddresStreetDB*)addresIndexer)->storeCities(*this);
 	}
 	if (iterationPhase == PHASEINDEXADDRREL)
@@ -314,8 +344,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		strbuf << L"Counter relations: ";
 		strbuf << numbers;
 		strbuf << std::endl;
-		std::wstring buffText = strbuf.str();
-		OutputDebugString(buffText.c_str());
+		std::wstring progress = strbuf.str();
+		OutputDebugString(progress.c_str());
 
 		numbers = 0;
 		iterateOverElements(NODEWAYBOUNDARY,
@@ -336,8 +366,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		strbuf << L"Counter boundaries: ";
 		strbuf << numbers;
 		strbuf << std::endl;
-		buffText = strbuf.str();
-		OutputDebugString(buffText.c_str());
+		progress = strbuf.str();
+		OutputDebugString(progress.c_str());
 		/*
 		iterateOverElements(NODEREL,
 			[&](EntityBase* itm) { 
@@ -358,12 +388,16 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				if (timeNow.count() > 20)
 				{
 					std::wstringstream strbuf;
-					strbuf << L"20s Counter node elements: ";
-					strbuf << numbers;
+					strbuf << L"20s Counter node elements made :";
+					float numberP = ((float)numbers/nodeCnt)*100;
+					strbuf << numberP;
 					strbuf << std::endl;
-					std::wstring buffText = strbuf.str();
-					OutputDebugString(buffText.c_str());
+					progress.assign(strbuf.str());
+					OutputDebugString(progress.c_str());
 					timeStep = boost::chrono::steady_clock::now();
+					
+					::PostMessage(hParentWnd, WM_MYMESSAGE, NULL, (LPARAM)progress.c_str());
+
 				}
 		});
 		timeStep = boost::chrono::steady_clock::now();
@@ -371,8 +405,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		strbuf << L"Counter node elements: ";
 		strbuf << numbers;
 		strbuf << std::endl;
-		std::wstring buffText = strbuf.str();
-		OutputDebugString(buffText.c_str());
+		progress = strbuf.str();
+		OutputDebugString(progress.c_str());
 		numbers = 0;
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) { 
@@ -383,11 +417,13 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				{
 					std::wstringstream strbuf;
 					strbuf << L"20s Counter node relations: ";
-					strbuf << numbers;
+					float numberP = ((float)numbers/relCnt)*100;
+					strbuf << numberP;
 					strbuf << std::endl;
-					std::wstring buffText = strbuf.str();
-					OutputDebugString(buffText.c_str());
+					progress = strbuf.str();
+					OutputDebugString(progress.c_str());
 					timeStep = boost::chrono::steady_clock::now();
+					::PostMessage(hParentWnd, WM_MYMESSAGE, NULL, (LPARAM)progress.c_str());
 				}
 		});
 		timeStep = boost::chrono::steady_clock::now();
@@ -396,8 +432,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		strbuf << L"Counter node relations: ";
 		strbuf << numbers;
 		strbuf << std::endl;
-		buffText = strbuf.str();
-		OutputDebugString(buffText.c_str());
+		progress = strbuf.str();
+		OutputDebugString(progress.c_str());
 		numbers = 0;
 		iterateOverElements(NODEWAY,
 			[=, &numbers, &timeStep](std::shared_ptr<EntityBase> itm) {  
@@ -408,11 +444,13 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 			{
 				std::wstringstream strbuf;
 				strbuf << L"20s Counter node ways: ";
-				strbuf << numbers;
+				float numberP = ((float)numbers/wayCnt)*100;
+				strbuf << numberP;
 				strbuf << std::endl;
-				std::wstring buffText = strbuf.str();
-				OutputDebugString(buffText.c_str());
+				progress = strbuf.str();
+				OutputDebugString(progress.c_str());
 				timeStep = boost::chrono::steady_clock::now();
+				::PostMessage(hParentWnd, WM_MYMESSAGE, NULL, (LPARAM)progress.c_str());
 			}
 		});
 		strbuf.str(L"");
@@ -420,8 +458,8 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		strbuf << L"Counter node ways: ";
 		strbuf << numbers;
 		strbuf << std::endl;
-		buffText = strbuf.str();
-		OutputDebugString(buffText.c_str());
+		progress = strbuf.str();
+		OutputDebugString(progress.c_str());
 		numbers = 0;
 	}
 	if (iterationPhase == PHASECOMBINE)

@@ -53,8 +53,8 @@ std::vector<char> EmbeddedResources::getRawFromResource(std::string name)
 		if ( __bundled_resources[resIdx].name == name)
 		{
 			std::vector<char> valueSet;
-			valueSet.reserve( __bundled_resources[resIdx].size);
-			memcpy_s(valueSet.data(),  __bundled_resources[resIdx].size,  __bundled_resources[resIdx].data,  __bundled_resources[resIdx].size);
+			valueSet.resize( __bundled_resources[resIdx].size - 4);
+			memcpy_s(valueSet.data(),  __bundled_resources[resIdx].size - 4,  __bundled_resources[resIdx].data + 4,  __bundled_resources[resIdx].size - 4);
 			return valueSet;
 		}
 	}

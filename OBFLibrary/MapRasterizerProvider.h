@@ -18,6 +18,11 @@ public:
 		return workingStyle->getDefaultValueDefinitions();
 	}
 
+	std::shared_ptr<MapStyleInfo> getStyleInfo()
+	{
+		return workingStyle;
+	}
+
 	std::vector<uint8_t> obtainResourceByName(const std::string& name) const;
 	bool obtainBitmapShader( const std::string& name, SkBitmapProcShader* &outShader ) const;
 	bool obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const;
@@ -38,6 +43,12 @@ public:
 	const std::vector< SkPaint >& oneWayPaints;
     const std::vector< SkPaint >& reverseOneWayPaints;
 
+	std::shared_ptr<const MapStyleRule> attributeRule_defaultColor;
+    std::shared_ptr<const MapStyleRule> attributeRule_shadowRendering;
+	std::shared_ptr<const MapStyleRule> attributeRule_polygonMinSizeToDisplay;
+    std::shared_ptr<const MapStyleRule> attributeRule_roadDensityZoomTile;
+    std::shared_ptr<const MapStyleRule> attributeRule_roadsDensityLimitPerTile;
+
 	std::shared_ptr<BinaryMapSection> dummySectionData;
 private:
 	std::shared_ptr<MapStyleInfo> workingStyle;
@@ -49,11 +60,6 @@ private:
 	std::shared_ptr<MapStyleEval> _textEval;
 	std::shared_ptr<MapStyleEval> _polyEval;
 
-	std::shared_ptr<const MapStyleRule>  _attributeRule_defaultColor;
-    std::shared_ptr<const MapStyleRule> _attributeRule_shadowRendering;
-	std::shared_ptr<const MapStyleRule> _attributeRule_polygonMinSizeToDisplay;
-    std::shared_ptr<const MapStyleRule> _attributeRule_roadDensityZoomTile;
-    std::shared_ptr<const MapStyleRule> _attributeRule_roadsDensityLimitPerTile;
 
     SkPaint _mapPaint;
     SkPaint _textPaint;

@@ -71,6 +71,7 @@ MapRasterizer::~MapRasterizer(void)
 
 void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 {
+	
 	auto& mapDatum = _source.obtainMapData(workArea, workZoom);
 	std::list< std::shared_ptr<const MapObjectData> > detailedmapMapObjects, detailedmapCoastlineObjects;
     std::list< std::shared_ptr<const MapObjectData> > polygonizedCoastlineObjects;
@@ -123,6 +124,7 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
     }
 
 	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());
+	_context->initialize(_source, workZoom);
 	_context->_tileScale = MapUtils::getPowZoom(31 - workZoom);
 	_context->zoom = workZoom;
 	_context->_area31 = workArea;
@@ -140,23 +142,28 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	}
 
 	SkImage::Info info = {
-		1024, 1024, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+		256, 256, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
 		};
 	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 	SkCanvas* painter = imageRender->getCanvas();
-	DrawMap(*painter);
-	SkAutoDataUnref data(imageRender->newImageSnapshot()->encode());
-	SkFILEWStream stream(pathFile.c_str());
-	stream.write(data->data(), data->size());
-
+	bool painted = DrawMap(*painter);
+	if (painted)
+	{
+		SkAutoTUnref<SkImage> imageSrc(imageRender->newImageSnapshot());
+		SkAutoDataUnref data(imageSrc->encode());
+		SkFILEWStream stream(pathFile.c_str());
+		stream.write(data->data(), data->size());
+	}
 }
 
 
-void MapRasterizer::DrawMap(SkCanvas& canvas)
+bool MapRasterizer::DrawMap(SkCanvas& canvas)
 {
 	if (!_context)
-		return;
+		return false;
 
+	bool drawn = false;
+	bool painted = false;
 	if(/*fillBackground*/ false)
     {
         if(/*destinationArea*/ false)
@@ -186,14 +193,21 @@ void MapRasterizer::DrawMap(SkCanvas& canvas)
 	_context->_pixelScaleXY.set<1>(_context->_tileScale / static_cast<double>(sizer.height()));
 
 	_mapPaint = _source.mapPaint;
-	rasterizeMapElements(&_destinationArea, canvas, _context->_polygons, GraphElementsType::Polygons);
-	
-	rasterizeMapElements(&_destinationArea, canvas, _context->_polyLines, GraphElementsType::Polylines);
-	
+
+	drawn = rasterizeMapElements(&_destinationArea, canvas, _context->_polygons, GraphElementsType::Polygons);
+	if (!painted && drawn)
+		painted = true;
+	drawn = rasterizeMapElements(&_destinationArea, canvas, _context->_polyLines, GraphElementsType::Polylines);
+	if (!painted && drawn)
+		painted = true;
+
+	return painted;
 }
 
-void MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr< GraphicElement> >& primitives, GraphElementsType type)
+bool MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr< GraphicElement> >& primitives, GraphElementsType type)
 {
+	bool drawn = false;
+	bool painted = false;
 	const auto polygonMinSizeToDisplay31 = _source.polygonMinSizeToDisplay * (_context->_pixelScaleXY.get<0>() * _context->_pixelScaleXY.get<1>());
     const auto polygonSizeThreshold = 1.0 / polygonMinSizeToDisplay31;
 
@@ -207,13 +221,20 @@ void MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCa
             if(primitive->zOrder > polygonSizeThreshold + static_cast<int>(primitive->zOrder))
                 continue;
 
-            rasterizePolygon(destinationArea, canvas, primitive);
+            drawn = rasterizePolygon(destinationArea, canvas, primitive);
+			if (!painted && drawn)
+				painted = true;
         }
         else if(type == Polylines || type == Polylines_ShadowOnly)
         {
-            rasterizePolyline(destinationArea, canvas, primitive, type == Polylines_ShadowOnly);
+            drawn = rasterizePolyline(destinationArea, canvas, primitive, type == Polylines_ShadowOnly);
+			if (!painted && drawn)
+				painted = true;
+
         }
     }
+
+	return painted;
 }
 
 bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintValuesSet valueSetSelector, const bool isArea )
@@ -348,7 +369,7 @@ bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintVal
 }
 
 
-void MapRasterizer::rasterizePolygon(
+bool MapRasterizer::rasterizePolygon(
     const AreaI* const destinationArea,
     SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive)
 {
@@ -357,7 +378,7 @@ void MapRasterizer::rasterizePolygon(
     assert(primitive->_mapData->isClosedFigure(true));
 */
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, true))
-        return;
+        return false;
 
     SkPath path;
     bool containsAtLeastOnePoint = false;
@@ -402,7 +423,7 @@ void MapRasterizer::rasterizePolygon(
     {
         // fast check for polygons
         if((bounds & 3) != 3 || (bounds >> 2) != 3)
-            return;
+            return false;
 
         bool ok = true;
         ok = ok || contains(outsideBounds, pointF(destinationArea->min_corner().get<0>(),destinationArea->min_corner().get<1>()));
@@ -410,7 +431,7 @@ void MapRasterizer::rasterizePolygon(
         ok = ok || contains(outsideBounds, pointF(0, destinationArea->max_corner().get<1>()));
         ok = ok || contains(outsideBounds, pointF(destinationArea->max_corner().get<0>(), 0));
         if(!ok)
-            return;
+            return false;
     }
 
 	if(!primitive->_mapData->innerpolypoints.empty())
@@ -441,18 +462,20 @@ void MapRasterizer::rasterizePolygon(
     canvas.drawPath(path, _mapPaint);
     if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_1, false))
         canvas.drawPath(path, _mapPaint);
+
+	return true;
 }
 
-void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,    SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow)
+bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,    SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow)
 {
     /*assert(primitive->_mapData->points.size() >= 2);*/
 	auto builtinStyleDefs =  _source.getDefaultStyles();
 
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
-        return;
+        return false;
 
 	if (primitive->_mapData->section.expired())
-		return;
+		return false;
 
 	auto mapsSectionData = primitive->_mapData->section.lock();
 
@@ -466,7 +489,7 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     int shadowRadius;
     ok = primitive->styleResult->getIntVal(builtinStyleDefs->id_OUTPUT_SHADOW_RADIUS, shadowRadius);
     if(drawOnlyShadow && (!ok || shadowRadius == 0))
-        return;
+        return false;
 
 	const auto typeRuleId = primitive->_mapData->type[primitive->_typeIdIndex];
 
@@ -529,7 +552,7 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     }
 
     if (destinationArea && !intersect)
-        return;
+        return false;
 
     if (pointIdx > 0)
     {
@@ -566,6 +589,12 @@ void MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
             }
         }
     }
+	if (primitive->_mapData->localId == 0)
+	{
+		//this is auto generated lines which does not count
+		return false;
+	}
+	return true;
 }
 
 void MapRasterizer::rasterizeLineShadow(

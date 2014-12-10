@@ -139,6 +139,13 @@ bool MapStyleResult::getFloatVal(uint32_t id, float& value) const
 	return bOK;
 }
 		
+void MapStyleResult::clear()
+{
+	_values.empty();
+#ifdef _DEBUG
+	_Dvalues.empty();
+#endif
+}
 
 std::wstring MapStyleResult::dump()
 {
@@ -163,7 +170,7 @@ std::wstring MapStyleResult::dump()
 	return dumpInfo;
 }
 
-MapStyleEval::MapStyleEval(const std::shared_ptr<MapStyleInfo>& _style, float _densityFactor) : _builtInDefValues(MapStyleInfo::getDefaultValueDefinitions()), owner(_style), _factor(_densityFactor)
+MapStyleEval::MapStyleEval(const std::shared_ptr<MapStyleInfo>& _style, float _densityFactor  /* = 0.10f */) : _builtInDefValues(MapStyleInfo::getDefaultValueDefinitions()), owner(_style), _factor(_densityFactor)
 {
 }
 
@@ -207,7 +214,7 @@ void MapStyleEval::setStringValue(const int valDefId, const std::string& defVal)
 
 #pragma pop_macro("max")
 
-bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, std::shared_ptr<MapStyleRule> ruleHandle, MapStyleResult* const outInfo)
+bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, const std::shared_ptr<const MapStyleRule> ruleHandle, MapStyleResult* const outInfo)
 {
 	for (auto ruleVal : ruleHandle->_values)
 	{
@@ -348,6 +355,10 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, std
 
 }
 
+bool MapStyleEval::evaluateRule(const std::shared_ptr<const MapStyleRule> ruleHandle, MapStyleResult* const outInfo)
+{
+	return evaluate(nullptr, ruleHandle, outInfo);
+}
 bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, rulesetType ruleType, MapStyleResult* const outInfo)
 {
 	std::shared_ptr<MapStyleRule> ruleHandle;

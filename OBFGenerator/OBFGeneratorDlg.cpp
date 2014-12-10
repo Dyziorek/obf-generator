@@ -84,6 +84,7 @@ COBFGeneratorDlg::COBFGeneratorDlg(CWnd* pParent /*=NULL*/)
 	, m_filePath(_T(""))
 	, m_fileReadPath(_T(""))
 	, m_DecompressFile(_T(""))
+	, zoomLevel(10)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -97,6 +98,8 @@ void COBFGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_MFCEDITBROWSE2, m_fileReadPath);
 	DDX_Control(pDX, IDC_MFCEDITBROWSE2, m_BrowseRead);
 	DDX_Text(pDX, IDC_MFCEDITBROWSE3, m_DecompressFile);
+	DDX_Text(pDX, IDC_EDIT2, zoomLevel);
+	DDV_MinMaxInt(pDX, zoomLevel, 0, 31);
 }
 
 BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
@@ -675,6 +678,8 @@ int COBFGeneratorDlg::PrepareTempDB()
 {
 	char* errMsg;
 	int dbRes;
+	results.hParentWnd = m_hWnd;
+	
 	// first index all after initial insert(s)
 	dbRes = sqlite3_exec(dbCtx, "create index IdIndex ON node (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	CString strMessage = L"Completed indexing nodes \r\n";
@@ -707,7 +712,7 @@ int COBFGeneratorDlg::PrepareTempDB()
 	OutputDebugString(msgTxt);
 	delete[] msgTxt;
 	dbRes = sqlite3_exec(dbCtx, "analyze", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
-	
+	results.getStats(dbCtx);
 	strMessage.Format(L"Iterating over for city");
 	msgTxt = new wchar_t[strMessage.GetAllocLength()+2];
 	wcscpy_s(msgTxt,strMessage.GetAllocLength()+2 , (LPCWSTR)strMessage);
@@ -1006,7 +1011,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		
 		boxI bgData = mapData->getWholeBox();
 
-		int zoomVal = 15;
+		int zoomVal = zoomLevel;
 		int tileSide = 256;
 
 		auto top = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
@@ -1021,6 +1026,15 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 
 		auto tileWidth = leftT - rightT;
 		auto tileHeight = bottomT - topT;
+
+		std::wstringstream strmText;
+		strmText.precision(0);
+
+		strmText << std::fixed << L"Tiles X:=" << tileWidth << L" Y:=" << tileHeight << L" Sum:" << tileWidth*tileHeight << L"Size:" << tileWidth*256 << L"x" <<tileHeight*256;
+		wchar_t* msgTxt = new wchar_t[strmText.str().size()+1];
+		ZeroMemory(msgTxt, (strmText.str().size()+1)*sizeof(wchar_t));
+		wcsncpy_s(msgTxt,strmText.str().size()+1 , strmText.str().data(),strmText.str().size());
+		::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 		if (tileHeight > 3 || tileWidth > 3)
 		{
 			auto idx = tileWidth;
@@ -1038,16 +1052,19 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 					bgData.max_corner().set<0>( MapUtils::get31TileNumberX(minx+((intx+1)*stepLon)));
 					bgData.max_corner().set<1>( MapUtils::get31TileNumberY(miny+((inty+1)*stepLat)));
 					auto mapDataObjets = mapData->obtainMapData(bgData, zoomVal);
-					std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
-					render->createContextData(bgData, zoomVal);
-					std::stringstream strmText;
-					strmText << "_" << intx << "_" << inty;
-					boost::filesystem::path pp(newPath);
-					std::string newName =  pp.leaf().filename().string() + strmText.str().c_str();
-					newName +=  + ".png";
-					pp.remove_leaf() /= newName;
-					auto result = pp.string();
-					render->DrawMap(result);
+					if (mapDataObjets.size() > 0)
+					{
+						std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
+						render->createContextData(bgData, zoomVal);
+						std::stringstream strmText;
+						strmText << "_" << intx << "_" << inty;
+						boost::filesystem::path pp(newPath);
+						std::string newName =  pp.leaf().filename().string() + strmText.str().c_str();
+						newName +=  + ".png";
+						pp.remove_leaf() /= newName;
+						auto result = pp.string();
+						render->DrawMap(result);
+					}
 				}
 			}
 		}
@@ -1057,6 +1074,11 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 			std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
 			render->createContextData(bgData, zoomVal);
 			render->DrawMap(newPath);
+		}
+
+		if ((tileHeight > 3 && tileWidth > 3) && (tileHeight < 10 && tileWidth < 10))
+		{
+
 		}
 	}
 }

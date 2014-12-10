@@ -8,6 +8,7 @@
 #include "MapStyleInfo.h"
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
+#include "EmbeddedResources.h"
 
 static std::mutex defualtMapStylesLocker;
 static std::shared_ptr<DefaultMapStyleValue> defaultMapStyles;
@@ -44,7 +45,8 @@ void MapStyleInfo::loadRenderStyles(const char* path)
 	tinyxml2::XMLDocument xDoc;
 	if (path == nullptr)
 	{
-		xDoc.LoadFile("D:\\osmData\\default.render.xml");
+		std::vector<char> renderData = EmbeddedResources::getDataFromResource("map/styles/default.render.xml");
+		xDoc.Parse(renderData.data(), renderData.size());
 	}
 	else
 	{

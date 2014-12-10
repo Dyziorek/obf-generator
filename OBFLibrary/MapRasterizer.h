@@ -98,7 +98,7 @@ public:
 	void createContextData(boxI& workArea, int workZoom);
 
 	void DrawMap(std::string pathFile);
-	void DrawMap(SkCanvas& canvas);
+	bool DrawMap(SkCanvas& canvas);
 
 
 	enum {
@@ -121,10 +121,10 @@ private:
 
 	MapRasterizerProvider& _source;
 	std::shared_ptr<MapRasterizerContext> _context;
-	void rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr<GraphicElement> >& primitives, GraphElementsType type);
+	bool rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr<GraphicElement> >& primitives, GraphElementsType type);
 
-	void rasterizePolygon( const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive);
-	void rasterizePolyline(const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow);
+	bool rasterizePolygon( const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive);
+	bool rasterizePolyline(const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow);
 	bool updatePaint(const MapStyleResult& evalResult, const PaintValuesSet valueSetSelector, const bool isArea );
 	void rasterizeLineShadow(  SkCanvas& canvas, const SkPath& path, uint32_t shadowColor, int shadowRadius );
 	void rasterizeLine_OneWay( SkCanvas& canvas, const SkPath& path, int oneway );

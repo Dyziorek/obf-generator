@@ -43,7 +43,7 @@ public:
     const pointI& previousPoint31,   std::vector< pointI >& segmentPoints );
 	bool calculateIntersection( const pointI& p1, const pointI& p0, const AreaI& bbox, pointI& pX );
 	void appendCoastlinePolygons( std::list< std::vector< pointI > >& closedPolygons, std::list< std::vector< pointI > >& coastlinePolylines, std::vector< pointI > & polyline );
-	
+	void initialize(MapRasterizerProvider& envData, int zoom);
 void convertCoastlinePolylinesToPolygons(
     const MapRasterizerProvider& env,
     std::list< std::vector< pointI > >& coastlinePolylines, std::list< std::vector< pointI > >& coastlinePolygons, uint64_t osmId );
