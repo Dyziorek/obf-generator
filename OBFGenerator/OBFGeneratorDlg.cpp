@@ -1006,7 +1006,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		
 		boxI bgData = mapData->getWholeBox();
 
-		int zoomVal = 14;
+		int zoomVal = 15;
 		int tileSide = 256;
 
 		auto top = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
@@ -1028,7 +1028,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 			float minx = MapUtils::get31LongitudeX(bgData.min_corner().get<0>());
 			float miny = MapUtils::get31LatitudeY(bgData.min_corner().get<1>());
 			float stepLon = (MapUtils::get31LongitudeX(bgData.max_corner().get<0>()) - MapUtils::get31LongitudeX(bgData.min_corner().get<0>()))/idx;
-			float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idx;
+			float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idy;
 			for (int intx = 0; intx < idx; intx++)
 			{
 				for(int inty = 0; inty < idy; inty++)

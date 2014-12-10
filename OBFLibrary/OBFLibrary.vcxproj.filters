@@ -284,8 +284,5 @@
     <ClCompile Include="EmbeddedResources.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EmbeddedResources_bundle.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

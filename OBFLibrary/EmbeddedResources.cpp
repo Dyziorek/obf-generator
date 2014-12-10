@@ -31,19 +31,19 @@ EmbeddedResources::~EmbeddedResources(void)
 }
 
 
-std::vector<uint8_t> EmbeddedResources::getDataFromResource(std::string name)
+std::vector<char> EmbeddedResources::getDataFromResource(std::string name)
 {
 	auto strBuff = getRawFromResource(name);
 	if (strBuff.size() > 0)
 	{
-		std::vector<uint8_t> decompressed;
+		std::vector<char> decompressed;
 		io::filtering_istream is;
 		is.push(io::zlib_decompressor());
-		is.push(io::array_source(&strBuff.front(), strBuff.size()));
+		is.push(io::array_source(strBuff.data(), strBuff.size()));
 		io::copy(is,io::back_inserter(decompressed));
 		return decompressed;	
 	}
-	return std::vector<uint8_t>();
+	return std::vector<char>();
 }
 
 std::vector<char> EmbeddedResources::getRawFromResource(std::string name)
@@ -58,4 +58,5 @@ std::vector<char> EmbeddedResources::getRawFromResource(std::string name)
 			return valueSet;
 		}
 	}
+	return std::vector<char>();
 }
