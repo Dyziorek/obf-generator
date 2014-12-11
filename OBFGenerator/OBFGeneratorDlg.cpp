@@ -1019,6 +1019,8 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		auto bottom = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.max_corner().get<1>()));
 		auto right = MapUtils::get31TileNumberY(MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));
 
+		
+
 		auto rightT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.min_corner().get<0>()));
 		auto topT = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
 		auto leftT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));

@@ -101,7 +101,7 @@ void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* 
 	int offset = cis->CurrentPosition();
 	int oldLimit = cis->PushLimit(limitValue);
 	reader.ReadMapDataSection(cis);
-	reader.PaintSections();
+	//reader.PaintSections();
 	cis->PopLimit(oldLimit);
 	
 

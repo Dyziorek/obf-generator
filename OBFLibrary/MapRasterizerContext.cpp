@@ -208,8 +208,11 @@ bool MapRasterizerContext::polygonizeCoastlines(
         const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
         mapObject->isArea = false;
         mapObject->points = polyline;
-		mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
-
+		mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+#ifdef _DEBUG
+		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+		mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif
         outVectorized.push_back(std::move(mapObject));
     }
 
@@ -225,7 +228,11 @@ bool MapRasterizerContext::polygonizeCoastlines(
         mapObject->points.push_back(mapObject->points.front());
         convertCoastlinePolylinesToPolygons(env, coastlinePolylines, mapObject->innerpolypoints, osmId);
 
-        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+        mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+#ifdef _DEBUG
+		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+		mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif
 		mapObject->localId = osmId;
         mapObject->isArea = true;
 
@@ -253,8 +260,11 @@ bool MapRasterizerContext::polygonizeCoastlines(
             const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
 			mapObject->isArea = false;
             mapObject->points = polygon;
-			mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
-
+	        mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+#ifdef _DEBUG
+			auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+			mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif
             outVectorized.push_back(std::move(mapObject));
         }
     }
@@ -267,8 +277,11 @@ bool MapRasterizerContext::polygonizeCoastlines(
         const std::shared_ptr<MapObjectData> mapObject(new MapObjectData(env.dummySectionData));
         mapObject->isArea = false;
         mapObject->points = polygon;
-        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
-
+        mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+#ifdef _DEBUG
+		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+		mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif
         outVectorized.push_back(std::move(mapObject));
     }
 
@@ -291,13 +304,21 @@ bool MapRasterizerContext::polygonizeCoastlines(
         mapObject->points = std::move(polygon);
         if(clockwise)
         {
-            mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+        mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+		#ifdef _DEBUG
+				auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+				mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+		#endif
             fullWaterObjects++;
         }
         else
         {
-            mapObject->type.push_back(env.dummySectionData->rules->naturalLand_encodingRuleId);
-            fullLandObjects++;
+			mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+#ifdef _DEBUG
+			auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+			mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif  
+			fullLandObjects++;
         }
 		mapObject->localId = osmId;
         mapObject->isArea = true;
@@ -324,7 +345,11 @@ bool MapRasterizerContext::polygonizeCoastlines(
 		mapObject->points.push_back(std::move(pointI(checkArea.Left(), checkArea.Bottom())));
         mapObject->points.push_back(mapObject->points.front());
 
-        mapObject->type.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+        mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
+#ifdef _DEBUG
+		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+		mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
+#endif
 		mapObject->localId = osmId;
         mapObject->isArea = true;
 
@@ -783,4 +808,57 @@ bool MapRasterizerContext::isClockwiseCoastlinePolygon( const std::vector< point
     }
 
     return clockwiseSum >= 0;
+}
+
+
+void MapRasterizerContext::removeHighwaysBasedOnDensity(const MapRasterizerProvider& source)
+{
+    // Check if any filtering needed
+    if(source.roadDensityZoomTile == 0 || source.roadsDensityLimitPerTile == 0)
+        return;
+
+    const auto dZ = zoom + source.roadDensityZoomTile;
+    std::unordered_map< uint64_t, std::pair<uint32_t, double> > densityMap;
+    
+
+	std::vector<std::shared_ptr<MapRasterizer::GraphicElement>>::iterator itLine = _polyLines.end();
+    std::vector<std::shared_ptr<MapRasterizer::GraphicElement>>::iterator itLineCheck = _polyLines.end();
+	itLineCheck = itLine - 1;
+    while(itLine != _polyLines.begin())
+    {
+		const auto& line = *(--itLine);
+
+        auto accept = true;
+		const std::shared_ptr<BinaryMapSection> sectionInfo = line->_mapData->section.lock();
+		if(line->_mapData->typeIds[line->_typeIdIndex] == sectionInfo->rules->highway_encodingRuleId)
+        {
+            accept = false;
+
+            uint64_t prevId = 0;
+            const auto pointsCount = line->_mapData->points.size();
+            auto pPoint = line->_mapData->points.data();
+            for(auto pointIdx = 0; pointIdx < pointsCount; pointIdx++, pPoint++)
+            {
+                auto x = pPoint->get<0>() >> (31 - dZ);
+                auto y = pPoint->get<1>() >> (31 - dZ);
+                uint64_t id = (static_cast<uint64_t>(x) << dZ) | y;
+                if(prevId != id)
+                {
+                    prevId = id;
+
+                    auto& mapEntry = densityMap[id];
+                    if(mapEntry.first < source.roadDensityZoomTile /*&& p.second > o */)
+                    {
+                        accept = true;
+                        mapEntry.first += 1;
+                        mapEntry.second = line->zOrder;
+                    }
+                }
+            }
+        }
+
+        if(!accept)
+             _polyLines.erase(itLine);
+		itLineCheck = itLine;
+    }
 }

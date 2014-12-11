@@ -44,13 +44,9 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	workingStyle.reset(new MapStyleInfo());
 	workingStyle->loadRenderStyles(nullptr);
 
-	_orderEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
-	applyStyle(_orderEval);
-
-	_pointEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
-	_lineEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
-	_polyEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
-	_textEval = std::shared_ptr<MapStyleEval>(new MapStyleEval(workingStyle, 1.0f));
+#ifdef _DEBUG
+	workingStyle->dump(rulesetType::line);
+#endif
 
 	dummySectionData.reset(new BinaryMapSection());
 	dummySectionData->rules.reset(new BinaryMapRules());
@@ -210,7 +206,34 @@ void MapRasterizerProvider::initialize()
                 _polygonMinSizeToDisplay = polygonMinSizeToDisplay;
         }
     }
+	if(attributeRule_roadDensityZoomTile)
+    {
+        MapStyleEval evaluator(getStyleInfo());
+        
+        evaluator.setIntValue(getDefaultStyles()->id_INPUT_MINZOOM, ZoomLevel0);
 
+        evalResult.clear();
+        if(evaluator.evaluateRule(attributeRule_roadDensityZoomTile, &evalResult))
+        {
+            int roadDensityZoomTile;
+			if(evalResult.getIntVal(getDefaultStyles()->id_OUTPUT_ATTR_INT_VALUE, roadDensityZoomTile))
+                _roadDensityZoomTile = roadDensityZoomTile;
+        }
+    }
+	if(attributeRule_roadsDensityLimitPerTile)
+    {
+        MapStyleEval evaluator(getStyleInfo());
+        
+        evaluator.setIntValue(getDefaultStyles()->id_INPUT_MINZOOM, ZoomLevel0);
+
+        evalResult.clear();
+        if(evaluator.evaluateRule(attributeRule_roadsDensityLimitPerTile, &evalResult))
+        {
+            int roadsDensityLimitPerTile;
+			if(evalResult.getIntVal(getDefaultStyles()->id_OUTPUT_ATTR_INT_VALUE, roadsDensityLimitPerTile))
+                _roadsDensityLimitPerTile = roadsDensityLimitPerTile;
+        }
+    }
 }
 
 void MapRasterizerProvider::obtainMaps(const char* path)
@@ -285,26 +308,24 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 {
 	auto& builtinDef = workingStyle->getDefaultValueDefinitions();
 
-	_orderEval.reset(new MapStyleEval(workingStyle, 1.0f));
-	applyStyle(_orderEval);
+	MapStyleEval orderEval(workingStyle, 0.30f);
+	MapStyleEval pointEval(workingStyle, 0.30f);;
+	MapStyleEval lineEval(workingStyle, 0.30f);;
+	MapStyleEval textEval(workingStyle, 0.30f);;
+	MapStyleEval polyEval(workingStyle, 0.30f);;
+	//applyStyle(_orderEval);
 
-	_pointEval.reset(new MapStyleEval(workingStyle, 1.0f));
-	_lineEval.reset(new MapStyleEval(workingStyle, 1.0f));
-	_polyEval.reset(new MapStyleEval(workingStyle, 1.0f));
-	_textEval.reset(new MapStyleEval(workingStyle, 1.0f));
+	orderEval.setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	orderEval.setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
+	pointEval.setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	pointEval.setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
-	_orderEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_orderEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
+	lineEval.setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	lineEval.setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
-	_pointEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_pointEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
-
-	_lineEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_lineEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
-
-	_polyEval->setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
-	_polyEval->setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
+	polyEval.setIntValue(builtinDef->id_INPUT_MAXZOOM, zoom);
+	polyEval.setIntValue(builtinDef->id_INPUT_MINZOOM, zoom);
 
 	
 	for (std::shared_ptr<const MapObjectData> cobjectMapData: mapData)
@@ -314,22 +335,22 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 		std::shared_ptr<MapRasterizer::GraphicElementGroup> graphGroup(new MapRasterizer::GraphicElementGroup());
 		graphGroup->_mapObject = objectMapData;
 		int typeRuleIDIndex = 0;
-		for(int typeRuleId : objectMapData->type)
+		for(int typeRuleId : objectMapData->typeIds)
 		{
 			if (objectMapData->section.expired())
 				continue;
 			auto sectionData = objectMapData->section.lock();
 			auto& mapDecoder = sectionData->rules->getRuleInfo(typeRuleId);
 			
-			_orderEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
-			_orderEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
-			_orderEval->setIntValue(builtinDef->id_INPUT_LAYER, objectMapData->getSimpleLayerValue());
-			_orderEval->setBoolValue(builtinDef->id_INPUT_AREA, objectMapData->isArea);
-			_orderEval->setBoolValue(builtinDef->id_INPUT_CYCLE, objectMapData->isClosedFigure());
-			_orderEval->setBoolValue(builtinDef->id_INPUT_POINT, objectMapData->points.size() == 1);
+			orderEval.setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
+			orderEval.setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
+			orderEval.setIntValue(builtinDef->id_INPUT_LAYER, objectMapData->getSimpleLayerValue());
+			orderEval.setBoolValue(builtinDef->id_INPUT_AREA, objectMapData->isArea);
+			orderEval.setBoolValue(builtinDef->id_INPUT_CYCLE, objectMapData->isClosedFigure());
+			orderEval.setBoolValue(builtinDef->id_INPUT_POINT, objectMapData->points.size() == 1);
 
 			MapStyleResult orderResults;
-			bool bOK = _orderEval->evaluate(objectMapData, rulesetType::order, &orderResults);
+			bool bOK = orderEval.evaluate(objectMapData, rulesetType::order, &orderResults);
 			if (!bOK)
 				continue;
 
@@ -363,11 +384,11 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 					continue;
 				}
 
-				_polyEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
-				_polyEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
+				polyEval.setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
+				polyEval.setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
 
 				std::shared_ptr<MapStyleResult> polyResults(new MapStyleResult());
-				bOK = _polyEval->evaluate(objectMapData, rulesetType::polygon, polyResults.get());
+				bOK = polyEval.evaluate(objectMapData, rulesetType::polygon, polyResults.get());
 				if (!bOK)
 					continue;
 				
@@ -382,10 +403,10 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 					pointElement->zOrder = graphicElement->zOrder;
 					graphGroup->_polygons.push_back(std::move(graphicElement));
 
-					_pointEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
-					_pointEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
+					pointEval.setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
+					pointEval.setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
 					std::shared_ptr<MapStyleResult> pointResults(new MapStyleResult());
-					bOK = _pointEval->evaluate(objectMapData, rulesetType::point, pointResults.get());
+					bOK = pointEval.evaluate(objectMapData, rulesetType::point, pointResults.get());
 					if (bOK)
 					{
 						// indicates it has icon
@@ -404,11 +425,11 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 				{
 					continue;
 				}
-				_lineEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
-				_lineEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
-				_lineEval->setIntValue(builtinDef->id_INPUT_LAYER, objectMapData->getSimpleLayerValue());
+				lineEval.setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
+				lineEval.setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
+				lineEval.setIntValue(builtinDef->id_INPUT_LAYER, objectMapData->getSimpleLayerValue());
 				std::shared_ptr<MapStyleResult> lineResults(new MapStyleResult());
-				bOK = _lineEval->evaluate(objectMapData, rulesetType::line, lineResults.get());
+				bOK = lineEval.evaluate(objectMapData, rulesetType::line, lineResults.get());
 				if (!bOK)
 					continue;
 
@@ -423,10 +444,10 @@ bool MapRasterizerProvider::obtainMapPrimitives(std::list<std::shared_ptr<const 
 					// no point defined
 					continue;
 				}
-				_pointEval->setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
-				_pointEval->setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
+				pointEval.setStringValue(builtinDef->id_INPUT_TAG, mapDecoder.tag);
+				pointEval.setStringValue(builtinDef->id_INPUT_VALUE, mapDecoder.value);
 				std::shared_ptr<MapStyleResult> pointResults(new MapStyleResult());
-				bOK = _pointEval->evaluate(objectMapData, rulesetType::point, pointResults.get());
+				bOK = pointEval.evaluate(objectMapData, rulesetType::point, pointResults.get());
 				if (bOK)
 				{
 					graphicElement->styleResult = pointResults;

@@ -300,6 +300,7 @@ void BinaryMapDataReader::readMapEncodingRules(gio::CodedInputStream* cis, uint3
 					for (std::shared_ptr<BinaryMapSection>& sectData : sectChilds)
 					{
 						cis->Seek(sectData->offset+sectData->dataOffset);
+						sectData->rules = mapRules;
 						loadMapDataObjects(cis, sectData, area);
 						std::unordered_map<uint64_t, std::shared_ptr<MapObjectData>> sectionObjects(sectData->sectionData);
 						std::for_each(sectionObjects.begin(), sectionObjects.end(), [&resultOut](const std::pair<uint64_t, std::shared_ptr<MapObjectData>>& ref)
@@ -659,7 +660,7 @@ void BinaryMapDataReader::paintSectionData(std::unordered_map<uint64_t, std::sha
 	painter->getClipBounds(&bounds);
 	for (auto sectionElem : sectionData)
 	{
-		for (int typeId : sectionElem.second->type)
+		for (int typeId : sectionElem.second->typeIds)
 		{
 			MapDecodingRule rule = mapRules->getRuleInfo(typeId);
 			if (rule.tag == "highway" || rule.tag == "boundary")
@@ -838,7 +839,6 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 							geoPt.set<1>(MapUtils::get31LatitudeY(ptVec.get<1>()));
 							localMapObj->geoPoints.push_back(geoPt);	
 						}
-
 #endif
 						polyArea polyData;
 						polyData.outer().insert(polyData.outer().end(), localMapObj->points.begin(), localMapObj->points.end());
@@ -890,12 +890,18 @@ void BinaryMapDataReader::readMapObject(gio::CodedInputStream* cis, std::shared_
 					uint32_t limitTypes;
 					cis->ReadVarint32(&limitTypes);
 					uint32_t oldLimitTypes = cis->PushLimit(limitTypes);
-					auto& typeIds = tagVal == MapData::kTypesFieldNumber ? localMapObj->type : localMapObj->addtype;
+#ifdef _DEBUG 
+					auto& typeNameInfo = tagVal == MapData::kTypesFieldNumber ? localMapObj->typeNames : localMapObj->addtypeNames;
+#endif
+					auto& typeIds = tagVal == MapData::kTypesFieldNumber ? localMapObj->typeIds : localMapObj->addtypeIds;
 					while(cis->BytesUntilLimit() > 0)
 					{
 						uint32_t ruleId;
 						cis->ReadVarint32(&ruleId);
 						typeIds.push_back(ruleId);
+#ifdef _DEBUG 
+						typeNameInfo.push_back(section->rules->getRuleInfo(ruleId).tag+", "+section->rules->getRuleInfo(ruleId).value);
+#endif
 					}
 					cis->PopLimit(oldLimitTypes);
 				}
@@ -1065,7 +1071,7 @@ void BinaryMapDataReader::evaluateObject(std::shared_ptr<MapObjectData>& infoDum
 		return;
 	auto sectionData = infoDump->section.lock();
 
-for (auto typeID : infoDump->type)
+for (auto typeID : infoDump->typeIds)
 {
 	MapStyleResult* ressultPlacer = new MapStyleResult(); 
 	

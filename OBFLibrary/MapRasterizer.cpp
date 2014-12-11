@@ -115,11 +115,18 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
         else*/
         {
             bgMapObject->isArea = false;
-            bgMapObject->type.push_back(_source.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
+            bgMapObject->typeIds.push_back(_source.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
+#ifdef _DEBUG
+			auto tpData = _source.dummySectionData->rules->getRuleInfo(_source.dummySectionData->rules->naturalCoastlineBroken_encodingRuleId);
+			bgMapObject->typeNames.push_back(tpData.tag+", "+tpData.value);
+#endif
         }
-        bgMapObject->addtype.push_back(_source.dummySectionData->rules->layerLowest_encodingRuleId);
-
-        assert(bgMapObject->isClosedFigure());
+        bgMapObject->addtypeIds.push_back(_source.dummySectionData->rules->layerLowest_encodingRuleId);
+#ifdef _DEBUG
+		auto tagVal = _source.dummySectionData->rules->getRuleInfo(_source.dummySectionData->rules->layerLowest_encodingRuleId);
+		bgMapObject->addtypeNames.push_back(tagVal.tag+", "+tagVal.value);
+#endif
+		assert(bgMapObject->isClosedFigure());
         polygonizedCoastlineObjects.push_back(std::move(bgMapObject));
     }
 
@@ -130,6 +137,7 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 	_context->_area31 = workArea;
 	_source.obtainMapPrimitives(mapDatum, workZoom, _context);
 	_source.obtainMapPrimitives(polygonizedCoastlineObjects, workZoom, _context);
+	_context->removeHighwaysBasedOnDensity(_source);
 	_context->sortGraphicElements();
 
 }
@@ -142,7 +150,7 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	}
 
 	SkImage::Info info = {
-		256, 256, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
+		512, 512, SkImage::kPMColor_ColorType, SkImage::kPremul_AlphaType
 		};
 	SkAutoTUnref<SkSurface> imageRender(SkSurface::NewRaster(info));
 	SkCanvas* painter = imageRender->getCanvas();
@@ -491,7 +499,7 @@ bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     if(drawOnlyShadow && (!ok || shadowRadius == 0))
         return false;
 
-	const auto typeRuleId = primitive->_mapData->type[primitive->_typeIdIndex];
+	const auto typeRuleId = primitive->_mapData->typeIds[primitive->_typeIdIndex];
 
     int oneway = 0;
 	if(_context->zoom >= ZoomLevel16 && typeRuleId == mapsSectionData->rules->highway_encodingRuleId)

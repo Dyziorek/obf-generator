@@ -28,7 +28,7 @@ bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string&
 
 	const auto typeRuleId = sectionData->rules->getruleIdFromNames(tag, value);
 
-	std::vector<int> typeList = checkAdditional ? addtype : type;
+	std::vector<int> typeList = checkAdditional ? addtypeIds : typeIds;
 
 	for (int typeId : typeList)
 	{
@@ -41,7 +41,7 @@ bool MapObjectData::containsTypeSlow( const std::string& tag, const std::string&
 
 bool MapObjectData::containsType(const uint32_t typeRuleId, bool checkAdditional) const
 {
-	std::vector<int> typeList = checkAdditional ? addtype : type;
+	std::vector<int> typeList = checkAdditional ? addtypeIds : typeIds;
 	for (int typeId : typeList)
 	{
 		if (typeId == typeRuleId)
@@ -59,7 +59,7 @@ int MapObjectData::getSimpleLayerValue() const
 	std::shared_ptr<BinaryMapSection> sectionData = section.lock();
 
 
-    for(const auto typeRuleId : addtype)
+    for(const auto typeRuleId : addtypeIds)
     {
         
 

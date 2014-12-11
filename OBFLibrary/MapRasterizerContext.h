@@ -48,6 +48,6 @@ void convertCoastlinePolylinesToPolygons(
     const MapRasterizerProvider& env,
     std::list< std::vector< pointI > >& coastlinePolylines, std::list< std::vector< pointI > >& coastlinePolygons, uint64_t osmId );
 	bool isClockwiseCoastlinePolygon( const std::vector< pointI > & polygon );
-
+	void removeHighwaysBasedOnDensity(const MapRasterizerProvider& source);
 };
 

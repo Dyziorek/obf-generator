@@ -215,7 +215,7 @@ void MapStyleRule::dump( const std::string& prefix /*= QString()*/ ) const
 			child.dump(newPrefix);
         }
 		logOut.clear();
-		logOut << newPrefix << std::endl;
+		logOut << newPrefix << ")" << std::endl;
 		OutputDebugString(converter.from_bytes(logOut.str()).c_str());
     }
 

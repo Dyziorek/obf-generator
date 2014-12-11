@@ -54,11 +54,7 @@ private:
 	std::shared_ptr<MapStyleInfo> workingStyle;
 	std::list<std::shared_ptr<BinaryIndexDataReader>> mapProviders;
 	
-	std::shared_ptr<MapStyleEval> _orderEval;
-	std::shared_ptr<MapStyleEval> _pointEval;
-	std::shared_ptr<MapStyleEval> _lineEval;
-	std::shared_ptr<MapStyleEval> _textEval;
-	std::shared_ptr<MapStyleEval> _polyEval;
+
 
 
     SkPaint _mapPaint;
