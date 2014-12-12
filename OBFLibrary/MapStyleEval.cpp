@@ -60,7 +60,7 @@ bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value) const
 	}
 	return bOK;
 }
-bool MapStyleResult::getBoolVal(uint32_t id, int32_t& value) const
+bool MapStyleResult::getBoolVal(uint32_t id, bool& value) const
 {
 	bool bOK = false;
 

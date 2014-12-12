@@ -97,4 +97,6 @@ public:
 	afx_msg void OnBnClickedMfcbutton3();
 	CString m_DecompressFile;
 	int zoomLevel;
+	float m_XCoord;
+	float m_YCoord;
 };

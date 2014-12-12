@@ -48,7 +48,7 @@ private:
 public:
 	bool getIntVal(uint32_t id, int32_t& value) const;
 	bool getIntVal(uint32_t id, uint32_t& value) const;
-	bool getBoolVal(uint32_t id, int32_t& value) const;
+	bool getBoolVal(uint32_t id, bool& value) const;
 	bool getStringVal(uint32_t id, std::string& value) const;
 	bool getStringVal(uint32_t id, std::wstring& value) const;
 	bool getFloatVal(uint32_t id, float& value) const;

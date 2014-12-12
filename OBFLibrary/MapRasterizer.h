@@ -59,6 +59,7 @@ struct RasterSymbol
 	virtual ~RasterSymbol();
 	pointI location;
 	uint32_t zOrder;
+	std::shared_ptr<GraphicElement> graph;
 };
 
 struct RasterSymbolonPath : public RasterSymbol

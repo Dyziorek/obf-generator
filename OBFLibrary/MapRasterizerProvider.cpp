@@ -45,7 +45,7 @@ MapRasterizerProvider::MapRasterizerProvider(void) :
 	workingStyle->loadRenderStyles(nullptr);
 
 #ifdef _DEBUG
-	workingStyle->dump(rulesetType::line);
+	//workingStyle->dump(rulesetType::line);
 #endif
 
 	dummySectionData.reset(new BinaryMapSection());
@@ -598,4 +598,186 @@ std::vector<uint8_t> MapRasterizerProvider::obtainResourceByName( const std::str
 	std::vector<char> resultData = EmbeddedResources::getDataFromResource(name);
 	return std::vector<uint8_t>(resultData.begin(), resultData.end());
 
+}
+
+bool MapRasterizerProvider::obtainPrimitivesSymbols(std::shared_ptr<MapRasterizerContext>& _context)
+{
+	for (auto& graphicElement : _context->_graphicElements)
+	{
+		auto rasterSymbolGroup = std::shared_ptr<MapRasterizer::RasterSymbolGroup>(new MapRasterizer::RasterSymbolGroup);
+		collectSymbolsFromPrimitives(_context, graphicElement->_polygons, MapRasterizer::GraphElementType::Polygon, rasterSymbolGroup->_symbols);
+	}
+}
+
+
+void MapRasterizerProvider::collectSymbolsFromPrimitives(std::shared_ptr<MapRasterizerContext>& _context, 
+	std::vector< std::shared_ptr<MapRasterizer::GraphicElement> >& elements, const MapRasterizer::GraphElementType type,
+    std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	for (auto& graphicElement : elements)
+	{
+		switch(type)
+		{
+		case MapRasterizer::GraphElementType::Polygon:
+			uploadSymbolsForPolygon(_context, graphicElement, outSymbols);
+			break;
+		case MapRasterizer::GraphElementType::Polyline:
+			uploadSymbolsForPolyline(_context, graphicElement, outSymbols);
+			break;
+		case MapRasterizer::GraphElementType::Point:
+			uploadSymbolsForPoint(_context, graphicElement, outSymbols);
+			break;
+
+		default:
+			assert(false);
+		}
+
+	}
+}
+
+
+void MapRasterizerProvider::uploadSymbolsForPolygon(std::shared_ptr<MapRasterizerContext>& _context, std::shared_ptr<MapRasterizer::GraphicElement>& graphicElement, std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	bgm::ring<pointI> ringCheck(graphicElement->_mapData->points.begin(), graphicElement->_mapData->points.end());
+	pointI ptCenter;
+	bg::centroid(ringCheck, ptCenter);
+
+	uploadSymbolTextForElement(_context, graphicElement, Tools::normalizeCoordinates(ptCenter, ZoomLevel31), outSymbols);
+}
+
+void MapRasterizerProvider::uploadSymbolsForPolyline(std::shared_ptr<MapRasterizerContext>& _context, std::shared_ptr<MapRasterizer::GraphicElement>& graphicElement, std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	pointI ptLoc = graphicElement->_mapData->points[graphicElement->_mapData->points.size() >> 1];
+	uploadSymbolTextForElement(_context, graphicElement, ptLoc, outSymbols);
+}
+
+void MapRasterizerProvider::uploadSymbolsForPoint(std::shared_ptr<MapRasterizerContext>& _context, std::shared_ptr<MapRasterizer::GraphicElement>& graphicElement, std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	pointI ptLoc;
+	if (graphicElement->_mapData->points.size() == 1)
+	{
+		ptLoc = graphicElement->_mapData->points[0];
+	}
+	else
+	{
+		bgm::ring<pointI> ringCheck(graphicElement->_mapData->points.begin(), graphicElement->_mapData->points.end());
+		bg::centroid(ringCheck, ptLoc);
+		ptLoc = Tools::normalizeCoordinates(ptLoc, ZoomLevel31);
+	}
+
+	uploadSymbolIconForElement(_context, graphicElement, ptLoc, outSymbols);
+
+	uploadSymbolTextForElement(_context, graphicElement, ptLoc, outSymbols);
+}
+
+void MapRasterizerProvider::uploadSymbolTextForElement(std::shared_ptr<MapRasterizerContext>& _context, std::shared_ptr<MapRasterizer::GraphicElement>& graphicElement,const pointI& ptSymbolLoc, std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	const auto typeRuleId = graphicElement->_mapData->typeIds[graphicElement->_typeIdIndex];
+	const auto& section =  graphicElement->_mapData->section.lock();
+    const auto& decodedType = section->rules->mapRules[typeRuleId];
+
+	MapStyleResult textEvalResult;
+
+    MapStyleEval textEvaluator(workingStyle, 0.1f);
+    
+
+    bool ok;
+	for(auto itName = graphicElement->_mapData->nameTypeString.cbegin(); itName != graphicElement->_mapData->nameTypeString.cend(); ++itName)
+    {
+        const auto& name = std::get<2>(*itName);
+
+        // Skip empty names
+        if(name.empty())
+            continue;
+
+        // Evaluate style to obtain text parameters
+        textEvaluator.setStringValue(getDefaultStyles()->id_INPUT_TAG, decodedType.tag);
+        textEvaluator.setStringValue(getDefaultStyles()->id_INPUT_VALUE, decodedType.value);
+		textEvaluator.setIntValue(getDefaultStyles()->id_INPUT_MINZOOM, _context->zoom);
+        textEvaluator.setIntValue(getDefaultStyles()->id_INPUT_MAXZOOM, _context->zoom);
+        textEvaluator.setIntValue(getDefaultStyles()->id_INPUT_TEXT_LENGTH, name.length());
+
+        std::string nameTag;
+        if(std::get<0>(*itName) != section->rules->name_encodingRuleId)
+			nameTag = section->rules->mapRules[std::get<0>(*itName)].tag;
+
+        textEvaluator.setStringValue(getDefaultStyles()->id_INPUT_NAME_TAG, nameTag);
+
+        textEvalResult.clear();
+		if(!textEvaluator.evaluate(graphicElement->_mapData, rulesetType::text, &textEvalResult))
+            continue;
+
+        // Skip text that doesn't have valid size
+        int textSize = 0;
+		ok = textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_SIZE, textSize);
+        if(!ok || textSize == 0)
+            continue;
+
+        // Create primitive
+		const auto text = new MapRasterizer::RasterSymbolonPath();
+        text->graph = graphicElement;
+		text->location = ptSymbolLoc;
+        text->value = name;
+
+        text->drawOnPath = false;
+		textEvalResult.getBoolVal(getDefaultStyles()->id_OUTPUT_TEXT_ON_PATH, text->drawOnPath);
+
+		textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_ORDER, text->zOrder);
+
+        text->verticalOffset = 0;
+        textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_DY, text->verticalOffset);
+
+        ok = textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_COLOR, text->color);
+        if(!ok || !text->color)
+            text->color = SK_ColorBLACK;
+
+        text->size = textSize;
+
+        text->shadowRadius = 0;
+        textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_HALO_RADIUS, text->shadowRadius);
+
+		ok = textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_HALO_COLOR, text->shadowColor);
+        if(!ok || !text->shadowColor)
+            text->shadowColor = SK_ColorWHITE;
+
+        text->wrapWidth = 0;
+        textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_WRAP_WIDTH, text->wrapWidth);
+
+        text->isBold = false;
+        textEvalResult.getBoolVal(getDefaultStyles()->id_OUTPUT_TEXT_BOLD, text->isBold);
+
+        text->minDistance = 0;
+        textEvalResult.getIntVal(getDefaultStyles()->id_OUTPUT_TEXT_MIN_DISTANCE, text->minDistance);
+
+        textEvalResult.getStringVal(getDefaultStyles()->id_OUTPUT_TEXT_SHIELD, text->shieldResourceName);
+
+        outSymbols.push_back(std::move(std::shared_ptr<MapRasterizer::RasterSymbol>(text)));
+    }
+}
+
+void MapRasterizerProvider::uploadSymbolIconForElement(std::shared_ptr<MapRasterizerContext>& _context, std::shared_ptr<MapRasterizer::GraphicElement>& graphicElement,const pointI& ptSymbolLoc, std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols)
+{
+	if(!graphicElement->styleResult)
+        return;
+
+    bool ok;
+
+    std::string iconResourceName;
+    ok = graphicElement->styleResult->getStringVal(getDefaultStyles()->id_OUTPUT_ICON, iconResourceName);
+
+    if(ok && !iconResourceName.empty())
+    {
+		const auto icon = new MapRasterizer::RasterSymbolPin();
+        icon->graph = graphicElement;
+		icon->location = ptSymbolLoc;
+
+        icon->resourceName = std::move(iconResourceName);
+
+        icon->zOrder = 100;
+        graphicElement->styleResult->getIntVal(getDefaultStyles()->id_OUTPUT_ICON, icon->zOrder);
+        //NOTE: a magic shifting of icon order. This is needed to keep icons less important than anything else
+        icon->zOrder += 100000;
+
+        outSymbols.push_back(std::move(std::shared_ptr<MapRasterizer::RasterSymbol>(icon)));
+    }
 }

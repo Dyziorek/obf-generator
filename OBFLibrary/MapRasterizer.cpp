@@ -140,6 +140,8 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 	_context->removeHighwaysBasedOnDensity(_source);
 	_context->sortGraphicElements();
 
+	_source.obtainPrimitivesSymbols(_context);
+
 }
 
 void MapRasterizer::DrawMap(std::string pathFile)

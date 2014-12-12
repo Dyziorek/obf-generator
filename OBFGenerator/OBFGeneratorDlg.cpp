@@ -85,6 +85,8 @@ COBFGeneratorDlg::COBFGeneratorDlg(CWnd* pParent /*=NULL*/)
 	, m_fileReadPath(_T(""))
 	, m_DecompressFile(_T(""))
 	, zoomLevel(10)
+	, m_XCoord(0)
+	, m_YCoord(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -1019,7 +1021,8 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		auto bottom = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.max_corner().get<1>()));
 		auto right = MapUtils::get31TileNumberY(MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));
 
-		
+		auto centerTileX = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(m_XCoord));
+		auto centerTileY = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(m_YCoord));
 
 		auto rightT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.min_corner().get<0>()));
 		auto topT = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
@@ -1029,17 +1032,34 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		auto tileWidth = leftT - rightT;
 		auto tileHeight = bottomT - topT;
 
+
+
 		std::wstringstream strmText;
 		strmText.precision(0);
-
-		strmText << std::fixed << L"Tiles X:=" << tileWidth << L" Y:=" << tileHeight << L" Sum:" << tileWidth*tileHeight << L"Size:" << tileWidth*256 << L"x" <<tileHeight*256;
+		if (centerTileX > leftT && centerTileX < rightT)
+		{
+			if (centerTileY > bottomT && centerTileY < topT)
+			{
+			strmText << L"Selected point outside of loadaed map";
+			wchar_t* msgTxt = new wchar_t[strmText.str().size()+1];
+			ZeroMemory(msgTxt, (strmText.str().size()+1)*sizeof(wchar_t));
+			wcsncpy_s(msgTxt,strmText.str().size()+1 , strmText.str().data(),strmText.str().size());
+			::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
+			return;
+			}
+		}
+		strmText << std::fixed << L"Tiles X:=" << tileWidth << L" Y:=" << tileHeight << L" Sum:" << tileWidth*tileHeight << L"Size:" << tileWidth*1024 << L"x" <<tileHeight*1024;
 		wchar_t* msgTxt = new wchar_t[strmText.str().size()+1];
 		ZeroMemory(msgTxt, (strmText.str().size()+1)*sizeof(wchar_t));
 		wcsncpy_s(msgTxt,strmText.str().size()+1 , strmText.str().data(),strmText.str().size());
 		::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 		if (tileHeight > 3 || tileWidth > 3)
 		{
-			auto idx = tileWidth;
+			MapUtils::convert31YToMeters
+			float stepLon = (MapUtils::get31LongitudeX(bgData.max_corner().get<0>()) - MapUtils::get31LongitudeX(bgData.min_corner().get<0>()))/idx;
+			float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idy;
+
+			/*auto idx = tileWidth;
 			auto idy = tileHeight;
 			float minx = MapUtils::get31LongitudeX(bgData.min_corner().get<0>());
 			float miny = MapUtils::get31LatitudeY(bgData.min_corner().get<1>());
@@ -1068,7 +1088,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 						render->DrawMap(result);
 					}
 				}
-			}
+			}*/
 		}
 		else
 		{
