@@ -6,6 +6,13 @@
 #include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
 #include "SkCanvas.h"
+#include "SkSurface.h"
+#include "SkImage.h"
+#include "SkData.h"
+#include "SkStream.h"
+#include "SkBitmapDevice.h"
+#include "SkImageDecoder.h"
+#include "SkColorFilter.h"
 #include "SkBitmapProcShader.h"
 #ifdef _DEBUG_VLD
 	#include "vld.h"
@@ -42,6 +49,8 @@
 #include "MapRasterizer.h"
 #include "MapRasterizerContext.h"
 #include "MapRasterizerProvider.h"
+#include "AtlasMapDxRender.h"
+
 namespace io = boost::iostreams;
 namespace ar = boost::archive;
 
@@ -102,6 +111,8 @@ void COBFGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_MFCEDITBROWSE3, m_DecompressFile);
 	DDX_Text(pDX, IDC_EDIT2, zoomLevel);
 	DDV_MinMaxInt(pDX, zoomLevel, 0, 31);
+	DDX_Text(pDX, IDC_EDIT1, m_XCoord);
+	DDX_Text(pDX, IDC_EDIT3, m_YCoord);
 }
 
 BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
@@ -115,6 +126,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON1, &COBFGeneratorDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_MFCBUTTON2, &COBFGeneratorDlg::OnBnClickedMfcbutton2)
 	ON_BN_CLICKED(IDC_MFCBUTTON3, &COBFGeneratorDlg::OnBnClickedMfcbutton3)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -192,6 +204,10 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	//sqlite3_exec(dbCtx, "create index IdWIndex ON ways (id)", &COBFGeneratorDlg::shell_callback,this,&errMsg); 
 	results.PrepareDB(dbCtx);
 
+	renderer.reset(new AtlasMapDxRender());
+	renderer->Initialize(GetDlgItem(IDC_PLACEDX)->GetSafeHwnd());
+	
+	SetTimer(1000, 1000, NULL);
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -239,6 +255,7 @@ void COBFGeneratorDlg::OnPaint()
 	else
 	{
 		CDialogEx::OnPaint();
+		renderer->renderScene();
 	}
 }
 
@@ -1021,8 +1038,8 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		auto bottom = MapUtils::get31TileNumberY(MapUtils::get31LatitudeY(bgData.max_corner().get<1>()));
 		auto right = MapUtils::get31TileNumberY(MapUtils::get31LongitudeX(bgData.max_corner().get<0>()));
 
-		auto centerTileX = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(m_XCoord));
-		auto centerTileY = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(m_YCoord));
+		auto centerTileX = MapUtils::getTileNumberX(zoomVal, m_XCoord);
+		auto centerTileY = MapUtils::getTileNumberY(zoomVal, m_YCoord);
 
 		auto rightT = MapUtils::getTileNumberX(zoomVal, MapUtils::get31LongitudeX(bgData.min_corner().get<0>()));
 		auto topT = MapUtils::getTileNumberY(zoomVal, MapUtils::get31LatitudeY(bgData.min_corner().get<1>()));
@@ -1036,9 +1053,9 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 
 		std::wstringstream strmText;
 		strmText.precision(0);
-		if (centerTileX > leftT && centerTileX < rightT)
+		if (centerTileX > leftT || centerTileX < rightT)
 		{
-			if (centerTileY > bottomT && centerTileY < topT)
+			if (centerTileY > bottomT || centerTileY < topT)
 			{
 			strmText << L"Selected point outside of loadaed map";
 			wchar_t* msgTxt = new wchar_t[strmText.str().size()+1];
@@ -1055,9 +1072,45 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 		::PostMessage(m_hWnd, WM_MYMESSAGE, NULL, (LPARAM)msgTxt);
 		if (tileHeight > 3 || tileWidth > 3)
 		{
-			MapUtils::convert31YToMeters
-			float stepLon = (MapUtils::get31LongitudeX(bgData.max_corner().get<0>()) - MapUtils::get31LongitudeX(bgData.min_corner().get<0>()))/idx;
-			float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idy;
+			
+			bgData.min_corner().set<0>( MapUtils::get31TileNumberX( MapUtils::getLongitudeFromTile(zoomVal, centerTileX)));
+			bgData.min_corner().set<1>( MapUtils::get31TileNumberY( MapUtils::getLatitudeFromTile(zoomVal, centerTileY)));
+			bgData.max_corner().set<0>( MapUtils::get31TileNumberX( MapUtils::getLongitudeFromTile(zoomVal, centerTileX+1)));
+			bgData.max_corner().set<1>( MapUtils::get31TileNumberY( MapUtils::getLatitudeFromTile(zoomVal, centerTileY+1)));
+			auto mapDataObjets = mapData->obtainMapData(bgData, zoomVal);
+			if (mapDataObjets.size() > 0)
+			{
+				std::shared_ptr<MapRasterizer> render(new MapRasterizer(*mapData.get()));
+				render->createContextData(bgData, zoomVal);
+				//SkAutoTUnref<SkBitmap> bitSrc(nullptr);
+				//bitSrc->setConfig(SkBitmap::kARGB_8888_Config, 1024, 1024);
+				//bitSrc->allocPixels();
+				SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
+				SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
+				
+				bool painted = render->DrawMap(*painter);
+				if (painted)
+				{
+					const SkBitmap& bitmapData = device->accessBitmap(false);
+					auto DataB = bitmapData.config();
+					
+					SkImage::Info inf;
+					inf.fAlphaType = SkImage::kPremul_AlphaType;
+					inf.fColorType = SkImage::kPMColor_ColorType;
+					inf.fWidth = bitmapData.width();
+					inf.fHeight = bitmapData.height();
+					SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
+					SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
+					SkAutoDataUnref data(imageSrc->encode());
+					SkFILEWStream stream(newPath.c_str());
+					stream.write(data->data(), data->size());
+					renderer->saveSkBitmapToResource(bitmapData, 0,0);
+				}
+			}
+
+			//MapUtils::convert31YToMeters
+			//float stepLon = (MapUtils::get31LongitudeX(bgData.max_corner().get<0>()) - MapUtils::get31LongitudeX(bgData.min_corner().get<0>()))/idx;
+			//float stepLat = (MapUtils::get31LatitudeY(bgData.max_corner().get<1>()) - MapUtils::get31LatitudeY(bgData.min_corner().get<1>()))/idy;
 
 			/*auto idx = tileWidth;
 			auto idy = tileHeight;
@@ -1301,4 +1354,20 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton3()
 	//		}
 	//	}
 	//}
+}
+
+
+//HRESULT COBFGeneratorDlg::get_accChildCount(long *pcountChildren)
+//{
+//	// TODO: Add your specialized code here and/or call the base class
+//
+//	return CDialogEx::get_accChildCount(pcountChildren);
+//}
+
+
+void COBFGeneratorDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	renderer->renderScene();
+
+	CDialogEx::OnTimer(nIDEvent);
 }

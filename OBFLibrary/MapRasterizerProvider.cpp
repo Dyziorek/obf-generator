@@ -607,6 +607,7 @@ bool MapRasterizerProvider::obtainPrimitivesSymbols(std::shared_ptr<MapRasterize
 		auto rasterSymbolGroup = std::shared_ptr<MapRasterizer::RasterSymbolGroup>(new MapRasterizer::RasterSymbolGroup);
 		collectSymbolsFromPrimitives(_context, graphicElement->_polygons, MapRasterizer::GraphElementType::Polygon, rasterSymbolGroup->_symbols);
 	}
+	return true;
 }
 
 

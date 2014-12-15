@@ -22,10 +22,57 @@ using namespace DirectX;
 
 #include "AtlasMapDxRender.h"
 
+class AtlasMapDxRender::_Impl 
+{
+public:
+	_Impl(void);
+	~_Impl(void);
+
+	HRESULT Initialize(HWND baseHWND);
+	void saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset);
+	void renderScene();
+private:
+	HINSTANCE                           g_hInst;
+	HWND                                g_hWnd;
+	D3D_DRIVER_TYPE                     g_driverType;
+	D3D_FEATURE_LEVEL                   g_featureLevel;
+	ID3D11Device*                       g_pd3dDevice;
+	ID3D11DeviceContext*                g_pImmediateContext;
+	IDXGISwapChain*                     g_pSwapChain;
+	ID3D11RenderTargetView*             g_pRenderTargetView;
+	ID3D11Texture2D*                    g_pDepthStencil;
+	ID3D11DepthStencilView*             g_pDepthStencilView;
+
+	ID3D11Resource*						g_pResourceMap;
+	ID3D11Resource*						g_pResourceSky;
+	ID3D11ShaderResourceView*           g_pTextureRVSky;
+	ID3D11ShaderResourceView*           g_pTextureRVMap;
+	ID3D11InputLayout*                  g_pBatchInputLayout;
+
+	std::unique_ptr<CommonStates>                           g_States;
+	/*
+	std::unique_ptr<BasicEffect>                            g_BatchEffect;
+	std::unique_ptr<EffectFactory>                          g_FXFactory;
+	std::unique_ptr<GeometricPrimitive>                     g_Shape;
+	std::unique_ptr<Model>                                  g_Model;
+	std::unique_ptr<PrimitiveBatch<VertexPositionColor>>    g_Batch;
+	*/
+	std::unique_ptr<SpriteFont>                             g_Font;
+	std::unique_ptr<SpriteBatch>                            g_Sprites;
+	
+
+	XMMATRIX                            g_World;
+	XMMATRIX                            g_View;
+	XMMATRIX                            g_Projection;
+
+
+
+};
+
 
 boost::thread_group generators;
 
-AtlasMapDxRender::AtlasMapDxRender(void)
+AtlasMapDxRender::_Impl::_Impl(void)
 {
 	g_hInst = nullptr;
 	g_hWnd = nullptr;
@@ -45,12 +92,12 @@ AtlasMapDxRender::AtlasMapDxRender(void)
 }
 
 
-AtlasMapDxRender::~AtlasMapDxRender(void)
+AtlasMapDxRender::_Impl::~_Impl(void)
 {
 }
 
 
-HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
+HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND)
 {
     HRESULT hr = S_OK;
 	g_hWnd = baseHWND;
@@ -112,6 +159,7 @@ HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
         return hr;
 
     hr = g_pd3dDevice->CreateRenderTargetView( pBackBuffer, nullptr, &g_pRenderTargetView );
+
     pBackBuffer->Release();
     if( FAILED( hr ) )
         return hr;
@@ -160,13 +208,18 @@ HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
 	D3D11_TEXTURE2D_DESC desc;
     desc.Width = 1024;
     desc.Height = 1024;
-    desc.MipLevels = 0;
+    desc.MipLevels = 1;
     desc.ArraySize = 1;
 	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.CPUAccessFlags = 0;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	UINT supported = 0;
+	hr = g_pd3dDevice->CheckFormatSupport(DXGI_FORMAT_R8G8B8A8_UNORM, &supported);
+
 	hr = g_pd3dDevice->CreateTexture2D(&desc, nullptr, (ID3D11Texture2D**)&g_pResourceMap);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
@@ -180,13 +233,15 @@ HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
     // Create DirectXTK objects
     g_States.reset( new CommonStates( g_pd3dDevice ) );
     g_Sprites.reset( new SpriteBatch( g_pImmediateContext ) );
-
+	float ClearColor[4] = { 0.176f, 0.196f, 0.667f, 0.0f };
+	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, ClearColor);
     return S_OK;
 }
 
 
-void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Resource* textureBuffer, int xoffset, int yoffset)
+void AtlasMapDxRender::_Impl::saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset)
 {
+	HRESULT hr = S_OK;
     typedef unsigned char UINT8; 
     typedef signed char SINT8; 
     typedef unsigned short UINT16; 
@@ -238,6 +293,71 @@ void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, ID3D11Re
 	destRegion.front = 0;
 	destRegion.back = 1;
 
-	g_pImmediateContext->UpdateSubresource(textureBuffer, 0, &destRegion, m_pmap, stride, bpl*bmpHeight);
+	D3D11_MAPPED_SUBRESOURCE subData;
 
+	hr = g_pImmediateContext->Map(g_pResourceMap, 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
+	char* mappedData = (char*)subData.pData;
+	for (int i = 0; i < bmpHeight; i++)
+	{
+		memcpy(mappedData, m_pmap, stride);
+		mappedData += subData.RowPitch;
+		m_pmap += stride;
+	}
+
+	g_pImmediateContext->Unmap(g_pResourceMap, 0);
+	//g_pImmediateContext->UpdateSubresource(g_pResourceMap, 0, &destRegion, m_pmap, stride, bpl*bmpHeight);
+
+}
+
+
+void AtlasMapDxRender::_Impl::renderScene()
+{
+	RECT rc;
+    GetClientRect( g_hWnd, &rc );
+
+	RECT src;
+	src.top = 0;
+	src.left = 0;
+	src.bottom = 1024;
+	src.right = 1024;
+
+	g_Sprites->Begin();
+	g_Sprites->Draw(g_pTextureRVMap, rc, &src);
+	g_Sprites->End();
+
+	g_pSwapChain->Present(0,0);
+}
+
+AtlasMapDxRender::AtlasMapDxRender(void) : pImpl(new _Impl())
+{
+
+}
+
+AtlasMapDxRender::~AtlasMapDxRender(void)
+{
+
+}
+
+AtlasMapDxRender::AtlasMapDxRender(AtlasMapDxRender&& other) : pImpl(std::move(other.pImpl))
+{
+
+}
+
+AtlasMapDxRender& AtlasMapDxRender::operator=(AtlasMapDxRender&& other)
+{
+	pImpl = std::move(other.pImpl);
+	return *this;
+}
+
+HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
+{
+	return pImpl->Initialize(baseHWND);
+}
+void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset)
+{
+	pImpl->saveSkBitmapToResource(skBitmap, xoffset, yoffset);
+}
+void AtlasMapDxRender::renderScene()
+{
+	pImpl->renderScene();
 }

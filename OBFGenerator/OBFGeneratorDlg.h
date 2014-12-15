@@ -10,6 +10,7 @@
 
 
 class MapRasterizerProvider;
+class AtlasMapDxRender;
 // COBFGeneratorDlg dialog
 class COBFGeneratorDlg : public CDialogEx
 {
@@ -93,10 +94,14 @@ public:
 	afx_msg void OnBnClickedMfcbutton2();
 	CString m_fileReadPath;
 	std::shared_ptr<MapRasterizerProvider> mapData;
+	std::unique_ptr<AtlasMapDxRender> renderer;
 	CMFCEditBrowseCtrl m_BrowseRead;
 	afx_msg void OnBnClickedMfcbutton3();
 	CString m_DecompressFile;
 	int zoomLevel;
 	float m_XCoord;
 	float m_YCoord;
+	float zx;
+//	virtual HRESULT get_accChildCount(long *pcountChildren);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

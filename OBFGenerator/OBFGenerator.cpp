@@ -5,8 +5,10 @@
 #include "stdafx.h"
 #include "sqlite3.h"
 #include "OBFGenerator.h"
-#include "OBFGeneratorDlg.h"
 #include "SkGraphics.h"
+#include "SkBitmap.h"
+#include "AtlasMapDxRender.h"
+#include "OBFGeneratorDlg.h"
 #ifdef _DEBUG_VLD
  #include "vld.h"
 #endif
