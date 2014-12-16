@@ -73,6 +73,11 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 {
 	
 	auto& mapDatum = _source.obtainMapData(workArea, workZoom);
+	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());
+	_context->initialize(_source, workZoom);
+	_context->_tileScale = MapUtils::getPowZoom(31 - workZoom);
+	_context->zoom = workZoom;
+	_context->_area31 = workArea;
 	std::list< std::shared_ptr<const MapObjectData> > detailedmapMapObjects, detailedmapCoastlineObjects;
     std::list< std::shared_ptr<const MapObjectData> > polygonizedCoastlineObjects;
 	for (const std::shared_ptr<const MapObjectData>& mapItem : mapDatum)
@@ -80,7 +85,7 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
 		if (mapItem->section.expired())
 			continue;
 		auto sectionData = mapItem->section.lock();
-		if (mapItem->containsType(sectionData->rules->naturalCoastlineLine_encodingRuleId))
+		if (mapItem->containsType(sectionData->rules->naturalCoastline_encodingRuleId))
 		{
 			detailedmapCoastlineObjects.push_back(mapItem);
 		}
@@ -130,11 +135,7 @@ void MapRasterizer::createContextData(boxI& workArea, int workZoom )
         polygonizedCoastlineObjects.push_back(std::move(bgMapObject));
     }
 
-	_context = std::shared_ptr<MapRasterizerContext>(new MapRasterizerContext());
-	_context->initialize(_source, workZoom);
-	_context->_tileScale = MapUtils::getPowZoom(31 - workZoom);
-	_context->zoom = workZoom;
-	_context->_area31 = workArea;
+	
 	_source.obtainMapPrimitives(mapDatum, workZoom, _context);
 	_source.obtainMapPrimitives(polygonizedCoastlineObjects, workZoom, _context);
 	_context->removeHighwaysBasedOnDensity(_source);
@@ -166,6 +167,30 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	}
 }
 
+bool MapRasterizer::DrawSymbols(SkCanvas& canvas)
+{
+	if (!_context)
+		return false;
+
+	bool drawn = false;
+	bool painted = false;
+
+	auto sizer = canvas.getDeviceSize();
+	AreaI _destinationArea;
+	_destinationArea.min_corner().set<0>(0);
+	_destinationArea.min_corner().set<1>(0);
+	_destinationArea.max_corner().set<1>(sizer.height());
+	_destinationArea.max_corner().set<0>(sizer.width());
+	_context->_pixelScaleXY.set<0>(_context->_tileScale / static_cast<double>(sizer.width()));
+	_context->_pixelScaleXY.set<1>(_context->_tileScale / static_cast<double>(sizer.height()));
+
+	_mapPaint = _source.mapPaint;
+
+	rasterizeSymbolsWithoutPaths(_context->symbols, canvas)
+
+	return painted;
+
+}
 
 bool MapRasterizer::DrawMap(SkCanvas& canvas)
 {
@@ -246,6 +271,9 @@ bool MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCa
 
 	return painted;
 }
+
+
+bool rasterizeSymbols(_context->symbols, canvas);
 
 bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintValuesSet valueSetSelector, const bool isArea )
 {

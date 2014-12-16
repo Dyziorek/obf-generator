@@ -7,8 +7,8 @@ public:
 	~AtlasMapDxRender(void);
 	AtlasMapDxRender(AtlasMapDxRender&& other);
 	AtlasMapDxRender& operator=(AtlasMapDxRender&& other);
-	HRESULT Initialize(HWND baseHWND);
-	void saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset);
+	HRESULT Initialize(HWND baseHWND, int numLayers = 1);
+	void saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset);
 	void renderScene();
 
 private:

@@ -20,7 +20,7 @@ class OBFResultDB
 {
 public:
 	OBFResultDB(void);
-	~OBFResultDB(void);
+	virtual ~OBFResultDB(void);
 	void close(void);
 	sqlite3* dbMapCtx;
 	sqlite3_stmt* mapStmt;
@@ -85,12 +85,12 @@ public:
 	std::map<__int64, std::shared_ptr<EntityRelation>> relNodes;
 
 	void imageResult();
-	OBFResultDB* mapIndexer;
-	OBFResultDB* poiIndexer;
-	OBFResultDB* transIndexer;
-	OBFResultDB* routeIndexer;
-	OBFResultDB* addresIndexer;
-	BatchUpdater* storeData;
+	std::shared_ptr<OBFResultDB> mapIndexer;
+	std::shared_ptr<OBFResultDB> poiIndexer;
+	std::shared_ptr<OBFResultDB> transIndexer;
+	std::shared_ptr<OBFResultDB> routeIndexer;
+	std::shared_ptr<OBFResultDB> addresIndexer;
+	std::shared_ptr<BatchUpdater> storeData;
 
 	std::string mapName;
 	std::wstring progress;

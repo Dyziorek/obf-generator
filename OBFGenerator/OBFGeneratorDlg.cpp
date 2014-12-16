@@ -1085,26 +1085,50 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 				//SkAutoTUnref<SkBitmap> bitSrc(nullptr);
 				//bitSrc->setConfig(SkBitmap::kARGB_8888_Config, 1024, 1024);
 				//bitSrc->allocPixels();
-				SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
-				SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
-				
-				bool painted = render->DrawMap(*painter);
-				if (painted)
 				{
-					const SkBitmap& bitmapData = device->accessBitmap(false);
-					auto DataB = bitmapData.config();
+					SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
+					SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
+				
+					bool painted = render->DrawMap(*painter);
+					if (painted)
+					{
+						const SkBitmap& bitmapData = device->accessBitmap(false);
+						auto DataB = bitmapData.config();
 					
-					SkImage::Info inf;
-					inf.fAlphaType = SkImage::kPremul_AlphaType;
-					inf.fColorType = SkImage::kPMColor_ColorType;
-					inf.fWidth = bitmapData.width();
-					inf.fHeight = bitmapData.height();
-					SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
-					SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
-					SkAutoDataUnref data(imageSrc->encode());
-					SkFILEWStream stream(newPath.c_str());
-					stream.write(data->data(), data->size());
-					renderer->saveSkBitmapToResource(bitmapData, 0,0);
+						SkImage::Info inf;
+						inf.fAlphaType = SkImage::kPremul_AlphaType;
+						inf.fColorType = SkImage::kPMColor_ColorType;
+						inf.fWidth = bitmapData.width();
+						inf.fHeight = bitmapData.height();
+						SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
+						SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
+						SkAutoDataUnref data(imageSrc->encode());
+						SkFILEWStream stream(newPath.c_str());
+						stream.write(data->data(), data->size());
+						renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
+					}
+				}
+				{
+					SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
+					SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
+					bool painted = render->DrawSymbols(*painter);
+					if (painted)
+					{
+						const SkBitmap& bitmapData = device->accessBitmap(false);
+						auto DataB = bitmapData.config();
+					
+						SkImage::Info inf;
+						inf.fAlphaType = SkImage::kPremul_AlphaType;
+						inf.fColorType = SkImage::kPMColor_ColorType;
+						inf.fWidth = bitmapData.width();
+						inf.fHeight = bitmapData.height();
+						SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
+						SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
+						SkAutoDataUnref data(imageSrc->encode());
+						SkFILEWStream stream(newPath.c_str());
+						stream.write(data->data(), data->size());
+						renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
+					}
 				}
 			}
 

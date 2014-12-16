@@ -47,12 +47,6 @@ OBFResultDB::~OBFResultDB(void)
 
 void OBFResultDB::close(void)
 {
-	delete (OBFMapDB*)mapIndexer;
-	delete (OBFpoiDB*)poiIndexer;
-	delete (OBFtransportDB*)transIndexer;
-	delete (OBFrouteDB*)routeIndexer;
-	delete (OBFAddresStreetDB*)addresIndexer;
-	delete storeData;
 	OBFRenderingTypes::rules.clear();
 	OBFRenderingTypes::namedRulType.clear();
 
@@ -125,34 +119,34 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 	OBFRenderingTypes rederer;
 	rederer.loadXmlData();
 
-	if (mapIndexer == nullptr)
+	if (!mapIndexer)
 	{
-		mapIndexer = new OBFMapDB();
+		mapIndexer.reset(new OBFMapDB());
 	}
 
-	if (poiIndexer == nullptr)
+	if (!poiIndexer)
 	{
-		poiIndexer = new OBFpoiDB();
+		poiIndexer.reset(new OBFpoiDB());
 	}
 
-	if (addresIndexer == nullptr)
+	if (!addresIndexer)
 	{
-		addresIndexer = new OBFAddresStreetDB();
+		addresIndexer.reset(new OBFAddresStreetDB());
 	}
 
-	if (routeIndexer == nullptr)
+	if (!routeIndexer)
 	{
-		routeIndexer = new OBFrouteDB();
+		routeIndexer.reset(new OBFrouteDB());
 	}
 
-	if (transIndexer == nullptr)
+	if (!transIndexer)
 	{
-		transIndexer = new OBFtransportDB();
+		transIndexer.reset(new OBFtransportDB());
 	}
 
-	if (storeData == nullptr)
+	if (!storeData)
 	{
-		storeData = new BatchUpdater(*this);
+		storeData.reset(new BatchUpdater(*this));
 	}
 
 	if ((err = fopen_s(&fp, "D:\\osmData\\tempLocalMap.db", "r")) == 0)
@@ -279,9 +273,9 @@ int OBFResultDB::PrepareDB(sqlite3 *dbCtxSrc)
 
 void OBFResultDB::imageResult()
 {
-	OBFAddresStreetDB* addresor = (OBFAddresStreetDB*)addresIndexer;
+	OBFAddresStreetDB* addresor = (OBFAddresStreetDB*)addresIndexer.get();
 
-	((OBFMapDB*)mapIndexer)->paintPolys();
+	((OBFMapDB*)mapIndexer.get())->paintPolys();
 	//((OBFMapDB*)mapIndexer)->paintTreeData(*this, addresor->boundaries, addresor->cities);
 }
 
@@ -309,14 +303,14 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				if (itm->getTag("place") != std::string(""))
 				{
 					 std::shared_ptr<EntityNode> ptrNode = std::dynamic_pointer_cast<EntityNode, EntityBase>(itm);
-					 ((OBFAddresStreetDB*)addresIndexer)->iterateOverCity(ptrNode);
+					 ((OBFAddresStreetDB*)addresIndexer.get())->iterateOverCity(ptrNode);
 				}
 		});
 		strbuf << L"Storing cities ";
 		progress = strbuf.str();
 		::PostMessage(hParentWnd, WM_MYMESSAGE, NULL, (LPARAM)progress.c_str());
 
-		((OBFAddresStreetDB*)addresIndexer)->storeCities(*this);
+		((OBFAddresStreetDB*)addresIndexer.get())->storeCities(*this);
 	}
 	if (iterationPhase == PHASEINDEXADDRREL)
 	{
@@ -326,14 +320,14 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 				
 				std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(itm);
 
-				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(itm, *this);
+				((OBFAddresStreetDB*)addresIndexer.get())->indexBoundary(itm, *this);
 				
 
-				((OBFMapDB*)mapIndexer)->indexMapAndPolygonRelations(relItem, *this);
+				((OBFMapDB*)mapIndexer.get())->indexMapAndPolygonRelations(relItem, *this);
 
-				((OBFrouteDB*)routeIndexer)->indexRelations(relItem, *this);
+				((OBFrouteDB*)routeIndexer.get())->indexRelations(relItem, *this);
 
-				((OBFpoiDB*)poiIndexer)->indexRelations(relItem, *this);
+				((OBFpoiDB*)poiIndexer.get())->indexRelations(relItem, *this);
 
 				//relations.insert(relItem);
 				numbers++;
@@ -350,16 +344,16 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 		numbers = 0;
 		iterateOverElements(NODEWAYBOUNDARY,
 			[=, &numbers](std::shared_ptr<EntityBase> itm) {  
-				((OBFAddresStreetDB*)addresIndexer)->indexBoundary(itm, *this);
+				((OBFAddresStreetDB*)addresIndexer.get())->indexBoundary(itm, *this);
 				numbers++;
 		});
 
-		((OBFAddresStreetDB*)addresIndexer)->tryToAssignBoundaryToFreeCities();
+		((OBFAddresStreetDB*)addresIndexer.get())->tryToAssignBoundaryToFreeCities();
 
 		iterateOverElements(NODEREL,
 			[&](std::shared_ptr<EntityBase> itm) { 
 				std::shared_ptr<EntityRelation> relItem = std::dynamic_pointer_cast<EntityRelation, EntityBase>(itm);
-				((OBFAddresStreetDB*)addresIndexer)->indexAddressRelation(relItem, *this);
+				((OBFAddresStreetDB*)addresIndexer.get())->indexAddressRelation(relItem, *this);
 		});
 		strbuf.str(L"");
 		strbuf.clear();
@@ -464,7 +458,7 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 	}
 	if (iterationPhase == PHASECOMBINE)
 	{
-		((OBFMapDB*)mapIndexer)->processLowLevelWays(*this);
+		((OBFMapDB*)mapIndexer.get())->processLowLevelWays(*this);
 		this->storeData->commit();
 	}
 	if (iterationPhase == PHASESAVE)
@@ -478,10 +472,10 @@ int OBFResultDB::iterateOverElements(int iterationPhase)
 
 		BinaryMapDataWriter writter(&rafek);
 
-		((OBFMapDB*)mapIndexer)->writeBinaryMapIndex(writter, "MAPDATA", *this);
-		((OBFrouteDB*)routeIndexer)->writeBinaryRouteIndex(writter, *this, "ROUTEDATA");
-		((OBFAddresStreetDB*)addresIndexer)->writeAddresMapIndex(writter,"ADDRDATA", *this);
-		((OBFpoiDB*)poiIndexer)->writePoiDataIndex(writter, *this, "POIDATA");
+		((OBFMapDB*)mapIndexer.get())->writeBinaryMapIndex(writter, "MAPDATA", *this);
+		((OBFrouteDB*)routeIndexer.get())->writeBinaryRouteIndex(writter, *this, "ROUTEDATA");
+		((OBFAddresStreetDB*)addresIndexer.get())->writeAddresMapIndex(writter,"ADDRDATA", *this);
+		((OBFpoiDB*)poiIndexer.get())->writePoiDataIndex(writter, *this, "POIDATA");
 		writter.close();
 //		rafek.close();
 		//((OBFpoiDB*)poiIndexer)->writePoiMapIndex(writter, mapName, *this);

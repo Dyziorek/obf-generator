@@ -28,28 +28,30 @@ public:
 	_Impl(void);
 	~_Impl(void);
 
-	HRESULT Initialize(HWND baseHWND);
-	void saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset);
+	HRESULT Initialize(HWND baseHWND, int numLayers);
+	void saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset);
 	void renderScene();
 private:
 	HINSTANCE                           g_hInst;
 	HWND                                g_hWnd;
 	D3D_DRIVER_TYPE                     g_driverType;
 	D3D_FEATURE_LEVEL                   g_featureLevel;
-	ID3D11Device*                       g_pd3dDevice;
-	ID3D11DeviceContext*                g_pImmediateContext;
-	IDXGISwapChain*                     g_pSwapChain;
-	ID3D11RenderTargetView*             g_pRenderTargetView;
-	ID3D11Texture2D*                    g_pDepthStencil;
-	ID3D11DepthStencilView*             g_pDepthStencilView;
+	Microsoft::WRL::ComPtr<ID3D11Device>                       g_pd3dDevice;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext>                g_pImmediateContext;
+	Microsoft::WRL::ComPtr<IDXGISwapChain>                     g_pSwapChain;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView>             g_pRenderTargetView;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D>                    g_pDepthStencil;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView>             g_pDepthStencilView;
 
-	ID3D11Resource*						g_pResourceMap;
-	ID3D11Resource*						g_pResourceSky;
-	ID3D11ShaderResourceView*           g_pTextureRVSky;
-	ID3D11ShaderResourceView*           g_pTextureRVMap;
-	ID3D11InputLayout*                  g_pBatchInputLayout;
+//	Microsoft::WRL::ComPtr<ID3D11Resource>	g_pResourceMap;
+	Microsoft::WRL::ComPtr<ID3D11Resource>	g_pResourceSky;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>  g_pTextureRVSky;
+//	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>  g_pTextureRVMap;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout>    g_pBatchInputLayout;
 
 	std::unique_ptr<CommonStates>                           g_States;
+
+	std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D11Resource>, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>>> textureResourceLayers;
 	/*
 	std::unique_ptr<BasicEffect>                            g_BatchEffect;
 	std::unique_ptr<EffectFactory>                          g_FXFactory;
@@ -65,7 +67,7 @@ private:
 	XMMATRIX                            g_View;
 	XMMATRIX                            g_Projection;
 
-
+	XMVECTORF32 ClearColor;
 
 };
 
@@ -86,9 +88,14 @@ AtlasMapDxRender::_Impl::_Impl(void)
 	g_pDepthStencilView = nullptr;
 
 	g_pTextureRVSky = nullptr;
-	g_pTextureRVMap = nullptr;
-	g_pBatchInputLayout = nullptr;
 
+	g_pBatchInputLayout = nullptr;
+	
+	//ClearColor = XMVECTORF32();
+	ClearColor.f[0] =  0.176f;
+	ClearColor.f[1] =  0.196f;
+	ClearColor.f[2] =  0.667;
+	ClearColor.f[3] =  0.0f;
 }
 
 
@@ -97,7 +104,7 @@ AtlasMapDxRender::_Impl::~_Impl(void)
 }
 
 
-HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND)
+HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND, int numLayers)
 {
     HRESULT hr = S_OK;
 	g_hWnd = baseHWND;
@@ -188,11 +195,11 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND)
     descDSV.Format = descDepth.Format;
     descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     descDSV.Texture2D.MipSlice = 0;
-    hr = g_pd3dDevice->CreateDepthStencilView( g_pDepthStencil, &descDSV, &g_pDepthStencilView );
+    hr = g_pd3dDevice->CreateDepthStencilView( g_pDepthStencil.Get(), &descDSV, &g_pDepthStencilView );
     if( FAILED( hr ) )
         return hr;
 
-    g_pImmediateContext->OMSetRenderTargets( 1, &g_pRenderTargetView, g_pDepthStencilView );
+    g_pImmediateContext->OMSetRenderTargets( 1, &g_pRenderTargetView, g_pDepthStencilView.Get() );
 
     // Setup the viewport
     D3D11_VIEWPORT vp;
@@ -218,9 +225,6 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND)
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	desc.MiscFlags = 0;
 	UINT supported = 0;
-	hr = g_pd3dDevice->CheckFormatSupport(DXGI_FORMAT_R8G8B8A8_UNORM, &supported);
-
-	hr = g_pd3dDevice->CreateTexture2D(&desc, nullptr, (ID3D11Texture2D**)&g_pResourceMap);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
     memset( &SRVDesc, 0, sizeof( SRVDesc ) );
@@ -228,18 +232,29 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND)
 	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	SRVDesc.Texture2D.MipLevels = desc.MipLevels;
 
-	hr = g_pd3dDevice->CreateShaderResourceView(g_pResourceMap, &SRVDesc, &g_pTextureRVMap);
+	hr = g_pd3dDevice->CheckFormatSupport(DXGI_FORMAT_R8G8B8A8_UNORM, &supported);
+
+	for (auto numLayer = 0; numLayer < numLayers; numLayer++)
+	{
+		Microsoft::WRL::ComPtr<ID3D11Resource> resourceElem;
+		 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureRV;
+		hr = g_pd3dDevice->CreateTexture2D(&desc, nullptr, (ID3D11Texture2D**)resourceElem.GetAddressOf());
+		hr = g_pd3dDevice->CreateShaderResourceView(resourceElem.Get(), &SRVDesc, &textureRV);
+		textureResourceLayers.push_back(std::make_pair(std::move(resourceElem), std::move(textureRV)));
+	}
+
+
+	
 
     // Create DirectXTK objects
-    g_States.reset( new CommonStates( g_pd3dDevice ) );
-    g_Sprites.reset( new SpriteBatch( g_pImmediateContext ) );
-	float ClearColor[4] = { 0.176f, 0.196f, 0.667f, 0.0f };
-	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, ClearColor);
+    g_States.reset( new CommonStates( g_pd3dDevice.Get() ) );
+    g_Sprites.reset( new SpriteBatch( g_pImmediateContext.Get() ) );
+	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
     return S_OK;
 }
 
 
-void AtlasMapDxRender::_Impl::saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset)
+void AtlasMapDxRender::_Impl::saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset)
 {
 	HRESULT hr = S_OK;
     typedef unsigned char UINT8; 
@@ -285,17 +300,17 @@ void AtlasMapDxRender::_Impl::saveSkBitmapToResource(const SkBitmap& skBitmap, i
 			//*(UINT32*)(m_pmap+i) = temp;
    //     } 
    // } 
-	D3D11_BOX destRegion;
-	destRegion.left = xoffset;
-	destRegion.right = yoffset;
-	destRegion.top = xoffset+bmpWidth;
-	destRegion.bottom = yoffset+bmpHeight;
-	destRegion.front = 0;
-	destRegion.back = 1;
+	//D3D11_BOX destRegion;
+	//destRegion.left = xoffset;
+	//destRegion.right = yoffset;
+	//destRegion.top = xoffset+bmpWidth;
+	//destRegion.bottom = yoffset+bmpHeight;
+	//destRegion.front = 0;
+	//destRegion.back = 1;
 
 	D3D11_MAPPED_SUBRESOURCE subData;
 
-	hr = g_pImmediateContext->Map(g_pResourceMap, 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
+	hr = g_pImmediateContext->Map(textureResourceLayers[textureID].first.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
 	char* mappedData = (char*)subData.pData;
 	for (int i = 0; i < bmpHeight; i++)
 	{
@@ -304,7 +319,7 @@ void AtlasMapDxRender::_Impl::saveSkBitmapToResource(const SkBitmap& skBitmap, i
 		m_pmap += stride;
 	}
 
-	g_pImmediateContext->Unmap(g_pResourceMap, 0);
+	g_pImmediateContext->Unmap(textureResourceLayers[textureID].first.Get(), 0);
 	//g_pImmediateContext->UpdateSubresource(g_pResourceMap, 0, &destRegion, m_pmap, stride, bpl*bmpHeight);
 
 }
@@ -321,10 +336,14 @@ void AtlasMapDxRender::_Impl::renderScene()
 	src.bottom = 1024;
 	src.right = 1024;
 
-	g_Sprites->Begin();
-	g_Sprites->Draw(g_pTextureRVMap, rc, &src);
-	g_Sprites->End();
+	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
 
+	for (auto layerData : textureResourceLayers)
+	{
+		g_Sprites->Begin();
+		g_Sprites->Draw(layerData.second.Get(), rc, &src);
+		g_Sprites->End();
+	}
 	g_pSwapChain->Present(0,0);
 }
 
@@ -349,13 +368,13 @@ AtlasMapDxRender& AtlasMapDxRender::operator=(AtlasMapDxRender&& other)
 	return *this;
 }
 
-HRESULT AtlasMapDxRender::Initialize(HWND baseHWND)
+HRESULT AtlasMapDxRender::Initialize(HWND baseHWND, int numLayers)
 {
-	return pImpl->Initialize(baseHWND);
+	return pImpl->Initialize(baseHWND, numLayers);
 }
-void AtlasMapDxRender::saveSkBitmapToResource(const SkBitmap& skBitmap, int xoffset, int yoffset)
+void AtlasMapDxRender::saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset)
 {
-	pImpl->saveSkBitmapToResource(skBitmap, xoffset, yoffset);
+	pImpl->saveSkBitmapToResource(textureID, skBitmap, xoffset, yoffset);
 }
 void AtlasMapDxRender::renderScene()
 {

@@ -100,8 +100,8 @@ public:
 
 	void DrawMap(std::string pathFile);
 	bool DrawMap(SkCanvas& canvas);
-
-
+	bool DrawSymbols(SkCanvas& canvas);
+	bool rasterizeSymbols(_context->symbols, canvas);
 	enum {
             PolygonAreaCutoffLowerThreshold = 75,
             BasemapZoom = 11,

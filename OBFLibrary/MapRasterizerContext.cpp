@@ -230,7 +230,7 @@ bool MapRasterizerContext::polygonizeCoastlines(
 
         mapObject->typeIds.push_back(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
 #ifdef _DEBUG
-		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastlineLine_encodingRuleId);
+		auto typeData = env.dummySectionData->rules->getRuleInfo(env.dummySectionData->rules->naturalCoastline_encodingRuleId);
 		mapObject->typeNames.push_back(typeData.tag+", "+typeData.value);
 #endif
 		mapObject->localId = osmId;
@@ -588,6 +588,7 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
 	std::list< std::vector< pointI > >::iterator itPolyline(coastlinePolylines.begin());
 	while(itPolyline != coastlinePolylines.end())
     {
+		auto itRemoving = itPolyline;
         const auto& polyline = *(itPolyline++);
         //assert(!polyline.empty());
 
@@ -600,7 +601,7 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
             continue;
 
         validPolylines.push_back(polyline);
-		coastlinePolylines.erase(itPolyline);
+		coastlinePolylines.erase(itRemoving);
     }
 
     std::unordered_set< std::list< std::vector< pointI > >::iterator > processedPolylines;
