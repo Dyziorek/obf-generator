@@ -11,6 +11,7 @@
 #include "SkBitmapProcShader.h"
 #include "SkImageDecoder.h"
 #include "SkColorFilter.h"
+#include "SkBitmapDevice.h"
 
 #include <google\protobuf\io\coded_stream.h>
 #include <boost/filesystem.hpp>
@@ -176,19 +177,37 @@ bool MapRasterizer::DrawSymbols(SkCanvas& canvas)
 	bool painted = false;
 
 	auto sizer = canvas.getDeviceSize();
+	
 	AreaI _destinationArea;
 	_destinationArea.min_corner().set<0>(0);
 	_destinationArea.min_corner().set<1>(0);
 	_destinationArea.max_corner().set<1>(sizer.height());
 	_destinationArea.max_corner().set<0>(sizer.width());
-	_context->_pixelScaleXY.set<0>(_context->_tileScale / static_cast<double>(sizer.width()));
-	_context->_pixelScaleXY.set<1>(_context->_tileScale / static_cast<double>(sizer.height()));
 
-	_mapPaint = _source.mapPaint;
+	
+	std::vector<const std::shared_ptr<const RenderSymbolGroup>> symbols;
 
-	rasterizeSymbolsWithoutPaths(_context->symbols, canvas)
+	rasterizeSymbols(symbols);
 
-	return painted;
+	std::vector<RenderSymbolGroup> symbolsOnSurface;
+
+	uint64_t totalArea = 0;
+
+	for (auto symbolInfo : symbols)
+	{
+		for (auto SymbolData : symbolInfo->_symbols)
+		{
+			uint32_t sizePix =  SymbolData->bitmap->getSize();
+			totalArea += Tools::getNextPowerOfTwo(sizePix);
+		}
+	}
+
+	if (totalArea > 1024*1024)
+	{
+		return false;
+	}
+
+	return true;
 
 }
 
@@ -273,7 +292,216 @@ bool MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCa
 }
 
 
-bool rasterizeSymbols(_context->symbols, canvas);
+bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>> renderedSymbols)
+{
+	for(auto itSymbolsEntry = _context->_symbols.cbegin(); itSymbolsEntry != _context->_symbols.cend(); ++itSymbolsEntry)
+    {
+        // Create group
+		const auto constructedGroup = new RenderSymbolGroup((*itSymbolsEntry)->_mapObject);
+        std::shared_ptr<const RenderSymbolGroup> group(constructedGroup);
+		auto symbolVal = *itSymbolsEntry;
+        // Total offset allows several texts to stack into column
+        pointI totalOffset;
+		totalOffset.set<0>(0);
+		totalOffset.set<1>(0);
+
+        for(auto itPrimitiveSymbol = symbolVal->_symbols.cbegin(); itPrimitiveSymbol != symbolVal->_symbols.cend(); ++itPrimitiveSymbol)
+        {
+            
+
+            const auto& symbol = *itPrimitiveSymbol;
+
+			if(const auto textSymbol = std::dynamic_pointer_cast<const RasterSymbolonPath>(symbol))
+            {
+                //TODO: reshape name with icu4c, since skia doesn't know how to do that
+                const std::string text = textSymbol->value;
+
+                // Obtain shield for text if such exists
+                std::shared_ptr<const SkBitmap> textShieldBitmap;
+                if(!textSymbol->shieldResourceName.empty())
+                    _source.obtainTextShield(textSymbol->shieldResourceName, textShieldBitmap);
+
+                // Configure paint for text
+                SkPaint textPaint = _source.textPaint;
+                textPaint.setTextSize(textSymbol->size);
+                textPaint.setFakeBoldText(textSymbol->isBold);
+                textPaint.setColor(textSymbol->color);
+
+                // Measure text
+                SkRect textBounds;
+                auto totalWidth = textPaint.measureText(text.data(), text.length()*sizeof(char), &textBounds);
+                SkRect textBBox = textBounds;
+                std::vector<float> glyphsWidth;
+				std::vector<float> rotations;
+                if(textSymbol->drawOnPath)
+                {
+                    int glyphsCount = textPaint.countText(text.data(), text.length()*sizeof(char));
+                    glyphsWidth.resize(glyphsCount);
+					
+                    textPaint.getTextWidths(text.data(), text.length()*sizeof(char), glyphsWidth.data());
+					auto graphElem = symbol->graph;
+					if (graphElem->_type == GraphElementType::Polyline)
+					{
+						const auto pointVec = graphElem->_mapData->points;
+						float px = 0;
+						float py = 0;
+						for (int i = 1; i < pointVec.size(); i++) {
+							px +=  pointVec[i].get<0>() - pointVec[i - 1].get<0>();
+							py +=  pointVec[i].get<1>() - pointVec[i - 1].get<1>();
+						}
+						float rotation = 0.0;
+						if (px != 0 || py != 0) {
+							rotation = (float) (-std::atan2(px, py) + boost::math::constants::pi<float>() / 2);
+							rotations.insert(rotations.end(), glyphsCount, rotation);
+						}
+					}
+                }
+
+                // Process shadow (if such is enabled)
+                SkPaint textShadowPaint;
+                SkRect shadowBounds;
+                if(textSymbol->shadowRadius > 0)
+                {
+                    textShadowPaint = textPaint;
+                    textShadowPaint.setStyle(SkPaint::kStroke_Style);
+                    textShadowPaint.setColor(textSymbol->shadowColor);
+                    textShadowPaint.setStrokeWidth(textSymbol->shadowRadius);
+
+                    totalWidth = textShadowPaint.measureText(text.data(), text.length()*sizeof(char), &shadowBounds);
+                    textBBox.join(shadowBounds);
+
+                    if(textSymbol->drawOnPath)
+                        textShadowPaint.getTextWidths(text.data(), text.length()*sizeof(char), glyphsWidth.data());
+                }
+
+                // Calculate bitmap size and text area
+                auto textArea = textBBox;
+                textArea.offset(-2.0f*textBBox.left(), -2.0f*textBBox.top());
+                if(!glyphsWidth.empty())
+                    glyphsWidth[0] += -textBBox.left();
+                auto bitmapWidth = textArea.width();
+                auto bitmapHeight = textArea.height();
+                if(textShieldBitmap)
+                {
+                    // Enlarge bitmap if shield is larger than text
+					bitmapWidth = max(bitmapWidth, static_cast<float>(textShieldBitmap->width()));
+                    bitmapHeight = max(bitmapHeight, static_cast<float>(textShieldBitmap->height()));
+                    // Shift text area to proper position in a larger
+                    textArea.offset(
+                        (bitmapWidth - textArea.width()) / 2.0f,
+                        (bitmapHeight - textArea.height()) / 2.0f);
+                }
+
+                // Create a bitmap that will be hold text
+                auto bitmap = new SkBitmap();
+                bitmap->setConfig(SkBitmap::kARGB_8888_Config, bitmapWidth, bitmapHeight);
+                bitmap->allocPixels();
+                bitmap->eraseColor(SK_ColorTRANSPARENT);
+                SkBitmapDevice target(*bitmap);
+                SkCanvas canvas(&target);
+
+                // If there is shield for this text, rasterize it also
+                if(textShieldBitmap)
+                {
+                    canvas.drawBitmap(*textShieldBitmap,
+                        (bitmapWidth - textShieldBitmap->width()) / 2.0f,
+                        (bitmapHeight - textShieldBitmap->height()) / 2.0f,
+                        nullptr);
+                }
+
+                // Rasterize text
+                if(textSymbol->shadowRadius > 0)
+                    canvas.drawText(text.data(), text.length()*sizeof(char), textArea.left(), textArea.top(), textShadowPaint);
+                canvas.drawText(text.data(), text.length()*sizeof(char), textArea.left(), textArea.top(), textPaint);
+
+                //////////////////////////////////////////////////////////////////////////
+                //std::unique_ptr<SkImageEncoder> encoder(CreatePNGImageEncoder());
+                //std::string path;
+                //path.sprintf("D:\\texts\\%p.png", bitmap);
+                //encoder->encodeFile(path.toLocal8Bit(), *bitmap, 100);
+                //////////////////////////////////////////////////////////////////////////
+
+                if(textSymbol->drawOnPath)
+                {
+                    // Publish new rasterized symbol
+					std::vector<std::pair<float, float>> glyphMods;
+					glyphMods.resize(glyphsWidth.size());
+					for(int glyphIdx = 0; glyphIdx < glyphsWidth.size(); glyphIdx++)
+					{
+						glyphMods[glyphIdx] = std::make_pair(glyphsWidth[glyphIdx], rotations[glyphIdx]);
+					}
+					
+					const auto rasterizedSymbol = new RenderSymbol_Path(
+                        group,
+                        constructedGroup->_mapObject,
+                        std::move(std::shared_ptr<const SkBitmap>(bitmap)),
+                        symbol->zOrder,
+                        glyphMods);
+                    assert(static_cast<bool>(rasterizedSymbol->bitmap));
+					constructedGroup->_symbols.push_back(std::move(std::shared_ptr<RenderSymbol>(rasterizedSymbol)));
+                }
+                else
+                {
+                    // Calculate local offset
+                    pointI localOffset;
+					localOffset.set<0>(0);
+                    localOffset.set<1>((bitmap->height() / 2) + textSymbol->verticalOffset);
+
+                    // Increment total offset
+					bg::add_point(totalOffset,localOffset);
+
+                    // Publish new rasterized symbol
+                    const auto rasterizedSymbol = new RenderSymbol_Pin(
+                        group,
+                        constructedGroup->_mapObject,
+                        std::move(std::shared_ptr<const SkBitmap>(bitmap)),
+                        symbol->zOrder,
+						symbol->location,
+                        (constructedGroup->_symbols.empty() ? pointI() : totalOffset));
+                    assert(static_cast<bool>(rasterizedSymbol->bitmap));
+                    constructedGroup->_symbols.push_back(std::move(std::shared_ptr<RenderSymbol>(rasterizedSymbol)));
+                }
+            }
+			else if(const auto iconSymbol = std::dynamic_pointer_cast<const RasterSymbolPin>(symbol))
+            {
+                std::shared_ptr<const SkBitmap> bitmap;
+                if(!_source.obtainMapIcon(iconSymbol->resourceName, bitmap) || !bitmap)
+                    continue;
+
+                //////////////////////////////////////////////////////////////////////////
+                //std::unique_ptr<SkImageEncoder> encoder(CreatePNGImageEncoder());
+                //std::string path;
+                //path.sprintf("D:\\icons\\%p.png", bitmap);
+                //encoder->encodeFile(path.toLocal8Bit(), *bitmap, 100);
+                //////////////////////////////////////////////////////////////////////////
+
+                // Calculate local offset
+                pointI localOffset;
+				localOffset.set<0>(0);
+                localOffset.set<1>((bitmap->height() / 2));
+
+                // Increment total offset
+                bg::add_point(totalOffset,localOffset);
+
+                // Publish new rasterized symbol
+                const auto rasterizedSymbol = new RenderSymbol_Pin(
+                    group,
+                    constructedGroup->_mapObject,
+                    std::move(bitmap),
+                    symbol->zOrder,
+                    symbol->location,
+                    (constructedGroup->_symbols.empty() ? pointI() : totalOffset));
+                assert(static_cast<bool>(rasterizedSymbol->bitmap));
+                constructedGroup->_symbols.push_back(std::move(std::shared_ptr<RenderSymbol>(rasterizedSymbol)));
+            }
+        }
+
+        // Add group to output
+        renderedSymbols.push_back(std::move(group));
+    }
+
+	return true;
+}
 
 bool MapRasterizer::updatePaint(const MapStyleResult& evalResult, const PaintValuesSet valueSetSelector, const bool isArea )
 {

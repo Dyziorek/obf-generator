@@ -4,6 +4,61 @@ class MapRasterizerProvider;
 
 class MapRasterizerContext;
 
+struct RenderSymbol;
+struct RenderSymbolGroup
+{
+	RenderSymbolGroup(const std::shared_ptr<MapObjectData>& mapObject): _mapObject(mapObject)
+	{
+	}
+	virtual ~RenderSymbolGroup() {}
+	const std::shared_ptr<MapObjectData> _mapObject;
+	std::vector<std::shared_ptr<RenderSymbol>> _symbols;
+};
+
+struct RenderSymbol
+{
+	RenderSymbol(std::shared_ptr<const RenderSymbolGroup> _group, std::shared_ptr<MapObjectData> mapObject, std::shared_ptr<const SkBitmap> surface, uint32_t order)
+		:group(_group), _mapObject(mapObject), bitmap(surface), zOrder(order) { assert(_mapObject);}
+
+	virtual ~RenderSymbol() {}
+	boxI offRect;
+	uint32_t zOrder;
+	const std::weak_ptr<const RenderSymbolGroup> group;
+	const std::shared_ptr<MapObjectData> _mapObject;
+	const std::shared_ptr<const SkBitmap> bitmap;
+};
+
+struct RenderSymbol_Path : public RenderSymbol
+{
+
+	RenderSymbol_Path(std::shared_ptr<const RenderSymbolGroup> _group, std::shared_ptr<MapObjectData> mapObject, std::shared_ptr<const SkBitmap> surface, uint32_t zOrder, std::vector<std::pair<float, float>> glyphData)
+		: RenderSymbol(_group, mapObject, surface, zOrder), glyphs(glyphData)
+	{
+		assert(_mapObject);
+	}
+	virtual ~RenderSymbol_Path() {}
+	
+	const std::vector<std::pair<float, float>> glyphs;
+
+};
+
+
+struct RenderSymbol_Pin : public RenderSymbol
+{
+
+	RenderSymbol_Pin(std::shared_ptr<const RenderSymbolGroup> _group, std::shared_ptr<MapObjectData> mapObject, std::shared_ptr<const SkBitmap> surface, uint32_t zOrder, const pointI& loc, const pointI& off )
+		: RenderSymbol(_group, mapObject, surface, zOrder), location(loc), offset(off)
+	{
+		assert(_mapObject);
+	}
+	virtual ~RenderSymbol_Pin() {}
+	const pointI location;
+	const pointI offset;
+	
+
+};
+
+
 class MapRasterizer
 {
 public:
@@ -101,7 +156,8 @@ public:
 	void DrawMap(std::string pathFile);
 	bool DrawMap(SkCanvas& canvas);
 	bool DrawSymbols(SkCanvas& canvas);
-	bool rasterizeSymbols(_context->symbols, canvas);
+	
+
 	enum {
             PolygonAreaCutoffLowerThreshold = 75,
             BasemapZoom = 11,
@@ -123,7 +179,6 @@ private:
 	MapRasterizerProvider& _source;
 	std::shared_ptr<MapRasterizerContext> _context;
 	bool rasterizeMapElements(const AreaI* const destinationArea,SkCanvas& canvas, const std::vector< std::shared_ptr<GraphicElement> >& primitives, GraphElementsType type);
-
 	bool rasterizePolygon( const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive);
 	bool rasterizePolyline(const AreaI* const destinationArea, SkCanvas& canvas, const std::shared_ptr< GraphicElement>& primitive, bool drawOnlyShadow);
 	bool updatePaint(const MapStyleResult& evalResult, const PaintValuesSet valueSetSelector, const bool isArea );
@@ -131,5 +186,6 @@ private:
 	void rasterizeLine_OneWay( SkCanvas& canvas, const SkPath& path, int oneway );
 	void calculateVertex( const pointI& point31, pointF& vertex );
 	bool contains( const std::vector< pointF >& vertices, const pointF& other );
+	bool rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>> renderedSymbols);
 };
 

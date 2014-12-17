@@ -30,7 +30,7 @@ public:
 	~MapRasterizerContext(void);
 
 	std::vector<std::shared_ptr<MapRasterizer::GraphicElementGroup>> _graphicElements;
-	std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>> symbols;
+	std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>> _symbols;
 	std::vector<std::shared_ptr<MapRasterizer::GraphicElement>> _polygons, _polyLines, _points;
 	AreaI _area31;
 	double _tileScale;

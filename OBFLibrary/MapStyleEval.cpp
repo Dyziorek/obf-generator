@@ -45,17 +45,30 @@ bool MapStyleResult::getIntVal(uint32_t id, int32_t& value) const
 bool MapStyleResult::getIntVal(uint32_t id, uint32_t& value) const
 {
 	bool bOK = false;
+	HRESULT hr = S_OK;
 
 	auto& vtData = _values.find(id);
 	if (vtData == _values.end())
 		return false;
 	_variant_t vtNewData;
-	vtNewData.ChangeType(VT_UI4, &vtData->second);
-
-	HRESULT hr = S_OK;
+	try
+	{
+		vtNewData.ChangeType(VT_UI4, &vtData->second);
+	}
+	catch(_com_error error)
+	{
+		hr = E_INVALIDARG;
+	}
+	
+	
 	if (SUCCEEDED(hr))
 	{
 		value = vtNewData.ulVal;
+		bOK = true;
+	}
+	else
+	{
+		value = 0;
 		bOK = true;
 	}
 	return bOK;

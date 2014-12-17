@@ -199,7 +199,7 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND, int numLayers)
     if( FAILED( hr ) )
         return hr;
 
-    g_pImmediateContext->OMSetRenderTargets( 1, &g_pRenderTargetView, g_pDepthStencilView.Get() );
+    g_pImmediateContext->OMSetRenderTargets( 1, g_pRenderTargetView.GetAddressOf(), g_pDepthStencilView.Get() );
 
     // Setup the viewport
     D3D11_VIEWPORT vp;
@@ -273,13 +273,14 @@ void AtlasMapDxRender::_Impl::saveSkBitmapToResource(int textureID, const SkBitm
     int bmpHeight = skBitmap.height();
     int stride = skBitmap.rowBytes(); 
     char* m_pmap = (char*)skBitmap.getPixels(); 
+	int bpl = skBitmap.bytesPerPixel();
     //virtual PixelFormat& GetPixelFormat() =0; //assume pf is ARGB; 
     //FILE* fp = fopen(path, "wb"); 
     //if(!fp){ 
     //    printf("saveSkBitmapToBMPFile: fopen %s Error!\n", path); 
     //} 
 	
-    SINT32 bpl=stride*4; 
+    //SINT32 bpl=stride*4; 
 	
 
    // for(SINT32 y=bmpHeight-1; y>=0; y--) 
@@ -312,9 +313,15 @@ void AtlasMapDxRender::_Impl::saveSkBitmapToResource(int textureID, const SkBitm
 
 	hr = g_pImmediateContext->Map(textureResourceLayers[textureID].first.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
 	char* mappedData = (char*)subData.pData;
-	for (int i = 0; i < bmpHeight; i++)
+	if (yoffset > 0)
 	{
-		memcpy(mappedData, m_pmap, stride);
+		m_pmap += stride*yoffset;
+		mappedData += subData.RowPitch*yoffset;
+	}
+
+	for (int i = yoffset; i < bmpHeight; i++)
+	{
+		memcpy(mappedData+(xoffset*bpl), m_pmap+(xoffset*bpl), stride);
 		mappedData += subData.RowPitch;
 		m_pmap += stride;
 	}
@@ -338,12 +345,12 @@ void AtlasMapDxRender::_Impl::renderScene()
 
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
 
-	for (auto layerData : textureResourceLayers)
-	{
-		g_Sprites->Begin();
-		g_Sprites->Draw(layerData.second.Get(), rc, &src);
-		g_Sprites->End();
-	}
+	// map layer texture
+	auto layerData = textureResourceLayers[0];
+	g_Sprites->Begin();
+	g_Sprites->Draw(layerData.second.Get(), rc, &rc);
+	g_Sprites->End();
+	
 	g_pSwapChain->Present(0,0);
 }
 
