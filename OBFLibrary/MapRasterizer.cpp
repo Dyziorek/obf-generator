@@ -171,7 +171,7 @@ void MapRasterizer::DrawMap(std::string pathFile)
 	}
 }
 
-bool MapRasterizer::DrawSymbols(SkCanvas& canvas)
+bool MapRasterizer::DrawSymbols(SkCanvas& canvas, std::vector<const std::shared_ptr<const RenderSymbolGroup>>& symbols)
 {
 	if (!_context)
 		return false;
@@ -188,7 +188,7 @@ bool MapRasterizer::DrawSymbols(SkCanvas& canvas)
 	_destinationArea.max_corner().set<0>(sizer.width());
 
 	
-	std::vector<const std::shared_ptr<const RenderSymbolGroup>> symbols;
+	//std::vector<const std::shared_ptr<const RenderSymbolGroup>> symbols;
 
 	rasterizeSymbols(symbols);
 

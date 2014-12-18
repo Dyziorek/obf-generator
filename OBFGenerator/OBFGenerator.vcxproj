@@ -215,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.h" />
+    <ClInclude Include="TexturePacker.h" />
     <ClInclude Include="AtlasMapDxRender.h" />
     <ClInclude Include="BatchUpdater.h" />
     <ClInclude Include="BlockReader.h" />
@@ -233,6 +234,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="TexturePacker.cpp" />
     <ClCompile Include="AtlasMapDxRender.cpp" />
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>

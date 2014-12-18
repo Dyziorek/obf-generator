@@ -155,7 +155,7 @@ public:
 
 	void DrawMap(std::string pathFile);
 	bool DrawMap(SkCanvas& canvas);
-	bool DrawSymbols(SkCanvas& canvas);
+	bool DrawSymbols(SkCanvas& canvas, std::vector<const std::shared_ptr<const RenderSymbolGroup>>& result);
 	
 
 	enum {

@@ -17,6 +17,7 @@
 #include "SpriteBatch.h"
 #include "SpriteFont.h"
 #include "VertexTypes.h"
+#include "TexturePacker.h"
 
 using namespace DirectX;
 
@@ -30,6 +31,7 @@ public:
 
 	HRESULT Initialize(HWND baseHWND, int numLayers);
 	void saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset);
+	void packTexture(int textureID, const std::vector<const std::shared_ptr<const SkBitmap>>& bitmaps);
 	void renderScene();
 private:
 	HINSTANCE                           g_hInst;
@@ -354,6 +356,29 @@ void AtlasMapDxRender::_Impl::renderScene()
 	g_pSwapChain->Present(0,0);
 }
 
+
+void AtlasMapDxRender::_Impl::packTexture(int textureID, const std::vector<const std::shared_ptr<const SkBitmap>>& bitmaps)
+{
+	TexturePacker packerData;
+
+	std::vector<std::shared_ptr<const TextureBlock>> blockData;
+
+	for (auto bitmapInfo : bitmaps)
+	{
+		TextureBlock* blocker = new TextureBlock();
+		blocker->Subrect.left = 0;
+		blocker->Subrect.right = bitmapInfo->width();
+		blocker->Subrect.bottom = bitmapInfo->height();
+		blocker->Subrect.top = 0;
+		blockData.push_back(std::shared_ptr<const TextureBlock>(blocker));
+	}
+	std::vector<std::shared_ptr<TextureBlock>> results;
+
+	packerData.packTexture(blockData, 1024, results);
+	
+
+}
+
 AtlasMapDxRender::AtlasMapDxRender(void) : pImpl(new _Impl())
 {
 
@@ -386,4 +411,9 @@ void AtlasMapDxRender::saveSkBitmapToResource(int textureID, const SkBitmap& skB
 void AtlasMapDxRender::renderScene()
 {
 	pImpl->renderScene();
+}
+
+void AtlasMapDxRender::packTexture(int textureID, const std::vector<const std::shared_ptr<const SkBitmap>>& bitmaps)
+{
+	pImpl->packTexture(textureID, bitmaps);
 }

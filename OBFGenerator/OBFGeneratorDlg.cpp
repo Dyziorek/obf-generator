@@ -1111,9 +1111,21 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 				{
 					SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
 					SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
-					bool painted = render->DrawSymbols(*painter);
+					std::vector<const std::shared_ptr<const RenderSymbolGroup>> symbols;
+					bool painted = render->DrawSymbols(*painter, symbols);
 					if (painted)
 					{
+						std::vector<const std::shared_ptr<const SkBitmap>> symbolGraphs;
+						for(auto symbolData : symbols)
+						{
+							for (auto symbolValue : symbolData->_symbols)
+							{
+
+								symbolGraphs.push_back(symbolValue->bitmap);
+							}
+						}
+						renderer->packTexture(1, symbolGraphs);
+
 						const SkBitmap& bitmapData = device->accessBitmap(false);
 						auto DataB = bitmapData.config();
 					
