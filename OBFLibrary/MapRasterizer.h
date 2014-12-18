@@ -186,6 +186,6 @@ private:
 	void rasterizeLine_OneWay( SkCanvas& canvas, const SkPath& path, int oneway );
 	void calculateVertex( const pointI& point31, pointF& vertex );
 	bool contains( const std::vector< pointF >& vertices, const pointF& other );
-	bool rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>> renderedSymbols);
+	bool rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>>& renderedSymbols);
 };
 

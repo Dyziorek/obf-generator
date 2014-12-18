@@ -35,6 +35,9 @@
 #include "MapRasterizerProvider.h"
 #include "Tools.h"
 
+#include <locale>
+#include <codecvt>
+
 MapRasterizer::RasterSymbol::RasterSymbol()
 {
 }
@@ -292,7 +295,7 @@ bool MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCa
 }
 
 
-bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>> renderedSymbols)
+bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>>& renderedSymbols)
 {
 	for(auto itSymbolsEntry = _context->_symbols.cbegin(); itSymbolsEntry != _context->_symbols.cend(); ++itSymbolsEntry)
     {
@@ -315,6 +318,8 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
             {
                 //TODO: reshape name with icu4c, since skia doesn't know how to do that
                 const std::string text = textSymbol->value;
+				std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
+				std::wstring cvt = coder.from_bytes(text);
 
                 // Obtain shield for text if such exists
                 std::shared_ptr<const SkBitmap> textShieldBitmap;
@@ -329,16 +334,16 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
 
                 // Measure text
                 SkRect textBounds;
-                auto totalWidth = textPaint.measureText(text.data(), text.length()*sizeof(char), &textBounds);
+                auto totalWidth = textPaint.measureText(cvt.data(), cvt.length()*sizeof(wchar_t), &textBounds);
                 SkRect textBBox = textBounds;
                 std::vector<float> glyphsWidth;
 				std::vector<float> rotations;
                 if(textSymbol->drawOnPath)
                 {
-                    int glyphsCount = textPaint.countText(text.data(), text.length()*sizeof(char));
+                    int glyphsCount = textPaint.countText(cvt.data(), cvt.length()*sizeof(wchar_t));
                     glyphsWidth.resize(glyphsCount);
 					
-                    textPaint.getTextWidths(text.data(), text.length()*sizeof(char), glyphsWidth.data());
+                    textPaint.getTextWidths(cvt.data(), cvt.length()*sizeof(wchar_t), glyphsWidth.data());
 					auto graphElem = symbol->graph;
 					if (graphElem->_type == GraphElementType::Polyline)
 					{
@@ -367,11 +372,11 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
                     textShadowPaint.setColor(textSymbol->shadowColor);
                     textShadowPaint.setStrokeWidth(textSymbol->shadowRadius);
 
-                    totalWidth = textShadowPaint.measureText(text.data(), text.length()*sizeof(char), &shadowBounds);
+                    totalWidth = textShadowPaint.measureText(cvt.data(), cvt.length()*sizeof(wchar_t), &shadowBounds);
                     textBBox.join(shadowBounds);
 
                     if(textSymbol->drawOnPath)
-                        textShadowPaint.getTextWidths(text.data(), text.length()*sizeof(char), glyphsWidth.data());
+                        textShadowPaint.getTextWidths(cvt.data(), cvt.length()*sizeof(wchar_t), glyphsWidth.data());
                 }
 
                 // Calculate bitmap size and text area
@@ -411,8 +416,8 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
 
                 // Rasterize text
                 if(textSymbol->shadowRadius > 0)
-                    canvas.drawText(text.data(), text.length()*sizeof(char), textArea.left(), textArea.top(), textShadowPaint);
-                canvas.drawText(text.data(), text.length()*sizeof(char), textArea.left(), textArea.top(), textPaint);
+                    canvas.drawText(cvt.data(), cvt.length()*sizeof(wchar_t), textArea.left(), textArea.top(), textShadowPaint);
+                canvas.drawText(cvt.data(), cvt.length()*sizeof(wchar_t), textArea.left(), textArea.top(), textPaint);
 
                 //////////////////////////////////////////////////////////////////////////
                 //std::unique_ptr<SkImageEncoder> encoder(CreatePNGImageEncoder());
@@ -426,9 +431,19 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
                     // Publish new rasterized symbol
 					std::vector<std::pair<float, float>> glyphMods;
 					glyphMods.resize(glyphsWidth.size());
+					if (glyphsWidth.size() == rotations.size())
+					{
 					for(int glyphIdx = 0; glyphIdx < glyphsWidth.size(); glyphIdx++)
 					{
 						glyphMods[glyphIdx] = std::make_pair(glyphsWidth[glyphIdx], rotations[glyphIdx]);
+					}
+					}
+					else
+					{
+						for(int glyphIdx = 0; glyphIdx < glyphsWidth.size(); glyphIdx++)
+						{
+							glyphMods[glyphIdx] = std::make_pair(glyphsWidth[glyphIdx], 0.0f);
+						}
 					}
 					
 					const auto rasterizedSymbol = new RenderSymbol_Path(
