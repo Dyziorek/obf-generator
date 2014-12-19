@@ -294,6 +294,16 @@ bool MapRasterizer::rasterizeMapElements(const AreaI* const destinationArea,SkCa
 	return painted;
 }
 
+bool MapRasterizer::GetSymbolData(std::vector<std::shared_ptr<RasterSymbolGroup>>& symbolData)
+	{
+		if (_context)
+		{
+			symbolData.insert(symbolData.end(),_context->_symbols.begin(), _context->_symbols.end());
+			return true;
+		}
+		return symbolData.size() > 0;
+	}
+	
 
 bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const RenderSymbolGroup>>& renderedSymbols)
 {

@@ -93,7 +93,7 @@
 #include "OBFResultDB.h"
 #include "OBFGeneratorDlg.h"
 #include "OSMTags.h"
-
+#include "RTree.h"
 //
 //#ifdef _DEBUG 
 //	#ifndef DBG_NEW  

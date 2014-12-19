@@ -69,7 +69,7 @@
     <ClInclude Include="AtlasMapDxRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\OBFLibrary\TexturePacker.h">
+    <ClInclude Include="TexturePacker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -119,7 +119,7 @@
     <ClCompile Include="AtlasMapDxRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\OBFLibrary\TexturePacker.cpp">
+    <ClCompile Include="TexturePacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

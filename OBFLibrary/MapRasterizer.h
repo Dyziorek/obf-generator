@@ -156,6 +156,8 @@ public:
 	void DrawMap(std::string pathFile);
 	bool DrawMap(SkCanvas& canvas);
 	bool DrawSymbols(SkCanvas& canvas, std::vector<const std::shared_ptr<const RenderSymbolGroup>>& result);
+	bool GetSymbolData(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData);
+	
 	
 
 	enum {

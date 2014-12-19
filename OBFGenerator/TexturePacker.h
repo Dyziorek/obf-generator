@@ -4,7 +4,8 @@
 
 struct TextureBlock
 {
-    uint32_t TextureID;
+	uint8_t textureID;
+	uint32_t textureHandle;
     RECT Subrect;
     float XOffset;
     float YOffset;
@@ -24,9 +25,8 @@ struct rect_xywh;
 struct rect_wh {
 	rect_wh(const rect_ltrb&);
 	rect_wh(const rect_xywh&);
-	rect_wh(int w = 0, int h = 0);
-	int w,h, area(), perimeter(), 
-		fits(const rect_wh& bigger) const; // 0 - no, 1 - yes, 2 - flipped, 3 - perfectly, 4 perfectly flipped
+	rect_wh( int w = 0, int h = 0);
+	int w, h, area(), perimeter(), fits(const rect_wh& bigger) const; // 0 - no, 1 - yes, 2 - flipped, 3 - perfectly, 4 perfectly flipped
 };
 
 // rectangle implementing left/top/right/bottom behaviour
@@ -50,10 +50,11 @@ struct rect_xywh : public rect_wh {
 
 struct rect_xywhf : public rect_xywh {
 	rect_xywhf(const rect_ltrb&);
-	rect_xywhf(int x, int y, int width, int height);
+	rect_xywhf(int x, int y, int width, int height,int id);
 	rect_xywhf();
 	void flip();
 	bool flipped;
+	int id;
 };
 
 
@@ -116,7 +117,7 @@ public:
 	TexturePacker(void);
 	~TexturePacker(void);
 
-	bool packTexture(std::vector<std::shared_ptr<const TextureBlock>>& inputTextures, int maxSideSize, std::vector<std::shared_ptr<TextureBlock>>& outData);
+	bool packTexture(std::vector<const std::shared_ptr<const TextureBlock>>& inputTextures, int maxSideSize, std::vector<std::shared_ptr<TextureBlock>>& outData);
 
 };
 

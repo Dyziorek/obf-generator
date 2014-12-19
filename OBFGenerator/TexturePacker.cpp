@@ -357,8 +357,8 @@ int TexturePacker::rect_wh::perimeter() {
 }
 
 
-TexturePacker::rect_xywhf::rect_xywhf(const rect_ltrb& rr) : rect_xywh(rr), flipped(false) {}
-TexturePacker::rect_xywhf::rect_xywhf(int x, int y, int width, int height) : rect_xywh(x, y, width, height), flipped(false) {}
+TexturePacker::rect_xywhf::rect_xywhf(const rect_ltrb& rr) : rect_xywh(rr), flipped(false), id(-1) {}
+TexturePacker::rect_xywhf::rect_xywhf(int x, int y, int width, int height, int handle) : rect_xywh(x, y, width, height), flipped(false), id(handle) {}
 TexturePacker::rect_xywhf::rect_xywhf() : flipped(false) {}
 
 void TexturePacker::rect_xywhf::flip() { 
@@ -366,12 +366,12 @@ void TexturePacker::rect_xywhf::flip() {
 	std::swap(w, h);
 }
 
-bool TexturePacker::packTexture(std::vector<std::shared_ptr<const TextureBlock>>& inputTextures, int maxSideSize, std::vector<std::shared_ptr<TextureBlock>>& outData)
+bool TexturePacker::packTexture(std::vector<const std::shared_ptr<const TextureBlock>>& inputTextures, int maxSideSize, std::vector<std::shared_ptr<TextureBlock>>& outData)
 {
 	std::vector<rect_xywhf*> rectPack;
 
 	for_each(inputTextures.begin(), inputTextures.end(), [&rectPack](std::shared_ptr<const TextureBlock> arg) {
-		rectPack.push_back(new rect_xywhf(arg->Subrect.left, arg->Subrect.top, arg->Subrect.right, arg->Subrect.bottom));
+		rectPack.push_back(new rect_xywhf(arg->Subrect.left, arg->Subrect.top, arg->Subrect.right, arg->Subrect.bottom, arg->textureHandle));
 	});
 	
 	vector<bin> bins;
@@ -379,11 +379,13 @@ bool TexturePacker::packTexture(std::vector<std::shared_ptr<const TextureBlock>>
 	bool bOK = pack(rectPack.data(), rectPack.size(), maxSideSize, bins);
 	if (bOK)
 	{
-		for (auto binData : bins)
+		for (int binID = 0; binID < bins.size(); binID++)
 		{
-			for (auto rectData : binData.rects)
+			for (auto rectData : bins[binID].rects)
 			{
 				TextureBlock* newBlock = new TextureBlock();
+				newBlock->textureID = binID;
+				newBlock->textureHandle = rectData->id;
 				newBlock->Subrect.left = rectData->x;
 				newBlock->Subrect.top = rectData->y;
 				newBlock->Subrect.right = rectData->w;
@@ -393,7 +395,7 @@ bool TexturePacker::packTexture(std::vector<std::shared_ptr<const TextureBlock>>
 			}
 		}
 	}
-
+	return bOK;
 }
 
 #pragma pop_macro(max)
