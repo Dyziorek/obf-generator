@@ -393,11 +393,11 @@ void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32
 		D3D11_MAPPED_SUBRESOURCE subData;
 
 		hr = g_pImmediateContext->Map(resourceData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
-		char* mappedData = (char*)subData.pData;
+		
 		for(std::shared_ptr<TextureBlock> blockInfo : hints)
 		{
 			assert(bitmaps.size() > blockInfo->textureHandle);
-
+			char* mappedData = (char*)subData.pData;
 			if (bitmaps.find((int32_t)blockInfo->textureHandle) != bitmaps.end())
 			{
 				auto bitmapData = bitmaps.find((int32_t)blockInfo->textureHandle)->second;
@@ -579,7 +579,7 @@ void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRaste
 				blocker->Subrect.top = 0;
 				blocker->textureHandle = textureMapNames.size();
 				textureMapNames.insert(std::make_pair(std::move(iconSymbol->resourceName), std::move(blocker)));
-				bitmapIdHash.insert(std::make_pair(blocker->textureHandle, bitmap));
+				bitmapIdHash.insert(std::make_pair(textureMapNames.size(),  std::move(bitmap)));
 			}
 		}
 	}
