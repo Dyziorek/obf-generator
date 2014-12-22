@@ -371,7 +371,7 @@ void AtlasMapDxRender::_Impl::InitSymbolTexture()
 void AtlasMapDxRender::_Impl::InitFontsTexture()
 {
 	MapRasterizerProvider loaderResources;
-	std::vector<uint8_t> resultData = loaderResources.obtainResourceByName("map/fonts/arial.spf");
+	std::vector<uint8_t> resultData = loaderResources.obtainResourceByName("map/fonts/arialn.spf");
 	if (resultData.size() > 0)
 	{
 		g_Fonts.insert(std::make_pair("arial", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
