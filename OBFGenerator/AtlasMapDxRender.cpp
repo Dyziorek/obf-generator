@@ -104,7 +104,7 @@ private:
 	std::unique_ptr<Model>                                  g_Model;
 	std::unique_ptr<PrimitiveBatch<VertexPositionColor>>    g_Batch;
 	*/
-	std::unique_ptr<SpriteFont>                             g_Font;
+	std::unordered_map<std::string,std::unique_ptr<SpriteFont>>       g_Fonts;
 	std::unique_ptr<SpriteBatch>                            g_Sprites;
 	std::unordered_map<std::string,  std::shared_ptr<const TextureBlock>> textureMapNames;
 	XMMATRIX                            g_World;
@@ -113,6 +113,7 @@ private:
 
 	XMVECTORF32 ClearColor;
 	void InitSymbolTexture();
+	void InitFontsTexture();
 	void AddTextureLayer(int newLayers);
 };
 
@@ -297,6 +298,7 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND, int numLayers)
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
 
 	InitSymbolTexture();
+	InitFontsTexture();
     return S_OK;
 }
 
@@ -364,6 +366,26 @@ void AtlasMapDxRender::_Impl::InitSymbolTexture()
 
 	packTexture(1, textureMapNames, texturePackData);
 
+}
+
+void AtlasMapDxRender::_Impl::InitFontsTexture()
+{
+	MapRasterizerProvider loaderResources;
+	std::vector<uint8_t> resultData = loaderResources.obtainResourceByName("map/fonts/arial.spf");
+	if (resultData.size() > 0)
+	{
+		g_Fonts.insert(std::make_pair("arial", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+	}
+	resultData = loaderResources.obtainResourceByName("map/fonts/calibri.spf");
+	if (resultData.size() > 0)
+	{
+		g_Fonts.insert(std::make_pair("calibri", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+	}	
+	resultData = loaderResources.obtainResourceByName("map/fonts/gothic.spf");
+	if (resultData.size() > 0)
+	{
+		g_Fonts.insert(std::make_pair("gothic", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+	}
 }
 
 void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>>& bitmaps, std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures)

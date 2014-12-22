@@ -18,6 +18,7 @@ public:
 	bool obtainPathEffect( const std::string& encodedPathEffect, SkPathEffect* &outPathEffect ) const;
 	bool obtainMapIcon( const std::string& name, std::shared_ptr<const SkBitmap>& outIcon ) const;
 	bool obtainTextShield( const std::string& name, std::shared_ptr<const SkBitmap>& outTextShield ) const;
+	std::vector<uint8_t> obtainResourceByName(const std::string& name) const;
 
 	std::shared_ptr<DefaultMapStyleValue> getDefaultStyles()
 	{
@@ -84,7 +85,7 @@ private:
 	mutable std::mutex _textShieldsMutex;
 	mutable std::unordered_map< std::string, std::shared_ptr<const SkBitmap> > _textShields;
 
-	std::vector<uint8_t> obtainResourceByName(const std::string& name) const;
+	
 	void collectSymbolsFromPrimitives(std::shared_ptr<MapRasterizerContext>& _context, 
 	std::vector< std::shared_ptr<MapRasterizer::GraphicElement> >& elements, const MapRasterizer::GraphElementType type,
     std::vector< std::shared_ptr<MapRasterizer::RasterSymbol> >& outSymbols);
