@@ -63,7 +63,7 @@ private:
 	enum textureTypeID
 	{ 
 		mapTexture = 0, 
-		fontTexture = 1
+		iconsTexture = 1
 	};
 
 public:
@@ -97,6 +97,7 @@ private:
 	std::unique_ptr<CommonStates>                           g_States;
 
 	std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D11Resource>, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>>> textureResourceLayers;
+	std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>> symbolDataToScene;
 	/*
 	std::unique_ptr<BasicEffect>                            g_BatchEffect;
 	std::unique_ptr<EffectFactory>                          g_FXFactory;
@@ -428,8 +429,8 @@ void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32
 				char* m_pmap = (char*)bitmapData->getPixels(); 
 				int bpl = bitmapData->bytesPerPixel();
 				int stride = bitmapData->rowBytes(); 
-				int yoffset = blockInfo->Subrect.left;
-				int xoffset = blockInfo->Subrect.top;
+				int yoffset = blockInfo->YOffset;
+				int xoffset = blockInfo->XOffset;
 				if (yoffset > 0)
 				{
 					mappedData += subData.RowPitch*yoffset;
@@ -504,6 +505,7 @@ void AtlasMapDxRender::_Impl::saveSkBitmapToResource(int textureID, const SkBitm
 
 void AtlasMapDxRender::_Impl::renderScene()
 {
+
 	RECT rc;
     GetClientRect( g_hWnd, &rc );
 
@@ -516,13 +518,45 @@ void AtlasMapDxRender::_Impl::renderScene()
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
 
 	// map layer texture
-	auto layerData = textureResourceLayers[2];
-	for (auto layerData : textureResourceLayers)
+	auto layerData = textureResourceLayers[mapTexture];
 	{
 		g_Sprites->Begin();
 		g_Sprites->Draw(layerData.second.Get(), rc, &rc);
 		g_Sprites->End();
 	}
+
+	auto iconData = textureResourceLayers[iconsTexture];
+
+
+	// icon layer textures used
+	g_Sprites->Begin();
+	for (auto symbolGroup : symbolDataToScene)
+	{
+		auto symbolVal = symbolGroup;
+		for(auto symbol : symbolVal->_symbols)
+        {
+			if(const auto textSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolonPath>(symbol))
+			{
+				if(!textSymbol->shieldResourceName.empty() && textureMapNames.find(textSymbol->shieldResourceName) != textureMapNames.end())
+				{
+					auto textureValue = textureMapNames.find(textSymbol->shieldResourceName)->second;
+
+				}
+			}
+			else if(const auto iconSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolPin>(symbol))
+			{
+				if (iconSymbol->resourceName != "")
+				{
+
+				}
+			}
+		}
+
+		g_Sprites->Draw(iconData.second.Get(), rc, &rc);
+	}
+	g_Sprites->End();
+	// text layer
+
 	g_pSwapChain->Present(0,0);
 }
 
@@ -604,6 +638,8 @@ void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRaste
 				bitmapIdHash.insert(std::make_pair(textureMapNames.size(),  std::move(bitmap)));
 			}
 		}
+
+		symbolDataToScene.push_back(std::move(symbolVal));
 	}
 
 	packTexture(0, textureMapNames, bitmapIdHash);

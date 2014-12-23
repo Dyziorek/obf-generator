@@ -386,8 +386,10 @@ bool TexturePacker::packTexture(std::vector<const std::shared_ptr<const TextureB
 				TextureBlock* newBlock = new TextureBlock();
 				newBlock->textureID = binID;
 				newBlock->textureHandle = rectData->id;
-				newBlock->Subrect.left = rectData->x;
-				newBlock->Subrect.top = rectData->y;
+				newBlock->XOffset = rectData->x;
+				newBlock->YOffset = rectData->y;
+				newBlock->Subrect.left = 0;
+				newBlock->Subrect.top = 0;
 				newBlock->Subrect.right = rectData->w;
 				newBlock->Subrect.bottom = rectData->h;
 				newBlock->flipped = rectData->flipped;
