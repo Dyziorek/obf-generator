@@ -43,6 +43,7 @@ namespace Tools
         TileId normalizeTileId(const TileId input, const ZoomLevel zoom);
         pointI normalizeCoordinates(const pointI& input, const ZoomLevel zoom);
         pointI normalizeCoordinates(const pointL& input, const ZoomLevel zoom);
+		
         int qAbsCeil(double v);
         int qAbsFloor(double v);
         enum CHCode : uint8_t

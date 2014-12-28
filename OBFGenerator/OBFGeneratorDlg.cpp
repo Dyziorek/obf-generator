@@ -1094,7 +1094,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 					{
 						const SkBitmap& bitmapData = device->accessBitmap(false);
 						auto DataB = bitmapData.config();
-					
+						renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
 						SkImage::Info inf;
 						inf.fAlphaType = SkImage::kPremul_AlphaType;
 						inf.fColorType = SkImage::kPMColor_ColorType;
@@ -1105,12 +1105,12 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 						SkAutoDataUnref data(imageSrc->encode());
 						SkFILEWStream stream(newPath.c_str());
 						stream.write(data->data(), data->size());
-						renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
+						
 					}
 				}
 				{
-					SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
-					SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
+					//SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
+					//SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
 					std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>> symbolData;
 					bool painted = render->GetSymbolData(symbolData);
 					if (painted)
@@ -1125,22 +1125,24 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 							}
 						}*/
 						
-						renderer->updateTexture(symbolData);
+						
 
-						const SkBitmap& bitmapData = device->accessBitmap(false);
-						auto DataB = bitmapData.config();
+						//const SkBitmap& bitmapData = device->accessBitmap(false);
+						//auto DataB = bitmapData.config();
 					
-						SkImage::Info inf;
-						inf.fAlphaType = SkImage::kPremul_AlphaType;
-						inf.fColorType = SkImage::kPMColor_ColorType;
-						inf.fWidth = bitmapData.width();
-						inf.fHeight = bitmapData.height();
-						SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
-						SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
-						SkAutoDataUnref data(imageSrc->encode());
-						SkFILEWStream stream(newPath.c_str());
-						stream.write(data->data(), data->size());
-						renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
+						//SkImage::Info inf;
+						//inf.fAlphaType = SkImage::kPremul_AlphaType;
+						//inf.fColorType = SkImage::kPMColor_ColorType;
+						//inf.fWidth = bitmapData.width();
+						//inf.fHeight = bitmapData.height();
+						//SkAutoTUnref<SkSurface> SrcData(SkSurface::NewRasterDirect(inf, bitmapData.getPixels(), bitmapData.rowBytes()));
+						//SkAutoTUnref<SkImage> imageSrc(SrcData->newImageSnapshot());
+						//SkAutoDataUnref data(imageSrc->encode());
+						//SkFILEWStream stream(newPath.c_str());
+						//stream.write(data->data(), data->size());
+						//renderer->saveSkBitmapToResource(0, bitmapData, 0,0);
+
+						renderer->updateTexture(symbolData, render->getCurrentContext());
 					}
 				}
 			}

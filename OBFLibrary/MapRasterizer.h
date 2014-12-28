@@ -158,7 +158,10 @@ public:
 	bool DrawSymbols(SkCanvas& canvas, std::vector<const std::shared_ptr<const RenderSymbolGroup>>& result);
 	bool GetSymbolData(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData);
 	
-	
+	std::shared_ptr<MapRasterizerContext> getCurrentContext() 
+	{
+		return _context;
+	}
 
 	enum {
             PolygonAreaCutoffLowerThreshold = 75,

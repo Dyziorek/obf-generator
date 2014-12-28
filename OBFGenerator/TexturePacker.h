@@ -4,6 +4,7 @@
 
 struct TextureBlock
 {
+	std::string texName;
 	uint8_t textureID;
 	uint32_t textureHandle;
     RECT Subrect;
@@ -11,6 +12,17 @@ struct TextureBlock
     float YOffset;
     float XAdvance;
 	bool flipped;
+
+	std::string textureName()
+	{
+		return texName;
+	}
+
+	uint32_t texID()
+	{
+		return textureHandle;
+	}
+
 };
 
 
