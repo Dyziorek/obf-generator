@@ -127,6 +127,7 @@ BEGIN_MESSAGE_MAP(COBFGeneratorDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_MFCBUTTON2, &COBFGeneratorDlg::OnBnClickedMfcbutton2)
 	ON_BN_CLICKED(IDC_MFCBUTTON3, &COBFGeneratorDlg::OnBnClickedMfcbutton3)
 	ON_WM_TIMER()
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 
@@ -1409,4 +1410,26 @@ void COBFGeneratorDlg::OnTimer(UINT_PTR nIDEvent)
 	renderer->renderScene();
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void COBFGeneratorDlg::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
+
+	CWnd* pWnd = GetDlgItem(IDC_PLACEDX);
+	RECT rectWnd;
+	RECT dlgRect;
+	GetWindowRect(&dlgRect);
+
+	pWnd->GetWindowRect(&rectWnd);
+	
+	ScreenToClient(&rectWnd);
+	rectWnd.bottom = cy - 10;
+	rectWnd.right = cx - 10;
+
+	pWnd->MoveWindow(&rectWnd);
+
+	renderer->ResizeWindow(pWnd->GetSafeHwnd());
+	// TODO: Add your message handler code here
 }

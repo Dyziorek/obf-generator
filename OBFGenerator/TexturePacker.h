@@ -12,6 +12,7 @@ struct TextureBlock
     float YOffset;
     float XAdvance;
 	bool flipped;
+	std::shared_ptr<const SkBitmap> bitmapLink;
 
 	std::string textureName()
 	{

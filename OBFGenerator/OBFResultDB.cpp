@@ -50,9 +50,12 @@ void OBFResultDB::close(void)
 	OBFRenderingTypes::rules.clear();
 	OBFRenderingTypes::namedRulType.clear();
 
+	if (nullptr == mapStmt)
+		return;
 
-		int sqlCode;
+	int sqlCode;
 	sqlCode = sqlite3_finalize(mapStmt);
+	mapStmt = nullptr;
 	sqlCode = sqlite3_finalize(lowStmt);
 	
 	sqlCode = sqlite3_finalize(routeStmt);
@@ -73,7 +76,7 @@ void OBFResultDB::close(void)
 	
 
 	// selectors from d
-sqlCode = 	sqlite3_finalize(selNodeStmt);
+	sqlCode = sqlite3_finalize(selNodeStmt);
 	sqlCode = sqlite3_finalize(selWayStmt);
 	sqlCode = sqlite3_finalize(selRelStmt);
 	sqlCode = sqlite3_finalize(itNodeStmt);
@@ -83,7 +86,7 @@ sqlCode = 	sqlite3_finalize(selNodeStmt);
 
 
 	
-sqlCode = 	sqlite3_finalize(poiNodeStmt);
+	sqlCode = sqlite3_finalize(poiNodeStmt);
 	
 	sqlCode = sqlite3_close(dbPoiCtx);
 	sqlCode = sqlite3_close(dbRouteCtx);

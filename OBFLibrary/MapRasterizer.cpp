@@ -327,9 +327,7 @@ bool MapRasterizer::rasterizeSymbols(std::vector<const std::shared_ptr<const Ren
 			if(const auto textSymbol = std::dynamic_pointer_cast<const RasterSymbolonPath>(symbol))
             {
                 //TODO: reshape name with icu4c, since skia doesn't know how to do that
-                const std::string text = textSymbol->value;
-				std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
-				std::wstring cvt = coder.from_bytes(text);
+                const std::wstring cvt = textSymbol->value;
 
                 // Obtain shield for text if such exists
                 std::shared_ptr<const SkBitmap> textShieldBitmap;

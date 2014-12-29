@@ -15,8 +15,8 @@
 #include "SpriteFont.h"
 #include "VertexTypes.h"
 #include "DirectXHelpers.h"
-#include "TexturePacker.h"
 #include "SkBitmap.h"
+#include "TexturePacker.h"
 #include "SkCanvas.h"
 #include "SkPaint.h"
 
@@ -58,6 +58,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
+#include "DirectXPackedVector.h"
+
 using namespace DirectX;
 
 #include "AtlasMapDxRender.h"
@@ -86,9 +88,10 @@ public:
 
 
 	HRESULT Initialize(HWND baseHWND, int numLayers);
+	HRESULT ResizeWindow(HWND windowResized);
 	void saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset);
-	void packTexture(int textureID, stringIdMap& textureBlocks, const std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>>& bitmaps);
-	void drawDataToTexture( const std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>>& bitmaps, std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures);
+	void packTexture(int textureID, stringIdMap& textureBlocks);
+	void drawDataToTexture(std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures);
 	void updateTexture(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData, std::shared_ptr<MapRasterizerContext> currCtx);
 	void renderScene();
 	void vertexFromPointArea(const AreaI& area,const pointI& position, const pointD& scale, XMVECTOR& vertices);
@@ -125,7 +128,7 @@ private:
 	std::unordered_map<std::string,std::unique_ptr<SpriteFont>>       g_Fonts;
 	std::unique_ptr<SpriteBatch>                            g_Sprites;
 	stringIdMap textureMapNames;
-	std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>> bitmapIdHash;
+	//std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>> bitmapIdHash;
 	
 	//std::unordered_map<std::string,  std::shared_ptr<const TextureBlock>> textureMapNames;
 	XMMATRIX                            g_World;
@@ -333,6 +336,91 @@ HRESULT AtlasMapDxRender::_Impl::Initialize(HWND baseHWND, int numLayers)
     return S_OK;
 }
 
+HRESULT AtlasMapDxRender::_Impl::ResizeWindow(HWND baseHWND)
+{
+	HRESULT hr;
+	g_hWnd = baseHWND;
+    
+	RECT rc;
+    GetClientRect( g_hWnd, &rc );
+    UINT width = rc.right - rc.left;
+    UINT height = rc.bottom - rc.top;
+
+	g_pImmediateContext->OMSetRenderTargets(0,0,0);
+	g_pRenderTargetView.Reset();
+
+	g_pSwapChain->ResizeBuffers(0,width,height,DXGI_FORMAT_UNKNOWN, 0);
+
+	ID3D11Texture2D* pBackBuffer = nullptr;
+    hr = g_pSwapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&pBackBuffer );
+    if( FAILED( hr ) )
+        return hr;
+
+    hr = g_pd3dDevice->CreateRenderTargetView( pBackBuffer, nullptr, &g_pRenderTargetView );
+
+    pBackBuffer->Release();
+    if( FAILED( hr ) )
+        return hr;
+
+	if (g_pDepthStencil)
+	{
+		g_pDepthStencil.Reset();
+	}
+
+	if (g_pDepthStencilView)
+	{
+		g_pDepthStencilView.Reset();
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC descData;
+
+	g_pRenderTargetView->GetDesc(&descData);
+
+	 // Create depth stencil texture
+    D3D11_TEXTURE2D_DESC descDepth;
+    ZeroMemory( &descDepth, sizeof(descDepth) );
+	descDepth.Width = width;
+    descDepth.Height = height;
+    descDepth.MipLevels = 1;
+    descDepth.ArraySize = 1;
+    descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    descDepth.SampleDesc.Count = 1;
+    descDepth.SampleDesc.Quality = 0;
+    descDepth.Usage = D3D11_USAGE_DEFAULT;
+    descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    descDepth.CPUAccessFlags = 0;
+    descDepth.MiscFlags = 0;
+    hr = g_pd3dDevice->CreateTexture2D( &descDepth, nullptr, &g_pDepthStencil );
+    if( FAILED( hr ) )
+        return hr;
+
+    // Create the depth stencil view
+    D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+    ZeroMemory( &descDSV, sizeof(descDSV) );
+    descDSV.Format = descDepth.Format;
+    descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    descDSV.Texture2D.MipSlice = 0;
+    hr = g_pd3dDevice->CreateDepthStencilView( g_pDepthStencil.Get(), &descDSV, &g_pDepthStencilView );
+    if( FAILED( hr ) )
+        return hr;
+
+    g_pImmediateContext->OMSetRenderTargets( 1, g_pRenderTargetView.GetAddressOf(), g_pDepthStencilView.Get() );
+
+
+
+    // Setup the viewport
+    D3D11_VIEWPORT vp;
+    vp.Width = (FLOAT)width;
+    vp.Height = (FLOAT)height;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    g_pImmediateContext->RSSetViewports( 1, &vp );
+	
+
+}
+
 void  AtlasMapDxRender::_Impl::AddTextureLayer(int newLayers)
 {
 	D3D11_TEXTURE2D_DESC desc;
@@ -374,7 +462,7 @@ void AtlasMapDxRender::_Impl::InitSymbolTexture()
 		, "shop_bicycle", "shop_car_repair", "shop_pet", "tourism_hotel", "tourism_motel", "tourism_viewpoint", "tourism"};
 
 	MapRasterizerProvider loaderResources;
-	std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>> texturePackData;
+	
 	for (auto resName : initResNames)
 	{
 		std::shared_ptr<const SkBitmap> resData;
@@ -390,15 +478,15 @@ void AtlasMapDxRender::_Impl::InitSymbolTexture()
 			blocker->Subrect.right = resData->width();
 			blocker->Subrect.bottom = resData->height();
 			blocker->Subrect.top = 0;
-			blocker->textureHandle = texturePackData.size();
+			blocker->textureHandle = textureMapNames.size();
 			blocker->texName = std::move(resName);
-			texturePackData.insert(std::make_pair(texturePackData.size(), std::move(resData)));
+			blocker->bitmapLink = std::move(resData);
 			textureMapNames.insert(blocker);
 		}
 	}
 	
 
-	packTexture(1, textureMapNames, texturePackData);
+	packTexture(1, textureMapNames);
 	
 }
 
@@ -433,7 +521,7 @@ void AtlasMapDxRender::_Impl::InitFontsTexture()
 	}
 }
 
-void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>>& bitmaps, std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures)
+void  AtlasMapDxRender::_Impl::drawDataToTexture(  std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures)
 {
 	HRESULT hr = S_OK;
 	if (textureResourceLayers.size() - 1 < numTextures)
@@ -469,14 +557,14 @@ void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32
 
 		hr = g_pImmediateContext->Map(resourceData.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subData);
 		
-		for(std::shared_ptr<TextureBlock> blockInfo : hints)
+		for(std::shared_ptr<TextureBlock> blockInfo : textureIDMap[texID])
 		{
 			//assert(bitmaps.find(blockInfo->textureHandle) == bitmaps.end());
 			char* mappedData = (char*)subData.pData;
-			if (bitmaps.find((int32_t)blockInfo->textureHandle) != bitmaps.end())
+			if (textureMapNames.get<1>().find((int32_t)blockInfo->textureHandle) != textureMapNames.get<1>().end())
 			{
-				auto bitmapData = bitmaps.find((int32_t)blockInfo->textureHandle)->second;
-				
+				auto bitmapData = textureMapNames.get<1>().find((int32_t)blockInfo->textureHandle)->get()->bitmapLink;
+				assert(static_cast<bool>(bitmapData));
 
 				char* m_pmap = (char*)bitmapData->getPixels(); 
 				int bpl = bitmapData->bytesPerPixel();
@@ -508,6 +596,10 @@ void  AtlasMapDxRender::_Impl::drawDataToTexture( const std::unordered_map<int32
 						m_pmap += stride;
 					}
 				}
+			}
+			else
+			{
+				assert(false);
 			}
 		}
 		g_pImmediateContext->Unmap(resourceData.Get(), 0);
@@ -600,12 +692,17 @@ void AtlasMapDxRender::_Impl::renderScene()
         {
 			if(const auto textSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolonPath>(symbol))
 			{
+				XMVECTOR vecPos;
+				vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
 				if(!textSymbol->shieldResourceName.empty() && textureMapNames.find(textSymbol->shieldResourceName) != textureMapNames.end())
 				{
-					auto textureValue = textureMapNames.find(textSymbol->shieldResourceName);
-					XMVECTOR vecPos;
-					vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
-					g_Sprites->Draw(iconData.second.Get(), vecPos, &textureValue->get()->Subrect);
+					auto textureValue = textureMapNames.find(textSymbol->shieldResourceName)->get();
+					RECT destRect;
+					destRect.left = textureValue->XOffset;
+					destRect.right = textureValue->XOffset + textureValue->Subrect.right;
+					destRect.top = textureValue->YOffset;
+					destRect.bottom = textureValue->YOffset + textureValue->Subrect.bottom;
+					g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
 				}
 			}
 			else if(const auto iconSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolPin>(symbol))
@@ -627,14 +724,59 @@ void AtlasMapDxRender::_Impl::renderScene()
 
 		/*g_Sprites->Draw(iconData.second.Get(), rc, &rc);*/
 	}
-	g_Sprites->End();
-	// text layer
 
+	// text layer
+	auto& fontRender = g_Fonts["arial"];
+	
+	for (auto symbolGroup : symbolDataToScene)
+	{
+		auto symbolVal = symbolGroup;
+		for(auto symbol : symbolVal->_symbols)
+        {
+			if(const auto textSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolonPath>(symbol))
+			{
+				XMVECTOR vecPos;
+				vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
+				
+				//XMVECTOR vecSize = fontRender->MeasureString(textSymbol->value.c_str());
+				 DirectX::PackedVector::XMCOLOR xcolor(textSymbol->color);
+				XMVECTOR color = DirectX::PackedVector::XMLoadColor(&xcolor);
+
+				fontRender->SetDefaultCharacter(L' ');
+				if (textSymbol->drawOnPath)
+				{
+					auto graphElem = symbol->graph;
+					if (graphElem->_type == MapRasterizer::GraphElementType::Polyline)
+					{
+						const auto pointVec = graphElem->_mapData->points;
+						float px = 0;
+						float py = 0;
+						for (int i = 1; i < pointVec.size(); i++) {
+							px +=  pointVec[i].get<0>() - pointVec[i - 1].get<0>();
+							py +=  pointVec[i].get<1>() - pointVec[i - 1].get<1>();
+						}
+						float rotation = 0.0;
+						if (px != 0 || py != 0) {
+							rotation = (float) (-std::atan2(px, py) + boost::math::constants::pi<float>() / 2);
+						}
+						fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+					}
+				}
+				else
+				{
+					fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, 0.0f, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size));
+				}
+			}
+		}
+
+		/*g_Sprites->Draw(iconData.second.Get(), rc, &rc);*/
+	}
+	g_Sprites->End();
 	g_pSwapChain->Present(0,0);
 }
 
 
-void AtlasMapDxRender::_Impl::packTexture(int textureID, stringIdMap& blockData, const std::unordered_map<int32_t, const std::shared_ptr<const SkBitmap>>& bitmaps)
+void AtlasMapDxRender::_Impl::packTexture(int textureID, stringIdMap& blockData)
 {
 	TexturePacker packerData;
 
@@ -660,7 +802,7 @@ void AtlasMapDxRender::_Impl::packTexture(int textureID, stringIdMap& blockData,
 			}
 		}
 
-		drawDataToTexture(bitmaps, results, numLayers);
+		drawDataToTexture(results, numLayers);
 	}
 }
 
@@ -668,7 +810,7 @@ void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRaste
 {
 	MapRasterizerProvider loaderResources;
 	
-	
+	bool insertedNewSymbol = false;
 
 	for(auto itSymbolsEntry =symbolData.cbegin(); itSymbolsEntry != symbolData.cend(); ++itSymbolsEntry)
     {
@@ -690,8 +832,9 @@ void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRaste
 						blocker->Subrect.top = 0;
 						blocker->textureHandle = textureMapNames.size();
 						blocker->texName = textSymbol->shieldResourceName;
+						blocker->bitmapLink = std::move(textShieldBitmap);
 						textureMapNames.insert(blocker);
-						bitmapIdHash.insert(std::make_pair(blocker->textureHandle, textShieldBitmap));
+						insertedNewSymbol = true;
 					}				
 				}
 			}
@@ -709,15 +852,19 @@ void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRaste
 				blocker->Subrect.top = 0;
 				blocker->textureHandle = textureMapNames.size();
 				blocker->texName = iconSymbol->resourceName;
+				blocker->bitmapLink = std::move(bitmap);
 				textureMapNames.insert(blocker);
-				bitmapIdHash.insert(std::make_pair(textureMapNames.size(),  std::move(bitmap)));
+				insertedNewSymbol = true;
 			}
 		}
 
 		symbolDataToScene.push_back(std::move(symbolVal));
 	}
 
-	packTexture(0, textureMapNames, bitmapIdHash);
+	if (insertedNewSymbol)
+	{
+		packTexture(0, textureMapNames);
+	}
 	_workCtx.swap(currCtx);
 }
 
@@ -746,6 +893,12 @@ HRESULT AtlasMapDxRender::Initialize(HWND baseHWND, int numLayers)
 {
 	return pImpl->Initialize(baseHWND, numLayers);
 }
+
+HRESULT AtlasMapDxRender::ResizeWindow(HWND windowResized)
+{
+	return pImpl->ResizeWindow(windowResized);
+}
+
 void AtlasMapDxRender::saveSkBitmapToResource(int textureID, const SkBitmap& skBitmap, int xoffset, int yoffset)
 {
 	pImpl->saveSkBitmapToResource(textureID, skBitmap, xoffset, yoffset);
@@ -755,10 +908,10 @@ void AtlasMapDxRender::renderScene()
 	pImpl->renderScene();
 }
 
-void AtlasMapDxRender::packTexture(int textureID, const std::unordered_map<int32_t, std::shared_ptr<const SkBitmap>>& bitmaps)
-{
-	//pImpl->packTexture(textureID, bitmaps);
-}
+//void AtlasMapDxRender::packTexture(int textureID, const std::unordered_map<int32_t, std::shared_ptr<const SkBitmap>>& bitmaps)
+//{
+//	//pImpl->packTexture(textureID, bitmaps);
+//}
 
 void AtlasMapDxRender::updateTexture(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData, std::shared_ptr<MapRasterizerContext> currCtx)
 {

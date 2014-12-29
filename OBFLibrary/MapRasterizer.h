@@ -123,7 +123,7 @@ struct RasterSymbolonPath : public RasterSymbol
 	RasterSymbolonPath();
 	virtual ~RasterSymbolonPath();
 
-	std::string value;
+	std::wstring value;
     bool drawOnPath;
     int verticalOffset;
     uint32_t color;

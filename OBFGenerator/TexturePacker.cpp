@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "SkBitmap.h"
 #include "TexturePacker.h"
 
 using namespace std;

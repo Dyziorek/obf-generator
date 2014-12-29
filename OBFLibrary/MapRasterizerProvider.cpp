@@ -28,7 +28,8 @@
 #include "EmbeddedResources.h"
 #include "Tools.h"
 
-#include "Sensorsapi.h"
+#include <locale>
+#include <codecvt>
 
 namespace bf = boost::filesystem;
 
@@ -684,7 +685,7 @@ void MapRasterizerProvider::uploadSymbolTextForElement(std::shared_ptr<MapRaster
 	MapStyleResult textEvalResult;
 
     MapStyleEval textEvaluator(workingStyle, 0.1f);
-    
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
 
     bool ok;
 	for(auto itName = graphicElement->_mapData->nameTypeString.cbegin(); itName != graphicElement->_mapData->nameTypeString.cend(); ++itName)
@@ -722,7 +723,7 @@ void MapRasterizerProvider::uploadSymbolTextForElement(std::shared_ptr<MapRaster
 		const auto text = new MapRasterizer::RasterSymbolonPath();
         text->graph = graphicElement;
 		text->location = ptSymbolLoc;
-        text->value = name;
+        text->value = coder.from_bytes(name);
 
         text->drawOnPath = false;
 		textEvalResult.getBoolVal(getDefaultStyles()->id_OUTPUT_TEXT_ON_PATH, text->drawOnPath);

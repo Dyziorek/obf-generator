@@ -104,4 +104,5 @@ public:
 	float zx;
 //	virtual HRESULT get_accChildCount(long *pcountChildren);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 };
