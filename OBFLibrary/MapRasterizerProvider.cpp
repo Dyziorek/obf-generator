@@ -243,7 +243,24 @@ void MapRasterizerProvider::obtainMaps(const char* path)
 
 	if ( bf::is_regular_file(fileInfo))
 	{
-		mapProviders.push_back(std::shared_ptr<BinaryIndexDataReader>(new BinaryIndexDataReader(fileInfo)));
+		if (!mapProviders.empty())
+		{
+			bool bExists = false;
+			for (auto mapDataLoader : mapProviders)
+			{
+				bExists = mapDataLoader->getMapPath() == path;
+				if (bExists)
+					break;
+			}
+			if (!bExists)
+			{
+				mapProviders.push_back(std::shared_ptr<BinaryIndexDataReader>(new BinaryIndexDataReader(fileInfo)));
+			}
+		}
+		else
+		{
+			mapProviders.push_back(std::shared_ptr<BinaryIndexDataReader>(new BinaryIndexDataReader(fileInfo)));
+		}
 	}
 	else if (bf::is_directory(fileInfo))
 	{

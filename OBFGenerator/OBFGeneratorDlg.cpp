@@ -1023,7 +1023,7 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 			std::wstring wstrPath = m_fileReadPath.GetBuffer();
 			std::wstring_convert<std::codecvt_utf8<wchar_t>> coder;
 			std::string cvt = coder.to_bytes(wstrPath);
-		
+			mapData->obtainMaps(cvt.c_str());
 			boost::filesystem::path pather(cvt);
 			pather.replace_extension("png");
 			newPath = pather.string();

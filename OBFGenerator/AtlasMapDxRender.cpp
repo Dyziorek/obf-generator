@@ -739,27 +739,42 @@ void AtlasMapDxRender::_Impl::renderScene()
 				vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
 				
 				//XMVECTOR vecSize = fontRender->MeasureString(textSymbol->value.c_str());
-				 DirectX::PackedVector::XMCOLOR xcolor(textSymbol->color);
+				DirectX::PackedVector::XMCOLOR xcolor(textSymbol->color);
 				XMVECTOR color = DirectX::PackedVector::XMLoadColor(&xcolor);
 
 				fontRender->SetDefaultCharacter(L' ');
 				if (textSymbol->drawOnPath)
 				{
+					XMVECTOR stringSize = fontRender->MeasureString(textSymbol->value.c_str());
+					stringSize *= 0.4;
 					auto graphElem = symbol->graph;
 					if (graphElem->_type == MapRasterizer::GraphElementType::Polyline)
 					{
 						const auto pointVec = graphElem->_mapData->points;
 						float px = 0;
 						float py = 0;
+						XMVECTOR pxVec, pxVec2;
 						for (int i = 1; i < pointVec.size(); i++) {
-							px +=  pointVec[i].get<0>() - pointVec[i - 1].get<0>();
-							py +=  pointVec[i].get<1>() - pointVec[i - 1].get<1>();
+							vertexFromPointArea(workArea, pointVec[i - 1], context->_pixelScaleXY, pxVec);
+							vertexFromPointArea(workArea, pointVec[i], context->_pixelScaleXY, pxVec2);
+							px +=  pxVec2.m128_f32[0] - pxVec.m128_f32[0];
+							py +=  pxVec2.m128_f32[1] - pxVec.m128_f32[1];
 						}
 						float rotation = 0.0;
+						float pathLen = 0.0;
+						XMVECTOR pxLen = XMLoadFloat2(&XMFLOAT2(px, py));
 						if (px != 0 || py != 0) {
-							rotation = (float) (-std::atan2(px, py) + boost::math::constants::pi<float>() / 2);
+							rotation = (float) (-std::atan2(px, py) + boost::math::constants::pi<float>() / 2.0f);
+							pathLen = XMVector2Length(pxLen).m128_f32[0];
+							if (rotation < 0) rotation += XM_PI * 2.0f;
+							if (rotation > XM_PI / 2.0f && rotation < 3.0f * XM_PI / 2.0f) {
+								rotation += XM_PI;
+							}
 						}
-						fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+						if (pathLen >= stringSize.m128_f32[0])
+						{
+							fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+						}
 					}
 				}
 				else

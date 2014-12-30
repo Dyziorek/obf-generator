@@ -44,6 +44,10 @@ public:
 		return sections;
 	}
 	void getSectionData(boxI& area, std::list<std::shared_ptr<BinaryMapSection>>& children, std::list<std::shared_ptr<BinaryMapSection>>& dataOut);
+	const std::string getName()
+	{
+		return mapName;
+	}
 private:
 	std::vector<std::tuple<treeMap::box, std::pair<gp::uint32, gp::uint32> ,std::shared_ptr<BinaryMapSection>>> sections;
 	std::string mapName;

@@ -50,6 +50,11 @@ public:
 		return filePointer;
 	}
 
+	const std::string getWorkingMapPath()
+	{
+		return _path.string();
+	}
+
 	// gio::ZeroCopyInputStream virtual overides those
 
 	bool Next(const void** data, int* size);

@@ -93,7 +93,15 @@ BinaryIndexDataReader::~BinaryIndexDataReader(void)
 
 
 
+std::string BinaryIndexDataReader::getMapPath()
+{
+	if (fileReader)
+	{
+		return fileReader->getWorkingMapPath();
+	}
 
+	return std::string("");
+}
 
 void BinaryIndexDataReader::ReadMapData(google::protobuf::io::CodedInputStream* cis)
 {
