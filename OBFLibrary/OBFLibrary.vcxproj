@@ -119,6 +119,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;BOOST_IOSTREAMS_NO_LIB;OBFLIBRARY_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\device;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\config;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\images;D:\VisualFiles\osmand\core\externals\skia\upstream.original\include\core;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessToFile>false</PreprocessToFile>
+      <AdditionalOptions>/Zm187 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

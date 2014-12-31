@@ -94,8 +94,9 @@ public:
 	void drawDataToTexture(std::vector<std::shared_ptr<TextureBlock>>& hints, int8_t numTextures);
 	void updateTexture(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData, std::shared_ptr<MapRasterizerContext> currCtx);
 	void renderScene();
-	void vertexFromPointArea(const AreaI& area,const pointI& position, const pointD& scale, XMVECTOR& vertices);
 private:
+	typedef bgm::ring<pointF> ringF;
+	typedef bgm::box<pointF> boxF;
 	HINSTANCE                           g_hInst;
 	HWND                                g_hWnd;
 	D3D_DRIVER_TYPE                     g_driverType;
@@ -139,6 +140,9 @@ private:
 	void InitSymbolTexture();
 	void InitFontsTexture();
 	void AddTextureLayer(int newLayers);
+	void vertexFromPointArea(const AreaI& area,const pointI& position, const pointD& scale, XMVECTOR& vertices);
+	void vertexToPoint(XMVECTOR& vertice, pointF& result);
+	bool notIntersect(const std::vector<std::pair<ringF, boxF>>& rings,const ringF& ringCheck);
 };
 
 
@@ -501,6 +505,28 @@ void AtlasMapDxRender::_Impl::vertexFromPointArea(const AreaI& area,const pointI
 	vertices.m128_f32[1] = ((yVal - yArea)/ scale.get<1>());
 }
 
+void AtlasMapDxRender::_Impl::vertexToPoint(XMVECTOR& vertice, pointF& result)
+{
+	result.set<0>(vertice.m128_f32[0]);
+	result.set<1>(vertice.m128_f32[1]);
+}
+
+bool AtlasMapDxRender::_Impl::notIntersect(const std::vector<std::pair<ringF, boxF>>& rings,const ringF& ringCheck)
+{
+	boxF checkBox;
+	bg::envelope(ringCheck, checkBox);
+	for (const auto ringToCheck : rings)
+	{
+		if (bg::intersects(ringToCheck.second, checkBox))
+		{
+			if (bg::intersects(ringToCheck.first, ringCheck))
+				return false;
+		}
+	}
+
+	return true;
+}
+
 void AtlasMapDxRender::_Impl::InitFontsTexture()
 {
 	MapRasterizerProvider loaderResources;
@@ -653,11 +679,15 @@ void AtlasMapDxRender::_Impl::renderScene()
 	RECT rc;
     GetClientRect( g_hWnd, &rc );
 
-	RECT src;
-	src.top = 0;
-	src.left = 0;
-	src.bottom = 1024;
-	src.right = 1024;
+	long height = rc.bottom - rc.top;
+	long width = rc.right - rc.left;
+
+
+
+	std::vector<std::pair<ringF, boxF>> rings;
+
+	
+	
 
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
 	g_Sprites->Begin();
@@ -702,7 +732,25 @@ void AtlasMapDxRender::_Impl::renderScene()
 					destRect.right = textureValue->XOffset + textureValue->Subrect.right;
 					destRect.top = textureValue->YOffset;
 					destRect.bottom = textureValue->YOffset + textureValue->Subrect.bottom;
-					g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
+
+					ringF spriteBBox;
+					pointF ptOrigin;
+					vertexToPoint(vecPos, ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(0, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(destRect.right - destRect.left, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(0, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					boxF env;
+					bg::envelope(spriteBBox, env);
+					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					{
+						rings.push_back(std::make_pair(spriteBBox, env));
+						g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
+					}
+
 				}
 			}
 			else if(const auto iconSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolPin>(symbol))
@@ -717,7 +765,25 @@ void AtlasMapDxRender::_Impl::renderScene()
 					destRect.right = textureValue->XOffset + textureValue->Subrect.right;
 					destRect.top = textureValue->YOffset;
 					destRect.bottom = textureValue->YOffset + textureValue->Subrect.bottom;
-					g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
+					
+					ringF spriteBBox;
+					pointF ptOrigin;
+					vertexToPoint(vecPos, ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(0, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(destRect.right - destRect.left, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(0, destRect.bottom - destRect.top, 0,0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					boxF env;
+					bg::envelope(spriteBBox, env);
+					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					{
+						rings.push_back(std::make_pair(spriteBBox, env));
+						g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
+					}
+
 				}
 			}
 		}
@@ -737,6 +803,7 @@ void AtlasMapDxRender::_Impl::renderScene()
 			{
 				XMVECTOR vecPos;
 				vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
+				XMVECTOR stringSize = fontRender->MeasureString(textSymbol->value.c_str());
 				
 				//XMVECTOR vecSize = fontRender->MeasureString(textSymbol->value.c_str());
 				DirectX::PackedVector::XMCOLOR xcolor(textSymbol->color);
@@ -745,7 +812,6 @@ void AtlasMapDxRender::_Impl::renderScene()
 				fontRender->SetDefaultCharacter(L' ');
 				if (textSymbol->drawOnPath)
 				{
-					XMVECTOR stringSize = fontRender->MeasureString(textSymbol->value.c_str());
 					stringSize *= 0.4;
 					auto graphElem = symbol->graph;
 					if (graphElem->_type == MapRasterizer::GraphElementType::Polyline)
@@ -773,13 +839,75 @@ void AtlasMapDxRender::_Impl::renderScene()
 						}
 						if (pathLen >= stringSize.m128_f32[0])
 						{
-							fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+
+							ringF spriteBBox;
+							pointF ptOrigin;
+							XMVECTOR rotationMatrix1;
+							XMVECTOR rotationMatrix2;
+							if (rotation != 0)
+							{
+								float sin, cos;
+
+								XMScalarSinCos(&sin, &cos, rotation);
+
+								XMVECTOR sinV = XMLoadFloat(&sin);
+								XMVECTOR cosV = XMLoadFloat(&cos);
+
+								rotationMatrix1 = XMVectorMergeXY(cosV, sinV);
+								rotationMatrix2 = XMVectorMergeXY(-sinV, cosV);
+							}
+							else
+							{
+								rotationMatrix1 = g_XMIdentityR0;
+								rotationMatrix2 = g_XMIdentityR1;
+							}
+							XMVECTOR destination = vecPos;
+							XMVECTOR position1 = XMVectorMultiply(XMVectorSplatX(vecPos), rotationMatrix1);
+							XMVECTOR position2 = XMVectorMultiplyAdd(XMVectorSplatY(vecPos), rotationMatrix2, position1);
+							vertexToPoint(position2, ptOrigin);
+							spriteBBox.push_back(ptOrigin);
+							 position1 = XMVectorMultiply(XMVectorSplatX(vecPos+XMVectorSet(0, stringSize.m128_f32[1], 0, 0)), rotationMatrix1);
+							 position2 = XMVectorMultiplyAdd(XMVectorSplatY(vecPos+XMVectorSet(0, stringSize.m128_f32[1], 0, 0)), rotationMatrix2, position1);
+							vertexToPoint(position2, ptOrigin);
+							spriteBBox.push_back(ptOrigin);
+							position1 = XMVectorMultiply(XMVectorSplatX(vecPos+XMVectorSet(stringSize.m128_f32[0], stringSize.m128_f32[1], 0, 0)), rotationMatrix1);
+							position2 = XMVectorMultiplyAdd(XMVectorSplatY(vecPos+XMVectorSet(stringSize.m128_f32[0], stringSize.m128_f32[1], 0, 0)), rotationMatrix2, position1);
+							vertexToPoint(position2, ptOrigin);
+							spriteBBox.push_back(ptOrigin);
+							position1 = XMVectorMultiply(XMVectorSplatX(vecPos+XMVectorSetInt(stringSize.m128_f32[0], 0, 0, 0)), rotationMatrix1);
+							position2 = XMVectorMultiplyAdd(XMVectorSplatY(vecPos+XMVectorSetInt(stringSize.m128_f32[0], 0, 0, 0)), rotationMatrix2, position1);
+							vertexToPoint(position2, ptOrigin);
+							spriteBBox.push_back(ptOrigin);
+							boxF env;
+							bg::envelope(spriteBBox, env);
+							if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+							{
+								rings.push_back(std::make_pair(spriteBBox, env));
+								fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+							}
 						}
 					}
 				}
 				else
 				{
-					fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, 0.0f, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size));
+
+					ringF spriteBBox;
+					pointF ptOrigin;
+					vertexToPoint(vecPos, ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSet(0, stringSize.m128_f32[1], 0, 0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSet(stringSize.m128_f32[0], stringSize.m128_f32[1], 0, 0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					vertexToPoint(vecPos+XMVectorSetInt(stringSize.m128_f32[0], 0, 0, 0), ptOrigin);
+					spriteBBox.push_back(ptOrigin);
+					boxF env;
+					bg::envelope(spriteBBox, env);
+					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					{
+						rings.push_back(std::make_pair(spriteBBox, env));
+						fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, 0.0f, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size));
+					}
 				}
 			}
 		}
