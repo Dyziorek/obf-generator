@@ -567,7 +567,15 @@ void MapRasterizerContext::appendCoastlinePolygons( std::list< std::vector< poin
     }
 }
 
-
+struct unref_iterator_less
+{
+	template <class IterRef>  bool operator()(const IterRef& obj1, const IterRef& obj2)
+	{
+		const void* refAddr1 = (void* )&(obj1);
+		const void* refAddr2 = (void* )&(obj2);
+		return refAddr1 < refAddr2;
+	}
+};
 
 void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
     const MapRasterizerProvider& env,
@@ -604,7 +612,7 @@ void MapRasterizerContext::convertCoastlinePolylinesToPolygons(
 		coastlinePolylines.erase(itRemoving);
     }
 
-    std::unordered_set< std::list< std::vector< pointI > >::iterator > processedPolylines;
+    std::set< std::list< std::vector< pointI > >::iterator, unref_iterator_less > processedPolylines;
     while(processedPolylines.size() != validPolylines.size())
     {
         for(auto itPolyline = validPolylines.begin(); itPolyline != validPolylines.end(); ++itPolyline)

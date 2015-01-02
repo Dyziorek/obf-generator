@@ -208,7 +208,7 @@ BOOL COBFGeneratorDlg::OnInitDialog()
 	renderer.reset(new AtlasMapDxRender());
 	renderer->Initialize(GetDlgItem(IDC_PLACEDX)->GetSafeHwnd());
 	
-	SetTimer(1000, 1000, NULL);
+	SetTimer(1000, 5000, NULL);
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 

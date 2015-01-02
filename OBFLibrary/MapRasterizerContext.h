@@ -3,9 +3,7 @@
 #include <future>
 
 
-namespace std
-{
-	template<>
+	/*template<>
 	struct hash< std::list< std::vector< pointI > >::iterator >
 	{
 		std::size_t operator()(const std::list< std::vector< pointI > >::iterator& hashWork) const
@@ -21,7 +19,9 @@ namespace std
 			return seed;
 		}
 	};
-}
+*/
+
+
 
 class MapRasterizerContext
 {

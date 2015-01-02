@@ -135,7 +135,7 @@ private:
 	XMMATRIX                            g_World;
 	XMMATRIX                            g_View;
 	XMMATRIX                            g_Projection;
-
+	MapRasterizerProvider               loaderResources;
 	XMVECTORF32 ClearColor;
 	void InitSymbolTexture();
 	void InitFontsTexture();
@@ -170,6 +170,8 @@ AtlasMapDxRender::_Impl::_Impl(void)
 	ClearColor.f[1] =  1.0f;
 	ClearColor.f[2] =  1.0f;
 	ClearColor.f[3] =  0.0f;
+
+	
 }
 
 
@@ -465,8 +467,7 @@ void AtlasMapDxRender::_Impl::InitSymbolTexture()
 	std::string initResNames[] = {"accomodation", "administrative", "aerialway_station","finance","fuel","historic_castle","landuse_grass","place_town", "railway_station"
 		, "shop_bicycle", "shop_car_repair", "shop_pet", "tourism_hotel", "tourism_motel", "tourism_viewpoint", "tourism"};
 
-	MapRasterizerProvider loaderResources;
-	
+		
 	for (auto resName : initResNames)
 	{
 		std::shared_ptr<const SkBitmap> resData;
@@ -515,7 +516,7 @@ bool AtlasMapDxRender::_Impl::notIntersect(const std::vector<std::pair<ringF, bo
 {
 	boxF checkBox;
 	bg::envelope(ringCheck, checkBox);
-	for (const auto ringToCheck : rings)
+	for (const auto& ringToCheck : rings)
 	{
 		if (bg::intersects(ringToCheck.second, checkBox))
 		{
@@ -529,7 +530,6 @@ bool AtlasMapDxRender::_Impl::notIntersect(const std::vector<std::pair<ringF, bo
 
 void AtlasMapDxRender::_Impl::InitFontsTexture()
 {
-	MapRasterizerProvider loaderResources;
 	std::vector<uint8_t> resultData = loaderResources.obtainResourceByName("map/fonts/arialn.spf");
 	if (resultData.size() > 0)
 	{
@@ -951,7 +951,6 @@ void AtlasMapDxRender::_Impl::packTexture(int textureID, stringIdMap& blockData)
 
 void AtlasMapDxRender::_Impl::updateTexture(std::vector<std::shared_ptr<MapRasterizer::RasterSymbolGroup>>& symbolData, std::shared_ptr<MapRasterizerContext> currCtx)
 {
-	MapRasterizerProvider loaderResources;
 	
 	bool insertedNewSymbol = false;
 
