@@ -533,17 +533,23 @@ void AtlasMapDxRender::_Impl::InitFontsTexture()
 	std::vector<uint8_t> resultData = loaderResources.obtainResourceByName("map/fonts/arialn.spf");
 	if (resultData.size() > 0)
 	{
-		g_Fonts.insert(std::make_pair("arial", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+		auto DataPair = std::make_pair("arial", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size()))));
+		DataPair.second->SetDefaultCharacter(L' ');
+		g_Fonts.insert(std::move(DataPair));
 	}
 	resultData = loaderResources.obtainResourceByName("map/fonts/calibri.spf");
 	if (resultData.size() > 0)
 	{
-		g_Fonts.insert(std::make_pair("calibri", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+		auto DataPair = std::make_pair("calibri", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size()))));
+		DataPair.second->SetDefaultCharacter(L' ');
+		g_Fonts.insert(std::move(DataPair));
 	}	
 	resultData = loaderResources.obtainResourceByName("map/fonts/gothic.spf");
 	if (resultData.size() > 0)
 	{
-		g_Fonts.insert(std::make_pair("gothic", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size())))));
+		auto DataPair = std::make_pair("gothic", std::unique_ptr<SpriteFont>(std::move(new SpriteFont(g_pd3dDevice.Get(), resultData.data(), resultData.size()))));
+		DataPair.second->SetDefaultCharacter(L' ');
+		g_Fonts.insert(std::move(DataPair));
 	}
 }
 
@@ -805,13 +811,30 @@ void AtlasMapDxRender::_Impl::renderScene()
 				vertexFromPointArea(workArea, textSymbol->location, context->_pixelScaleXY, vecPos);
 				XMVECTOR stringSize = fontRender->MeasureString(textSymbol->value.c_str());
 				
+				
+
 				//XMVECTOR vecSize = fontRender->MeasureString(textSymbol->value.c_str());
 				DirectX::PackedVector::XMCOLOR xcolor(textSymbol->color);
 				XMVECTOR color = DirectX::PackedVector::XMLoadColor(&xcolor);
 
-				fontRender->SetDefaultCharacter(L' ');
 				if (textSymbol->drawOnPath)
 				{
+					std::vector<XMVECTOR> vecTexts;
+#ifdef _DEBUG
+					float xCheck = 0.0f;
+					float yCheck = 0.0f;
+#endif
+					wchar_t charStr[2] = { 0, 0};
+					for (auto charVal : textSymbol->value)
+					{
+						charStr[0] = charVal;
+						vecTexts.push_back(fontRender->MeasureString(charStr));
+#ifdef _DEBUG
+						xCheck+=vecTexts.back().m128_f32[0];
+						yCheck+=vecTexts.back().m128_f32[1];
+#endif
+					}
+
 					stringSize *= 0.4;
 					auto graphElem = symbol->graph;
 					if (graphElem->_type == MapRasterizer::GraphElementType::Polyline)
@@ -883,7 +906,7 @@ void AtlasMapDxRender::_Impl::renderScene()
 							if (rings.size() == 0 || notIntersect(rings, spriteBBox))
 							{
 								rings.push_back(std::make_pair(spriteBBox, env));
-								fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size * 0.4f));
+								fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, 0.4f));
 							}
 						}
 					}
