@@ -833,6 +833,7 @@ void AtlasMapDxRender::_Impl::renderScene()
 						xCheck+=vecTexts.back().m128_f32[0];
 						yCheck+=vecTexts.back().m128_f32[1];
 #endif
+						
 					}
 
 					stringSize *= 0.4;
@@ -851,9 +852,13 @@ void AtlasMapDxRender::_Impl::renderScene()
 						}
 						float rotation = 0.0;
 						float pathLen = 0.0;
+						float plen = 0.0;
 						XMVECTOR pxLen = XMLoadFloat2(&XMFLOAT2(px, py));
 						if (px != 0 || py != 0) {
 							rotation = (float) (-std::atan2(px, py) + boost::math::constants::pi<float>() / 2.0f);
+							//XMVECTOR pxV = XMVectorSet(px, py, 0,0);
+							//XMVECTOR xRot = XMVector2AngleBetweenVectors(pxV, XMVectorSet(1, 0,0,0));
+							//xRot.m128_f32[0] +=XM_PI/2;
 							pathLen = XMVector2Length(pxLen).m128_f32[0];
 							if (rotation < 0) rotation += XM_PI * 2.0f;
 							if (rotation > XM_PI / 2.0f && rotation < 3.0f * XM_PI / 2.0f) {

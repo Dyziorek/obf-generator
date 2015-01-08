@@ -760,6 +760,13 @@ bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     /*assert(primitive->_mapData->points.size() >= 2);*/
 	auto builtinStyleDefs =  _source.getDefaultStyles();
 
+#ifdef _DEBUG
+	// we filter here for debug purpose
+	if (primitive->_mapData->typeIds.size() > 0 && primitive->_mapData->typeIds[0] != 136) 
+		return false;
+
+#endif
+
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
         return false;
 
@@ -853,27 +860,34 @@ bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
         {
             if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_minus2, false))
             {
+				primitive->painted = true;
                 canvas.drawPath(path, _mapPaint);
             }
             if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_minus1, false))
             {
+				primitive->painted = true;
                 canvas.drawPath(path, _mapPaint);
             }
             if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
             {
+				primitive->painted = true;
                 canvas.drawPath(path, _mapPaint);
             }
+			primitive->painted = true;
             canvas.drawPath(path, _mapPaint);
             if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_1, false))
             {
+				primitive->painted = true;
                 canvas.drawPath(path, _mapPaint);
             }
             if(updatePaint(*primitive->styleResult, PaintValuesSet::Set_3, false))
             {
+				primitive->painted = true;
                 canvas.drawPath(path, _mapPaint);
             }
             if (oneway && !drawOnlyShadow)
             {
+				primitive->painted = true;
                 rasterizeLine_OneWay(canvas, path, oneway);
             }
         }

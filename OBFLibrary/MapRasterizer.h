@@ -90,13 +90,14 @@ struct GraphicElement
 	GraphicElement(const std::shared_ptr<GraphicElementGroup> group, const std::shared_ptr<MapObjectData>& mapData,
 		const GraphElementType type, const uint32_t typeIdIndex) : _group(group), _mapData(mapData), _type(type), _typeIdIndex(typeIdIndex)
 	{
+		painted = false;
 	}
 	const std::weak_ptr<GraphicElementGroup> _group;
 	const std::shared_ptr<MapObjectData> _mapData;
 	const GraphElementType _type;
 	const uint32_t _typeIdIndex;
 
-
+	bool painted;
 	double zOrder;
 	std::shared_ptr<MapStyleResult> styleResult;
 };
