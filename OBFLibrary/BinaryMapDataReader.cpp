@@ -80,6 +80,7 @@ void BinaryMapDataReader::ReadMapDataSection(gio::CodedInputStream* cis)
 		{
 		case 0:
 			{
+				mapRules->createMissingRules();
 #ifdef _DEBUG
 				std::wstringstream strmData;
 				strmData << L"Sections count: " << sections.size() << std::endl;

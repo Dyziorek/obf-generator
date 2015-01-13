@@ -166,9 +166,9 @@ AtlasMapDxRender::_Impl::_Impl(void)
 	g_pBatchInputLayout = nullptr;
 	
 	//ClearColor = XMVECTORF32();
-	ClearColor.f[0] =  1.0f;
-	ClearColor.f[1] =  1.0f;
-	ClearColor.f[2] =  1.0f;
+	ClearColor.f[0] =  0.97f;
+	ClearColor.f[1] =  0.97f;
+	ClearColor.f[2] =  0.97f;
 	ClearColor.f[3] =  0.0f;
 
 	
@@ -819,20 +819,16 @@ void AtlasMapDxRender::_Impl::renderScene()
 
 				if (textSymbol->drawOnPath)
 				{
-					std::vector<XMVECTOR> vecTexts;
-#ifdef _DEBUG
-					float xCheck = 0.0f;
-					float yCheck = 0.0f;
-#endif
+					std::list<XMVECTOR> vecTexts;
+					//vector of position character at xy, rotation at z and glyph at w
+					std::vector<XMVECTOR> vecPath;
+					int vecCharPost = 0;
 					wchar_t charStr[2] = { 0, 0};
 					for (auto charVal : textSymbol->value)
 					{
 						charStr[0] = charVal;
-						vecTexts.push_back(fontRender->MeasureString(charStr));
-#ifdef _DEBUG
-						xCheck+=vecTexts.back().m128_f32[0];
-						yCheck+=vecTexts.back().m128_f32[1];
-#endif
+						XMVECTOR charGlyphSize = fontRender->MeasureString(charStr);
+						vecTexts.push_back(XMVectorSet(charGlyphSize.m128_f32[0], charGlyphSize.m128_f32[1], (float)charVal, 0));
 						
 					}
 
@@ -843,15 +839,37 @@ void AtlasMapDxRender::_Impl::renderScene()
 						const auto pointVec = graphElem->_mapData->points;
 						float px = 0;
 						float py = 0;
-						XMVECTOR pxVec, pxVec2;
+						float pxPart = 0;
+						float pyPart = 0;
+						float pathLen = 0.0;
+						float charPosLen = 0.0;
+						XMVECTOR pxVec, pxVec2, pxLenPart;
 						for (int i = 1; i < pointVec.size(); i++) {
 							vertexFromPointArea(workArea, pointVec[i - 1], context->_pixelScaleXY, pxVec);
 							vertexFromPointArea(workArea, pointVec[i], context->_pixelScaleXY, pxVec2);
-							px +=  pxVec2.m128_f32[0] - pxVec.m128_f32[0];
-							py +=  pxVec2.m128_f32[1] - pxVec.m128_f32[1];
+							pxPart = pxVec2.m128_f32[0] - pxVec.m128_f32[0];
+							pyPart = pxVec2.m128_f32[1] - pxVec.m128_f32[1];
+							px +=  pxPart;
+							py +=  pyPart;
+							pxLenPart = XMVector2Length(XMVectorSet(px, py, 0,0));
+							if (pxLenPart.m128_f32[0] < stringSize.m128_f32[0])
+							{
+								// usually street name requires to be bent
+								XMVECTOR xRot = XMVector2AngleBetweenVectors(XMVectorSet(px, py, 0,0), XMVectorSet(1, 0,0,0));
+								
+								while (pxLenPart.m128_f32[0] > charPosLen && vecTexts.size() > 0)
+								{
+									XMVECTOR charPop = vecTexts.front();
+									vecTexts.pop_front();
+									charPosLen += charPop.m128_f32[0];
+									XMVECTOR vecPathPos = XMVector2Transform(pxVec, XMMatrixTransformation2D(XMVectorZero(),0.0f, XMVectorSet(1,1, 0,0), XMVectorZero(), xRot.m128_f32[0], XMVectorSet(charPosLen, 0,0,0)));
+									vecPathPos = XMVectorSet(vecPathPos.m128_f32[0], vecPathPos.m128_f32[1], xRot.m128_f32[0], charPop.m128_f32[2]);
+									vecPath.push_back(vecPathPos);
+								}
+								charPosLen = 0.0;
+							}
 						}
 						float rotation = 0.0;
-						float pathLen = 0.0;
 						float plen = 0.0;
 						XMVECTOR pxLen = XMLoadFloat2(&XMFLOAT2(px, py));
 						if (px != 0 || py != 0) {
@@ -911,7 +929,18 @@ void AtlasMapDxRender::_Impl::renderScene()
 							if (rings.size() == 0 || notIntersect(rings, spriteBBox))
 							{
 								rings.push_back(std::make_pair(spriteBBox, env));
-								fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, 0.4f));
+								if (vecPath.size() == 0)
+								{
+									fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, 0.4f));
+								}
+								else
+								{
+									for (XMVECTOR vecPosPath : vecPath)
+									{
+										charStr[0] = (wchar_t)vecPosPath.m128_f32[3];
+										fontRender->DrawString(g_Sprites.get(), charStr, XMVectorSet(vecPosPath.m128_f32[0], vecPosPath.m128_f32[1], 0,0), color,  vecPosPath.m128_f32[2], g_XMZero, XMVectorScale(g_XMOne, 0.4f));
+									}
+								}
 							}
 						}
 					}

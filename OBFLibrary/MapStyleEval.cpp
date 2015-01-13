@@ -306,7 +306,7 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, con
 				assert(!ruleValue.isSpecial);
 				outInfo->_values[valueDef->id] = (ruleValue.simpleData.asUInt == 1);
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), ruleValue.simpleData.asUInt == 1 ? "true" : "false");
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, ruleValue.simpleData.asUInt == 1 ? "true" : "false");
 				#endif
                 break;
             case ValType::Inttype:
@@ -327,7 +327,7 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, con
                 outInfo->_values[valueDef->id] = valueReal;
 				#ifdef _DEBUG
 				valTxt = boost::lexical_cast<std::string>(valueReal);
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), valTxt);
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, valTxt);
 				#endif
                 break;
             case ValType::Stringtype:
@@ -335,7 +335,7 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, con
                 outInfo->_values[valueDef->id] =
                     owner->lookupStringValue(ruleValue.simpleData.asUInt).c_str();
 				#ifdef _DEBUG
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), owner->lookupStringValue(ruleValue.simpleData.asUInt));
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, owner->lookupStringValue(ruleValue.simpleData.asUInt));
 				#endif
                 break;
             case ValType::Colortype:
@@ -343,7 +343,7 @@ bool MapStyleEval::evaluate(const std::shared_ptr<MapObjectData>& mapObject, con
                 outInfo->_values[valueDef->id] = ruleValue.simpleData.asUInt;
 				#ifdef _DEBUG
 				valTxt = boost::lexical_cast<std::string>(ruleValue.simpleData.asUInt);
-				outInfo->_Dvalues[valueDef->id] = std::make_pair(owner->lookupStringValue(valueDef->id), boost::lexical_cast<std::string>(ruleValue.simpleData.asUInt));
+				outInfo->_Dvalues[valueDef->id] = std::make_pair(valueDef->name, boost::lexical_cast<std::string>(ruleValue.simpleData.asUInt));
 				#endif
                 break;
             }

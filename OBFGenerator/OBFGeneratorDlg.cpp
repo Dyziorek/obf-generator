@@ -256,7 +256,9 @@ void COBFGeneratorDlg::OnPaint()
 	else
 	{
 		CDialogEx::OnPaint();
+
 		renderer->renderScene();
+
 	}
 }
 
@@ -1407,7 +1409,9 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton3()
 
 void COBFGeneratorDlg::OnTimer(UINT_PTR nIDEvent)
 {
+
 	renderer->renderScene();
+
 
 	CDialogEx::OnTimer(nIDEvent);
 }

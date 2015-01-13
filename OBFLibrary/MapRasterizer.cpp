@@ -760,18 +760,32 @@ bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     /*assert(primitive->_mapData->points.size() >= 2);*/
 	auto builtinStyleDefs =  _source.getDefaultStyles();
 
-#ifdef _DEBUG
-	// we filter here for debug purpose
-	if (primitive->_mapData->typeIds.size() > 0 && primitive->_mapData->typeIds[0] != 136) 
-		return false;
 
-#endif
 
     if(!updatePaint(*primitive->styleResult, PaintValuesSet::Set_0, false))
         return false;
 
 	if (primitive->_mapData->section.expired())
 		return false;
+
+#ifdef _DEBUG
+	// we filter here for debug purpose
+	int check = false;
+	if (primitive->_mapData->typeIds.size() > 0 && primitive->_mapData->typeIds[0] == 136) 
+	{
+		// return false;
+		check = builtinStyleDefs->OUTPUT_PATH_EFFECT__1->id;
+	}
+	else
+	{
+		check = builtinStyleDefs->OUTPUT_PATH_EFFECT__1->id;
+	}
+	if (primitive->_mapData->addtypeIds.size() == 2 && primitive->_mapData->addtypeIds[0] == 128) 
+	{
+		check = builtinStyleDefs->OUTPUT_PATH_EFFECT__1->id;
+	}
+
+#endif
 
 	auto mapsSectionData = primitive->_mapData->section.lock();
 
@@ -803,13 +817,21 @@ bool MapRasterizer::rasterizePolyline(    const AreaI* const destinationArea,   
     bool intersect = false;
     int prevCross = 0;
     pointF vertex, middleVertex;
+#ifdef _DEBUG
+	pointF centerVertex;
+#endif
     const auto pointsCount = primitive->_mapData->points.size();
     const auto middleIdx = pointsCount / 2;
     auto pPoint = primitive->_mapData->points.data();
     for(pointIdx = 0; pointIdx < pointsCount; pointIdx++, pPoint++)
     {
         calculateVertex(*pPoint, vertex);
-
+#ifdef _DEBUG
+		if (vertex.get<0>() > 600 && vertex.get<0>() < 700 && vertex.get<1>() > 600 && vertex.get<1>() < 700)
+		{
+			centerVertex = vertex;
+		}
+#endif
         if(pointIdx == 0)
         {
             path.moveTo(vertex.get<0>(), vertex.get<1>());
