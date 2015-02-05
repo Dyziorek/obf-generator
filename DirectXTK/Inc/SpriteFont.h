@@ -48,6 +48,8 @@ namespace DirectX
 
 		Glyph GetGlyphData(wchar_t character) const;
 
+		std::vector<Glyph> GetGlyphDataText(_In_z_ wchar_t const* text) const;
+
 		bool isFontDistanced(float* spread, int* downscale, int* colorMask);
 
         // Describes a single character glyph.

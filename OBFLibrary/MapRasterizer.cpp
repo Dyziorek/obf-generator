@@ -214,6 +214,8 @@ bool MapRasterizer::DrawSymbols(SkCanvas& canvas, std::vector<const std::shared_
 
 }
 
+
+
 bool MapRasterizer::DrawMap(SkCanvas& canvas)
 {
 	if (!_context)

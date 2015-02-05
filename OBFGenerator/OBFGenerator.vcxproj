@@ -216,6 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\VisualFiles\osmand\core\protos\OBF.pb.h" />
+    <ClInclude Include="D2DRenderer.h" />
     <ClInclude Include="TexturePacker.h" />
     <ClInclude Include="AtlasMapDxRender.h" />
     <ClInclude Include="BatchUpdater.h" />
@@ -235,6 +236,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D2DRenderer.cpp" />
     <ClCompile Include="TexturePacker.cpp" />
     <ClCompile Include="AtlasMapDxRender.cpp" />
     <ClCompile Include="D:\VisualFiles\osmand\core\protos\OBF.pb.cc">

@@ -12,7 +12,6 @@
 #include <windows.h>
 
 
-
 // TODO: reference additional headers your program requires here
 #include "sqlite3.h"
 #include "google\protobuf\io\zero_copy_stream_impl.h"

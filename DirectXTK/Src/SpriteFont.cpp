@@ -397,6 +397,18 @@ SpriteFont::Glyph SpriteFont::GetGlyphData(wchar_t character) const
 	return *pImpl->FindGlyph(character);
 }
 
+std::vector<SpriteFont::Glyph> SpriteFont:: GetGlyphDataText(_In_z_ wchar_t const* text) const
+{
+	std::vector<SpriteFont::Glyph> glyphCont;
+
+	pImpl->ForEachGlyph(text, [&] (const Glyph* glData, float x, float y)
+	{
+		glyphCont.push_back(*glData);
+	});
+
+	return glyphCont;
+}
+
 bool SpriteFont::isFontDistanced(float* spread, int* downscaleOut, int* colorMaskOut)
 {
 	if (!pImpl->distanceFont)

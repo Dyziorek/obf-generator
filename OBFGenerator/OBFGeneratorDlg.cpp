@@ -1091,7 +1091,8 @@ void COBFGeneratorDlg::OnBnClickedMfcbutton2()
 				{
 					SkAutoTUnref<SkBitmapDevice> device(new SkBitmapDevice(SkBitmap::kARGB_8888_Config, 1024, 1024));
 					SkAutoTUnref<SkCanvas> painter(new SkCanvas(device));
-				
+					
+
 					bool painted = render->DrawMap(*painter);
 					if (painted)
 					{

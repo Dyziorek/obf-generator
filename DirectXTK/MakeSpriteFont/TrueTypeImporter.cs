@@ -30,7 +30,7 @@ namespace MakeSpriteFont
 
 
         // Size of the temp surface used for GDI+ rasterization.
-        const int MaxGlyphSize = 1024;
+        const int MaxGlyphSize = 4096;
 
 
         public void Import(CommandLineOptions options)
@@ -109,7 +109,17 @@ namespace MakeSpriteFont
                 {
                     for (int y = 0; y < inHeight; ++y)
                     {
-                        bitmapMask[x, y] = isInside(inputAcces[x, y]);
+                        Color inputColor = inputAcces[x, y];
+                        bitmapMask[x, y] = isInside(inputColor);
+                        //if (inputColor.ToArgb() != Color.Black.ToArgb())
+                        //{
+                        //    bitmapMask[x, y] = true;
+                        //}
+                        //else if (inputColor.ToArgb() != Color.Black.ToArgb())
+                        //{
+                        //    bitmapMask[x, y] = false;
+                        //}
+
 			        }
 		        }
             }
@@ -137,8 +147,8 @@ namespace MakeSpriteFont
         {
             float alpha = 0.5f + 0.5f * (signedDistance / spread);
             alpha = Math.Min(1, Math.Max(0, alpha)); // compensate for rounding errors
-            int alphaByte = (int)(alpha * 0xFF); // no unsigned byte in Java :(
-            return  Color.FromArgb((alphaByte << 24) | (color.ToArgb() & 0xFFFFFF));
+            byte alphaByte = (byte)(alpha * 255); // no unsigned byte in Java :(
+            return  Color.FromArgb((0xFF << 24)  | (alphaByte << 16) | (alphaByte << 8) | alphaByte);
         }
 
         private float findSignedDistance(int centerX, int centerY, ref bool[,] bitmapMask, int width, int height, float spread)
@@ -256,19 +266,24 @@ namespace MakeSpriteFont
                 throw new Exception("Excessively large glyph won't fit in my lazily implemented fixed size temp surface.");
 
             GraphicsPath pathTrans = new GraphicsPath();
-            pathTrans.
-
+            pathTrans.AddString(character.ToString(), font.FontFamily, (int)font.Style, font.SizeInPoints, new Point(padWidth, padHeight), StringFormat.GenericTypographic);
+            Matrix transform = new Matrix();
+            transform.Translate(-1 * padWidth, -1 * padHeight, MatrixOrder.Append);
+            transform.Scale(upscaler, upscaler, MatrixOrder.Append);
+            transform.Translate(padWidth, padHeight, MatrixOrder.Append);
+            pathTrans.Transform(transform);
             // Render the character.
-            graphics.Clear(Color.White);
-            graphics.ScaleTransform(upscaler, upscaler, MatrixOrder.Append);
-            graphics.DrawString(characterString, font, brush, padWidth, padHeight, stringFormat);
+            graphics.Clear(Color.Black);
+            //graphics.ScaleTransform(upscaler, upscaler, MatrixOrder.Append);
+            //graphics.DrawString(characterString, font, brush, padWidth, padHeight, stringFormat);
+            graphics.FillPath(brush, pathTrans);
             graphics.Flush();
 
             // Clone the newly rendered image.
             Bitmap glyphBitmap = bitmap.Clone(new Rectangle(0, 0, bitmapWidth, bitmapHeight), PixelFormat.Format32bppArgb);
             bitmap.Save(@"D:\osmData\fntinms.bmp");
             glyphBitmap.Save(@"D:\osmData\fntoms.bmp");
-            BitmapUtils.ConvertGreyToAlpha(glyphBitmap);
+            //BitmapUtils.ConvertGreyToAlpha(glyphBitmap);
 
             // Query its ABC spacing.
             float? abc = GetCharacterWidth(character, font, graphics);

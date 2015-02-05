@@ -689,10 +689,11 @@ void AtlasMapDxRender::_Impl::renderScene()
 	long width = rc.right - rc.left;
 
 
+	typedef std::pair<ringF, boxF> collisionBox;
 
-	std::vector<std::pair<ringF, boxF>> rings;
+	bgi::rtree<collisionBox, bgi::linear<16, 4>> collisionSearch;
 
-	
+	std::vector<collisionBox> coollisions;
 	
 
 	g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView.Get(), ClearColor);
@@ -751,12 +752,17 @@ void AtlasMapDxRender::_Impl::renderScene()
 					spriteBBox.push_back(ptOrigin);
 					boxF env;
 					bg::envelope(spriteBBox, env);
-					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					collisionSearch.query(bgi::intersects(env), std::back_inserter(coollisions));
+
+					if (coollisions.size() == 0)
 					{
-						rings.push_back(std::make_pair(spriteBBox, env));
+						collisionSearch.insert(std::make_pair(spriteBBox, env));
 						g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
 					}
-
+					else
+					{
+						coollisions.clear();
+					}
 				}
 			}
 			else if(const auto iconSymbol = std::dynamic_pointer_cast<const MapRasterizer::RasterSymbolPin>(symbol))
@@ -784,10 +790,16 @@ void AtlasMapDxRender::_Impl::renderScene()
 					spriteBBox.push_back(ptOrigin);
 					boxF env;
 					bg::envelope(spriteBBox, env);
-					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					collisionSearch.query(bgi::intersects(env), std::back_inserter(coollisions));
+
+					if (coollisions.size() == 0)
 					{
-						rings.push_back(std::make_pair(spriteBBox, env));
+						collisionSearch.insert(std::make_pair(spriteBBox, env));
 						g_Sprites->Draw(iconData.second.Get(), vecPos, &destRect);
+					}
+					else
+					{
+						coollisions.clear();
 					}
 
 				}
@@ -926,9 +938,11 @@ void AtlasMapDxRender::_Impl::renderScene()
 							spriteBBox.push_back(ptOrigin);
 							boxF env;
 							bg::envelope(spriteBBox, env);
-							if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+							collisionSearch.query(bgi::intersects(env), std::back_inserter(coollisions));
+
+							if (coollisions.size() == 0)
 							{
-								rings.push_back(std::make_pair(spriteBBox, env));
+								collisionSearch.insert(std::make_pair(spriteBBox, env));
 								if (vecPath.size() == 0)
 								{
 									fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, rotation, g_XMZero, XMVectorScale(g_XMOne, 0.4f));
@@ -942,6 +956,11 @@ void AtlasMapDxRender::_Impl::renderScene()
 									}
 								}
 							}
+							else
+							{
+								coollisions.clear();
+							}
+
 						}
 					}
 				}
@@ -960,10 +979,16 @@ void AtlasMapDxRender::_Impl::renderScene()
 					spriteBBox.push_back(ptOrigin);
 					boxF env;
 					bg::envelope(spriteBBox, env);
-					if (rings.size() == 0 || notIntersect(rings, spriteBBox))
+					collisionSearch.query(bgi::intersects(env), std::back_inserter(coollisions));
+
+					if (coollisions.size() == 0)
 					{
-						rings.push_back(std::make_pair(spriteBBox, env));
+						collisionSearch.insert(std::make_pair(spriteBBox, env));
 						fontRender->DrawString(g_Sprites.get(), textSymbol->value.c_str(), vecPos, color, 0.0f, g_XMZero, XMVectorScale(g_XMOne, textSymbol->size));
+					}
+					else
+					{
+						coollisions.clear();
 					}
 				}
 			}
